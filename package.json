@@ -26,6 +26,7 @@
     "@dnd-kit/vue": "0.5.1",
     "@visactor/vtable": "1.26.8",
     "idb-keyval": "6.3.0",
+    "papaparse": "^5.7.0",
     "pinia": "^4.0.3",
     "reka-ui": "2.11.0",
     "vue": "^3.5.42"
