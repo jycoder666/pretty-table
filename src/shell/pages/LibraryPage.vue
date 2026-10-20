@@ -24,8 +24,10 @@ const typeLabel = (t: TemplateInstance) => {
 }
 
 function useTpl(t: TemplateInstance) {
-  if (editor.dirty && editor.page === 'editor') {
-    if (!confirm('会替换当前的表，确定继续？')) return
+  // PX-02（FR-10 一律二次确认）：只要存在有未另存改动的编辑实例，从库页换模板就确认；
+  // 不再依赖 page === 'editor'（库页时 page 已是 'library'，原条件恒假导致静默覆盖）。
+  if (editor.dirty && editor.current) {
+    if (!confirm('换一张模板会替换当前的表格，未另存的修改会丢失。确定继续？')) return
   }
   editor.openTemplate(t)
 }

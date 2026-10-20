@@ -41,8 +41,54 @@ async function mountPage() {
 
 beforeEach(() => {
   setActivePinia(createPinia())
+  vi.restoreAllMocks()
   listMock.mockReset().mockResolvedValue([])
   removeMock.mockReset().mockResolvedValue(undefined)
+})
+
+/** 取第 n 张「使用此模板」按钮（库页含系统预设与我的模板两个分区） */
+function useBtnAt(wrapper: ReturnType<typeof mount>, n: number) {
+  return wrapper.findAll('button').filter((b) => b.text().includes('使用此模板'))[n]!
+}
+
+describe('LibraryPage · 换模板替换确认（PX-02 / FR-10）', () => {
+  it('编辑台有未保存改动时换模板：弹确认，确认后切换', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const editor = useEditorStore()
+    editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
+    editor.setSlotText('obj.name.a', '未保存的方案')
+    expect(editor.dirty).toBe(true)
+    const wrapper = await mountPage()
+    // 点第 2 张预设，避免与当前打开的 compare-alpha-v1 同模板
+    await useBtnAt(wrapper, 1).trigger('click')
+    await flushPromises()
+    expect(confirmSpy).toHaveBeenCalledTimes(1)
+    expect(confirmSpy.mock.calls[0]?.[0]).toContain('未另存的修改会丢失')
+    expect(editor.current?.templateId).not.toBe(COMPARE_ALPHA_V1.templateId)
+  })
+
+  it('有改动但取消确认：不切换', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const editor = useEditorStore()
+    editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
+    editor.setSlotText('obj.name.a', '未保存的方案')
+    const wrapper = await mountPage()
+    await useBtnAt(wrapper, 1).trigger('click')
+    await flushPromises()
+    expect(editor.current?.templateId).toBe(COMPARE_ALPHA_V1.templateId)
+  })
+
+  it('无未保存改动：直接切换，不弹确认', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const editor = useEditorStore()
+    editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
+    editor.markSaved()
+    const wrapper = await mountPage()
+    await useBtnAt(wrapper, 1).trigger('click')
+    await flushPromises()
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(editor.current?.templateId).not.toBe(COMPARE_ALPHA_V1.templateId)
+  })
 })
 
 describe('LibraryPage · 我的模板删除入口（PX-01）', () => {
