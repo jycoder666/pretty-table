@@ -1,16 +1,18 @@
 import { fail, ok, type CoreWarning, type Result } from '../errors'
 import type { SlotDef, TemplateDefinition, TemplateInstance, TemplateType } from '../types'
+import { sanitizeHex } from '../theme/palettes'
 
 /**
- * Schema migration (增强期设计增量 §3.3/§3.4):
- * - 读 1.0/1.x → 补默认值，写出 schemaVersion "1.1"（写时一律 1.1）
- * - 读 2.x → TEMPLATE_INVALID
+ * Schema migration (增强期 §3.3/§3.4 + 自定义格式设计增量 §1.5):
+ * - 读 1.0/1.1/1.x → 补默认值（新字段缺省 = 行为不变），写出 schemaVersion "1.2"（写时一律 1.2）
+ * - 读 1.x（minor > 2）宽容 warn；读 2.x → TEMPLATE_INVALID
  * - 非法 mark/format/recommendCol 值 → warn 不拒
+ * - themeTokens 非法 hex → 清除该键 + warn TOKEN_INVALID（迁移期清洗，不拒整表）
  * - 缺 slotGrid 时借系统底稿（sourceTemplateId / 同 templateId，且行列一致）
  * 纯函数：不修改入参，只改内存副本；不批量回写本机已存模板。
  */
 
-export const SCHEMA_VERSION_CURRENT = '1.1'
+export const SCHEMA_VERSION_CURRENT = '1.2'
 
 /** OUT-13：实例里携带的语义色/符号映射一律忽略 */
 export const SEMANTIC_TOKEN_KEYS: readonly string[] = [
@@ -60,6 +62,16 @@ export function migrateInstance(
   const inst = JSON.parse(JSON.stringify(o)) as TemplateInstance
   const warnings: CoreWarning[] = []
   inst.schemaVersion = SCHEMA_VERSION_CURRENT
+
+  // 读 1.x（minor > 2）宽容 warn（设计增量 §1.5 读规则）
+  const minor = /^1\.(\d+)/.exec(rawVersion)
+  if (minor && Number(minor[1]) > 2) {
+    warnings.push({
+      code: 'UNKNOWN_FIELD',
+      message: '模板版本较新，已尽量兼容读取',
+      details: { schemaVersion: rawVersion },
+    })
+  }
 
   // meta.templateType 缺省 → 按 templateId 推断，推断不到 compare
   inst.meta = { ...inst.meta }
@@ -167,6 +179,28 @@ export function migrateInstance(
         code: 'UNKNOWN_FIELD',
         message: '不支持自定义符号与颜色，相关设置已忽略',
         details: { keys: hit },
+      })
+    }
+
+    // schema 1.2：角色色 hex 清洗——非法值清除该键 + warn TOKEN_INVALID（不拒整表）
+    const TOKEN_COLOR_KEYS = ['primary', 'headerText', 'zebra', 'emphasis', 'border', 'background', 'tag']
+    let badHex = 0
+    for (const k of TOKEN_COLOR_KEYS) {
+      const v = tokens[k]
+      if (typeof v !== 'string') continue
+      const s = sanitizeHex(v)
+      if (s === null) {
+        delete tokens[k]
+        badHex++
+      } else if (s !== v) {
+        tokens[k] = s
+      }
+    }
+    if (badHex > 0) {
+      warnings.push({
+        code: 'TOKEN_INVALID',
+        message: `${badHex} 处颜色设置读不出来，已恢复预设`,
+        details: { count: badHex },
       })
     }
   }

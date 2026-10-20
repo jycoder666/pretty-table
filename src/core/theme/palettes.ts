@@ -68,6 +68,21 @@ export function isThemeId(id: string): id is ThemeId {
   return id === 'T-A' || id === 'T-B' || id === 'T-C'
 }
 
+/**
+ * hex 输入钳制（自定义格式设计增量 §1.2）：只收 #RGB / #RRGGBB，
+ * 规范为小写 6 位；非法返回 null（调用方不写入 + 壳内轻提示，不产生错误码）。
+ */
+export function sanitizeHex(v: string): string | null {
+  if (typeof v !== 'string') return null
+  const s = v.trim()
+  if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase()
+  if (/^#[0-9a-fA-F]{3}$/.test(s)) {
+    const h = s.slice(1)
+    return `#${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`.toLowerCase()
+  }
+  return null
+}
+
 export function resolveTheme(
   themeId: string,
   tokens?: ThemeTokens,
@@ -90,6 +105,8 @@ export function resolveTheme(
   }
   const base = { ...PALETTES[resolved] }
   if (tokens?.primary) base.primary = tokens.primary
+  // schema 1.2：表头文字色覆盖（新键 headerText）
+  if (tokens?.headerText) base.headerText = tokens.headerText
   if (typeof tokens?.zebra === 'string') base.zebra = tokens.zebra
   if (tokens?.emphasis) base.emphasis = tokens.emphasis
   if (tokens?.border) base.border = tokens.border

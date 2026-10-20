@@ -48,13 +48,33 @@ export interface SlotDef {
   locked?: boolean
 }
 
+/** 可自定义的表格角色色（UI 呈现六行；设计增量 §1.2 映射表） */
+export type RoleColorKey =
+  | 'primary' // 表头底色（表头与分区色条同源，沿用既有语义）
+  | 'headerText' // 表头文字色（schema 1.2 新键）
+  | 'zebra' // 斑马纹色（开关走既有 zebraOn / setZebra）
+  | 'emphasis' // 强调色
+  | 'border' // 边框色
+  | 'background' // 表底纸色（Palette.paper）
+
 export interface ThemeTokens {
   primary: string
+  /** schema 1.2：表头文字色覆盖 */
+  headerText?: string
   zebra?: boolean | string
   emphasis?: string
   border?: string
   background?: string
   tag?: string
+}
+
+/** 排版微调档位（全局；px 映射在 core/theme/layoutScales.ts） */
+export interface LayoutStyle {
+  /** 与列一一对应；null/缺位 = 该列用默认宽 */
+  colWidths?: (number | null)[]
+  rowHeightTier?: 1 | 2 | 3
+  fontSizeTier?: 1 | 2 | 3
+  paddingTier?: 1 | 2 | 3
 }
 
 export interface BlockDesc {
@@ -95,9 +115,11 @@ export interface LayoutSpec {
   recommendableCols?: number[]
   /** Schema 1.1: slot used as the table caption in HTML export (FR-25) */
   captionSlot?: string
+  /** schema 1.2：排版微调档位（缺省 = 全按预设默认） */
+  style?: LayoutStyle
 }
 
-export type TemplateType = 'compare' | 'detail' | 'pricing' | 'matrix'
+export type TemplateType = 'compare' | 'detail' | 'pricing' | 'matrix' | 'blank'
 
 export interface TemplateMeta {
   displayName?: string
@@ -141,6 +163,20 @@ export type EditIntent =
   | { kind: 'updateBlock'; blockId: string; props: Partial<NonNullable<BlockDesc['props']>> }
   /** 增强期 FR-23：最多一列推荐；设新列即替换旧值，null 取消 */
   | { kind: 'setRecommendCol'; col: number | null }
+  /** FR-C1 颜色覆盖：value=null 清除该角色覆盖（回到预设） */
+  | { kind: 'setThemeToken'; token: RoleColorKey; value: string | null }
+  | { kind: 'resetThemeTokens' }
+  /** FR-C2 排版档位（width=null 恢复默认宽） */
+  | { kind: 'setColWidth'; col: number; width: number | null }
+  | { kind: 'setRowHeightTier'; tier: 1 | 2 | 3 }
+  | { kind: 'setFontSizeTier'; tier: 1 | 2 | 3 }
+  | { kind: 'setPaddingTier'; tier: 1 | 2 | 3 }
+  /** FR-C3 结构编辑（全部按钮式；一次意图 = 一张撤销快照 = 一套 remap） */
+  | { kind: 'addRow'; afterRow?: number }
+  | { kind: 'removeRow'; row: number }
+  | { kind: 'addCol'; afterCol?: number }
+  | { kind: 'removeCol'; col: number }
+  | { kind: 'setHeaderLevel'; levels: 1 | 2 | 3 }
 
 export interface EditorState {
   current: TemplateInstance

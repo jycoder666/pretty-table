@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TemplateDefinition, TemplateInstance } from '../types'
-import { migrateInstance } from './migrate'
+import { migrateInstance, SCHEMA_VERSION_CURRENT } from './migrate'
 import { COMPARE_ALPHA_V1 } from '../templates'
 
 const PRESETS: TemplateDefinition[] = [COMPARE_ALPHA_V1]
@@ -18,11 +18,11 @@ function base100(): Record<string, unknown> {
 }
 
 describe('migrateInstance · 读 1.0 补默认值', () => {
-  it('缺 slotDefs → 全部按 text；缺 highlight → recommendCol=null', () => {
+  it('缺 slotDefs → 全部按 text；缺 highlight → recommendCol=null；版本升到当前', () => {
     const r = migrateInstance(base100(), PRESETS)
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.value.schemaVersion).toBe('1.1')
+    expect(r.value.schemaVersion).toBe(SCHEMA_VERSION_CURRENT)
     expect(r.value.slotDefs).toEqual({})
     expect(r.value.highlight).toEqual({ recommendCol: null })
   })
@@ -159,12 +159,58 @@ describe('migrateInstance · 版本与往返', () => {
     expect(inst.ok).toBe(true)
     if (!inst.ok) return
     const v = inst.value as TemplateInstance
-    expect(v.schemaVersion).toBe('1.1')
+    expect(v.schemaVersion).toBe(SCHEMA_VERSION_CURRENT)
     // 再过一遍迁移（幂等）+ 校验，字段不丢
     const again = migrateInstance(v, PRESETS)
     expect(again.ok).toBe(true)
     if (!again.ok) return
     expect(again.value.slotDefs?.['row.2.val.a']).toEqual({ kind: 'mark' })
     expect(again.value.layout.recommendableCols).toEqual([1, 2, 3])
+  })
+})
+
+describe('migrateInstance · schema 1.2（自定义格式）', () => {
+  it('1.1 → 1.2 补空不改语义：缺 headerText / layout.style 不补，行为不变', () => {
+    const json = base100()
+    json.schemaVersion = '1.1'
+    const r = migrateInstance(json, PRESETS)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.schemaVersion).toBe(SCHEMA_VERSION_CURRENT)
+    expect(r.value.themeTokens).toBeUndefined()
+    expect(r.value.layout.style).toBeUndefined()
+    expect(r.value.slots['a.1']).toBe('文本')
+  })
+
+  it('读 1.3（minor > 2）宽容 warn 不拒', () => {
+    const json = base100()
+    json.schemaVersion = '1.3'
+    const r = migrateInstance(json, PRESETS)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.schemaVersion).toBe(SCHEMA_VERSION_CURRENT)
+    expect(r.warnings?.some((w) => w.code === 'UNKNOWN_FIELD')).toBe(true)
+  })
+
+  it('themeTokens 非法 hex → 清除该键 + warn TOKEN_INVALID；合法值保留', () => {
+    const json = base100()
+    json.themeTokens = {
+      primary: '#2F5B9A',
+      headerText: 'not-a-color',
+      emphasis: '#GGG',
+      border: '#abc',
+    }
+    const r = migrateInstance(json, PRESETS)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.themeTokens).toEqual({ primary: '#2f5b9a', border: '#aabbcc' })
+    expect(r.warnings?.some((w) => w.code === 'TOKEN_INVALID')).toBe(true)
+  })
+
+  it('themeTokens 的 zebra 布尔开关不受 hex 清洗影响', () => {
+    const json = base100()
+    json.themeTokens = { primary: '#2f5b9a', zebra: false }
+    const r = migrateInstance(json, PRESETS)
+    expect(r.ok && r.value.themeTokens).toEqual({ primary: '#2f5b9a', zebra: false })
   })
 })

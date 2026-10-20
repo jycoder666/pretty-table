@@ -20,6 +20,9 @@ export type ErrorCode =
   | 'BLOCK_NOT_FOUND'
   | 'MERGE_NOT_ALLOWED'
   | 'MERGE_STRUCTURAL'
+  | 'MERGE_CONFLICT'
+  | 'LIMIT_ROWS'
+  | 'LIMIT_COLS'
   | 'SLOT_DROP_BLOCKED'
   | 'RENDER_FAIL'
   | 'EXPORT_HTML_FAIL'
@@ -41,6 +44,8 @@ export type WarnCode =
   | 'MARK_UNKNOWN'
   | 'FORMAT_UNKNOWN'
   | 'PASTE_NOTICE_AS_TEXT'
+  | 'TOKEN_INVALID'
+  | 'STRUCT_LOSS'
 
 export interface CoreError {
   code: ErrorCode
