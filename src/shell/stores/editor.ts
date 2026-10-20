@@ -1,16 +1,23 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
+  type CellCoord,
   type EditIntent,
   type EditorState,
   type TemplateInstance,
+  type ValidatedPastePlan,
+  buildVisibleGrid,
   createEditorState,
+  createStoreTxn,
   dispatch,
   undoOnce,
   markClean,
   replaceCurrent,
   canUndo,
   cloneInstance,
+  parsePaste,
+  planPaste,
+  validatePaste,
   THEME_NAMES,
   type ThemeId,
   type Align,
@@ -19,6 +26,8 @@ import {
   type BlockType,
 } from '@/core'
 import { saveDraft, loadDraft, clearDraft } from '../repo/draftRepo'
+import { faultGate } from '../debug/fault'
+import { pasteCopy } from '../paste/pasteCopy'
 
 export type PageView = 'library' | 'editor'
 
@@ -37,6 +46,100 @@ export const useEditorStore = defineStore('editor', () => {
   const current = computed(() => state.value?.current ?? null)
   const dirty = computed(() => state.value?.dirty ?? false)
   const undoEnabled = computed(() => (state.value ? canUndo(state.value) : false))
+
+  // ── 粘贴预览（FR-16～19）──
+  const pastePreview = ref<{ plan: ValidatedPastePlan; emptyCount: number } | null>(null)
+  const pastePending = computed(() => pastePreview.value !== null)
+
+  /** 选中槽 → 可见网格坐标（粘贴起点，左上角） */
+  function anchorOfSelected(inst: TemplateInstance, slotId: string): CellCoord | null {
+    const grid = inst.layout.slotGrid
+    if (!grid) return null
+    for (let r = 0; r < grid.length; r++) {
+      const row = grid[r]
+      if (!row) continue
+      for (let c = 0; c < row.length; c++) {
+        if (row[c] !== slotId) continue
+        const vis = buildVisibleGrid(inst)
+        const idx = vis.findIndex((v) => v.kind === 'logical' && v.logicalRow === r)
+        return idx >= 0 ? [idx, c] : null
+      }
+    }
+    return null
+  }
+
+  function commitPaste(plan: ValidatedPastePlan) {
+    if (!state.value) return
+    pastePreview.value = null
+    state.value.pastePending = false
+    // 故障注入（GC-19）：?pt-fault=PASTE_COMMIT_FAILED → 提示且 store 不变
+    if (faultGate('PASTE_COMMIT_FAILED')) {
+      showToast(pasteCopy([{ code: 'PASTE_COMMIT_FAILED', message: '' }]))
+      return
+    }
+    const txn = createStoreTxn(
+      () => state.value as EditorState,
+      (s) => {
+        state.value = s
+      },
+    )
+    const r = txn.applyBatch(plan)
+    if (!r.ok) {
+      showToast(pasteCopy([{ code: r.code, message: '' }]))
+      return
+    }
+    void persistDraft()
+    showToast(`已填入 ${plan.writes.length} 格`)
+  }
+
+  function pasteStart(data: { text?: string; html?: string }): boolean {
+    if (!state.value || !current.value) return false
+    const parsed = parsePaste(data)
+    if (!parsed.ok) {
+      showToast(pasteCopy([parsed.error]))
+      return false
+    }
+    if (!selectedSlotId.value) {
+      showToast(pasteCopy([{ code: 'PASTE_NO_ANCHOR', message: '' }]))
+      return false
+    }
+    const anchor = anchorOfSelected(current.value, selectedSlotId.value)
+    if (!anchor) {
+      showToast(pasteCopy([{ code: 'PASTE_NO_ANCHOR', message: '' }]))
+      return false
+    }
+    const planned = planPaste(current.value, state.value.version, anchor, parsed.value)
+    if (!planned.ok) {
+      showToast(pasteCopy([planned.error]))
+      return false
+    }
+    const validated = validatePaste(current.value, planned.value)
+    if (!validated.ok) {
+      showToast(pasteCopy(validated.errors))
+      return false
+    }
+    const plan = validated.value
+    const emptyCount = plan.cells.filter((c) => c.kind === 'empty').length
+    // S9：1×1 不预览、直接写入（仍是一次事务、可撤销）
+    if (plan.size.h === 1 && plan.size.w === 1) {
+      commitPaste(plan)
+      return true
+    }
+    pastePreview.value = { plan, emptyCount }
+    state.value.pastePending = true
+    return true
+  }
+
+  function confirmPaste() {
+    const p = pastePreview.value
+    if (!p) return
+    commitPaste(p.plan)
+  }
+
+  function cancelPaste() {
+    pastePreview.value = null
+    if (state.value) state.value.pastePending = false
+  }
 
   function showToast(msg: string) {
     toast.value = msg
@@ -208,6 +311,11 @@ export const useEditorStore = defineStore('editor', () => {
     banner,
     restorePrompt,
     exporting,
+    pastePreview,
+    pastePending,
+    pasteStart,
+    confirmPaste,
+    cancelPaste,
     showToast,
     openTemplate,
     tryRestoreDraft,

@@ -5,6 +5,8 @@ import { useEditorStore } from '../stores/editor'
 import SlotOverlay from '../dnd/SlotOverlay.vue'
 import { computeDropTargets, estimateCellRects, type DropTarget } from '../dnd/slotDnd'
 import { usePlaceSession } from '../dnd/placeSession'
+import EditorToolbar from './EditorToolbar.vue'
+import PasteEntry from '../paste/PasteEntry.vue'
 
 const editor = useEditorStore()
 const session = usePlaceSession()
@@ -105,6 +107,7 @@ defineExpose({
 
 <template>
   <div ref="host" class="preview-host" @click="onClick">
+    <EditorToolbar />
     <div ref="el" class="vtable-root" />
     <SlotOverlay
       :targets="dropTargets"
@@ -113,6 +116,7 @@ defineExpose({
       @place="onPlace"
       @cancel="onCancelPlace"
     />
+    <PasteEntry />
   </div>
 </template>
 
