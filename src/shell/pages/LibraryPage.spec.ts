@@ -8,15 +8,15 @@ import LibraryPage from './LibraryPage.vue'
 
 /** repo 层 mock（PX-01）：不依赖 IndexedDB，删除走可控的 remove mock */
 const { removeMock, listMock } = vi.hoisted(() => ({
-  removeMock: vi.fn(),
-  listMock: vi.fn(),
+  removeMock: vi.fn<(templateId: string) => Promise<void>>(),
+  listMock: vi.fn<() => Promise<TemplateInstance[]>>(),
 }))
 
 vi.mock('../repo/idbTemplateRepo', () => ({
   createIdbTemplateRepo: () => ({
     list: listMock,
-    get: vi.fn(async () => null),
-    save: vi.fn(async () => {}),
+    get: vi.fn<() => Promise<null>>(async () => null),
+    save: vi.fn<() => Promise<void>>(async () => {}),
     remove: removeMock,
   }),
 }))

@@ -24,6 +24,7 @@ import {
   type Emphasis,
   type MergeRange,
   type BlockType,
+  type DispatchOptions,
 } from '@/core'
 import { saveDraft, loadDraft, clearDraft } from '../repo/draftRepo'
 import { faultGate } from '../debug/fault'
@@ -75,6 +76,7 @@ export const useEditorStore = defineStore('editor', () => {
     if (!state.value) return
     pastePreview.value = null
     state.value.pastePending = false
+    textSessionKey = null
     // 故障注入（GC-19）：?pt-fault=PASTE_COMMIT_FAILED → 提示且 store 不变
     if (PT_DEBUG && faultGate('PASTE_COMMIT_FAILED')) {
       showToast(pasteCopy([{ code: 'PASTE_COMMIT_FAILED', message: '' }]))
@@ -158,6 +160,7 @@ export const useEditorStore = defineStore('editor', () => {
     selectedBlockId.value = null
     selectionRange.value = null
     banner.value = null
+    textSessionKey = null
     page.value = 'editor'
     void persistDraft()
   }
@@ -167,6 +170,7 @@ export const useEditorStore = defineStore('editor', () => {
       const d = await loadDraft()
       if (!d) return 'none'
       state.value = createEditorState(d.instance)
+      textSessionKey = null
       // restore clears undo (FR-10)
       state.value = {
         ...state.value,
@@ -191,9 +195,11 @@ export const useEditorStore = defineStore('editor', () => {
     restorePrompt.value = false
   }
 
-  function apply(intent: EditIntent): boolean {
+  function apply(intent: EditIntent, undoOpts?: DispatchOptions): boolean {
+    // PX-03：不带撤销策略的意图（对齐/强调/主题/合并等）结束当前文字编辑会话
+    if (!undoOpts) textSessionKey = null
     if (!state.value) return false
-    const r = dispatch(state.value, intent)
+    const r = dispatch(state.value, intent, undoOpts)
     if (!r.ok) {
       showToast(r.error.message)
       return false
@@ -206,11 +212,28 @@ export const useEditorStore = defineStore('editor', () => {
   function undo() {
     if (!state.value || !canUndo(state.value)) return
     state.value = undoOnce(state.value)
+    textSessionKey = null
     void persistDraft()
   }
 
+  // ── PX-03：同槽连续文字编辑合并为一步撤销 ──
+  // 会话 = 开始输入到失焦 / 切换槽位 / 触发其他类操作为止；键形如 'slot:<id>' / 'block:<id>'
+  let textSessionKey: string | null = null
+
+  function resetTextSession() {
+    textSessionKey = null
+  }
+
+  /** 文字编辑入口统一走这里：同会话 coalesce，跨会话 beginTextSession */
+  function textUndoOpts(key: string): DispatchOptions {
+    const opts: DispatchOptions =
+      textSessionKey === key ? { coalesceUndo: true } : { beginTextSession: true }
+    textSessionKey = key
+    return opts
+  }
+
   function setSlotText(slotId: string, text: string) {
-    apply({ kind: 'setSlot', slotId, value: text })
+    apply({ kind: 'setSlot', slotId, value: text }, textUndoOpts(`slot:${slotId}`))
   }
 
   function setTheme(themeId: ThemeId) {
@@ -267,8 +290,12 @@ export const useEditorStore = defineStore('editor', () => {
     if (!selectedBlockId.value || !current.value) return
     const b = current.value.blocks.find((x) => x.id === selectedBlockId.value)
     if (!b) return
-    if (b.type === 'sectionBar') apply({ kind: 'updateBlock', blockId: b.id, props: { label: text } })
-    else apply({ kind: 'updateBlock', blockId: b.id, props: { text } })
+    const opts = textUndoOpts(`block:${b.id}`)
+    if (b.type === 'sectionBar') {
+      apply({ kind: 'updateBlock', blockId: b.id, props: { label: text } }, opts)
+    } else {
+      apply({ kind: 'updateBlock', blockId: b.id, props: { text } }, opts)
+    }
   }
 
   function markSaved() {
@@ -298,6 +325,7 @@ export const useEditorStore = defineStore('editor', () => {
       openTemplate(inst)
       return
     }
+    textSessionKey = null
     state.value = replaceCurrent(state.value, inst, false)
   }
 
@@ -321,6 +349,8 @@ export const useEditorStore = defineStore('editor', () => {
     cancelPaste,
     showToast,
     openTemplate,
+    /** PX-03：文字编辑失焦时结束会话，下次输入另起一步撤销 */
+    endTextSession: resetTextSession,
     tryRestoreDraft,
     discardRestored,
     apply,

@@ -80,3 +80,66 @@ describe('editorState Fill path', () => {
     expect(r.ok).toBe(false)
   })
 })
+
+/** PX-03：模拟文字编辑会话——首键 beginTextSession，后续同会话 coalesceUndo */
+function typeText(
+  state: ReturnType<typeof createEditorState>,
+  slotId: string,
+  full: string,
+): ReturnType<typeof createEditorState> {
+  let s = state
+  for (let i = 1; i <= full.length; i++) {
+    const opts = i === 1 ? { beginTextSession: true } : { coalesceUndo: true }
+    const r = dispatch(s, { kind: 'setSlot', slotId, value: full.slice(0, i) }, opts)
+    if (!r.ok) throw new Error('dispatch failed')
+    s = r.value
+  }
+  return s
+}
+
+describe('editorState · 文字编辑会话合并撤销（PX-03）', () => {
+  it('同槽连续输入 5 个字符：撤销一步回到输入前整句', () => {
+    const s0 = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    const before = s0.current.slots['row.4.val.a']
+    const s = typeText(s0, 'row.4.val.a', 'abcde')
+    expect(canUndo(s)).toBe(true)
+    const u1 = undoOnce(s)
+    expect(u1.current.slots['row.4.val.a']).toEqual(before)
+    expect(canUndo(u1)).toBe(false)
+  })
+
+  it('编辑 A 槽 → 编辑 B 槽：一步回到 B 编辑前（A 保留），再一步回到 A 编辑前', () => {
+    const s0 = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    const aBefore = s0.current.slots['row.4.val.a']
+    const bBefore = s0.current.slots['row.3.val.a']
+    const sA = typeText(s0, 'row.4.val.a', '甲甲甲甲')
+    const sB = typeText(sA, 'row.3.val.a', '乙乙乙')
+    const u1 = undoOnce(sB)
+    expect(u1.current.slots['row.3.val.a']).toEqual(bBefore)
+    expect(u1.current.slots['row.4.val.a']).toEqual(sA.current.slots['row.4.val.a'])
+    const u2 = undoOnce(u1)
+    expect(u2.current.slots['row.4.val.a']).toEqual(aBefore)
+    expect(canUndo(u2)).toBe(false)
+  })
+
+  it('非文字操作（换主题）照旧一步：undo 后不能继续撤', () => {
+    const s0 = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    const sA = typeText(s0, 'row.4.val.a', 'abcde')
+    const r = dispatch(sA, { kind: 'setTheme', themeId: 'T-B' })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const u1 = undoOnce(r.value)
+    expect(u1.current.themeId).toBe('T-A')
+    expect(canUndo(u1)).toBe(false)
+  })
+
+  it('默认 dispatch（不传 opts）行为不变：undoSnapshot 每次覆盖', () => {
+    const s0 = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    const r1 = dispatch(s0, { kind: 'setSlot', slotId: 'row.4.val.a', value: 'x' })
+    const r2 = dispatch(r1.ok ? r1.value : s0, { kind: 'setSlot', slotId: 'row.4.val.a', value: 'xy' })
+    expect(r2.ok).toBe(true)
+    if (!r2.ok) return
+    const u = undoOnce(r2.value)
+    expect(u.current.slots['row.4.val.a']).toEqual({ text: 'x' })
+  })
+})

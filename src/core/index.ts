@@ -85,6 +85,7 @@ export {
   markClean,
   replaceCurrent,
   canUndo,
+  type DispatchOptions,
 } from './store/editorState'
 
 export {

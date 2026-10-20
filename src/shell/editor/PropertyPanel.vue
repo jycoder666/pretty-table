@@ -201,7 +201,7 @@ function removeBlock() {
         />
       </template>
       <template v-else>
-        <textarea v-model="slotText" rows="3" />
+        <textarea v-model="slotText" rows="3" @blur="editor.endTextSession()" />
       </template>
       <div class="row">
         <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('left')">左</PtButton>
@@ -236,7 +236,7 @@ function removeBlock() {
 
     <div v-if="editor.selectedBlockId" class="section">
       <h4>区块</h4>
-      <textarea v-model="blockText" rows="2" />
+      <textarea v-model="blockText" rows="2" @blur="editor.endTextSession()" />
       <PtButton variant="danger" :disabled="editor.pastePending" @click="removeBlock">删除区块</PtButton>
     </div>
 

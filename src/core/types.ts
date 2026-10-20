@@ -145,6 +145,8 @@ export type EditIntent =
 export interface EditorState {
   current: TemplateInstance
   undoSnapshot: TemplateInstance | null
+  /** PX-03：二级撤销链，仅文字编辑会话边界（beginTextSession）推进；普通操作保持一步撤销 */
+  undoPrev?: TemplateInstance | null
   dirty: boolean
   version: number
   /** 粘贴预览期间为 true：合并/拆分/对齐/强调/区块等编辑意图一律被拒（FR-17） */
