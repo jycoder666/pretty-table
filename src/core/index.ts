@@ -99,7 +99,13 @@ export {
 
 export { mount } from './render/coreHost'
 export { exportHtml } from './export/html'
-export { exportPng, measurePng } from './export/png'
+export {
+  buildExportModel,
+  renderExportHtml,
+  type ExportModel,
+  type ExportCell,
+} from './export/model'
+export { exportPng, measurePng, PNG_MAX_PIXELS_DEFAULT } from './export/png'
 
 export {
   listPresetTemplates,

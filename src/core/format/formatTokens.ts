@@ -2,7 +2,7 @@ import type { SlotDef } from '../types'
 
 /**
  * FormatTokens（增强期设计增量 §4.2）：全局常量 + 唯一数值格式化实现。
- * 预览 / HTML / PNG / Markdown 共用；locale 写死 zh-CN，不随浏览器语言变化。
+ * 预览 / HTML / PNG 共用；locale 写死 zh-CN，不随浏览器语言变化。
  */
 
 export const MARK_GLYPH = { yes: '✓', no: '✗', partial: '◐' } as const

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { COMPARE_ALPHA_V1 } from '../templates'
+import { COMPARE_ALPHA_V1, MATRIX_V1, PRICING_V1 } from '../templates'
 import { exportHtml } from './html'
 import { cloneInstance } from '../schema/validate'
 
-describe('exportHtml', () => {
-  it('escapes slot text and omits placeholder', () => {
+describe('exportHtml（T28 · 语义化 + 窄屏）', () => {
+  it('FR-05 回归：转义槽位文本，不泄占位（沿用 T15 用例）', () => {
     const inst = cloneInstance(COMPARE_ALPHA_V1)
     inst.slots['obj.name.a'] = '<script>x</script>'
     inst.slots['obj.name.b'] = ''
@@ -14,7 +14,60 @@ describe('exportHtml', () => {
     expect(r.value).toContain('&lt;script&gt;')
     expect(r.value).not.toContain('<script>')
     expect(r.value).not.toContain('填写内容')
-    expect(r.value).toContain('pt-table')
     expect(r.value).toContain('rowspan')
+  })
+
+  it('输出 caption/thead/tbody，表头 th scope=col、左栏 th scope=row', () => {
+    const r = exportHtml(cloneInstance(PRICING_V1))
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toContain('<thead>')
+    expect(r.value).toContain('<tbody>')
+    expect(r.value).toContain('<caption')
+    expect(r.value).toContain('scope="col"')
+    expect(r.value).toContain('scope="row"')
+  })
+
+  it('无 <style>/<script>/外链，样式全部内联', () => {
+    const r = exportHtml(cloneInstance(MATRIX_V1))
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).not.toMatch(/<style/i)
+    expect(r.value).not.toMatch(/<script/i)
+    expect(r.value).not.toMatch(/https?:\/\//)
+    expect(r.value).not.toMatch(/\sclass="/)
+    expect(r.value).toContain('style="')
+  })
+
+  it('符号格：字形 + aria-label（支持/不支持/部分支持）', () => {
+    const r = exportHtml(cloneInstance(MATRIX_V1))
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toContain('aria-label="支持"')
+    expect(r.value).toContain('aria-label="不支持"')
+    expect(r.value).toContain('aria-label="部分支持"')
+    expect(r.value).toContain('>✓</td>')
+    expect(r.value).toContain('>✗</td>')
+  })
+
+  it('推荐列表头含 <span>推荐</span>，列内联描边', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.highlight = { recommendCol: 1 }
+    const r = exportHtml(inst)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toContain('<span style="font-size:11px">推荐</span>')
+    expect(r.value).toContain('border:2px solid')
+  })
+
+  it('外包横滚容器 + table min-width + 首列 sticky（375px 不撑破）', () => {
+    const r = exportHtml(cloneInstance(MATRIX_V1))
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toContain('overflow-x:auto')
+    expect(r.value).toMatch(/min-width:\d+px/)
+    expect(r.value).toContain('position:sticky;left:0')
+    // min-width = 96 + 5×120 = 696
+    expect(r.value).toContain('min-width:696px')
   })
 })
