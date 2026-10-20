@@ -4,7 +4,7 @@
 
 行业不限。首发只上架「多列对比」和「单主体明细」两类系统模板，样例文案用通用商务。不做成 Excel，也不做自由画布。
 
-本仓库目前收录的是产品文档（需求、设计、交互、验收、实施计划）。文档阶段的决定是先把规格定完，再开工实现。
+规格文档不进本仓库，只放源码。下面是产品要做的功能。
 
 ## 首发功能
 
@@ -49,7 +49,3 @@
 ## 技术形态
 
 在线单页工具。壳负责模板库、拖拽和属性，核用 [VTable](https://github.com/VisActor/VTable) 按模板 JSON 渲染。直接依赖限 MIT / Apache-2.0。脚手架定为 create-vue + Reka UI。
-
-## 文档
-
-从 [docs/INDEX.md](docs/INDEX.md) 进入。需求见 [docs/01-requirements/需求文档.md](docs/01-requirements/需求文档.md)，架构见 [docs/02-design/设计方案.md](docs/02-design/设计方案.md)。
