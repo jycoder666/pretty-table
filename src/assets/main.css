@@ -1,0 +1,47 @@
+:root {
+  --pt-paper: #f7f9fc;
+  --pt-primary: #2f5b9a;
+  --pt-header-text: #ffffff;
+  --pt-zebra: #eef2f7;
+  --pt-emphasis: #c0392b;
+  --pt-emphasis-soft: #fdecea;
+  --pt-border: #c5d0de;
+  --pt-tag: #e8eef6;
+  --pt-tag-text: #2f5b9a;
+  font-family:
+    'PingFang SC',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #1a1a1a;
+  background: var(--pt-paper);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--pt-paper);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}

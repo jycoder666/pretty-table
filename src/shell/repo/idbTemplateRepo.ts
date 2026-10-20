@@ -1,0 +1,43 @@
+import { get, set, del, keys } from 'idb-keyval'
+import type { TemplateInstance } from '@/core'
+import { validateInstance } from '@/core'
+import type { TemplateRepo } from './templateRepo'
+import { kvStore } from './kvStore'
+import { faultGate } from '../debug/fault'
+
+const PREFIX = 'tpl:'
+
+export function createIdbTemplateRepo(): TemplateRepo {
+  return {
+    async list() {
+      if (faultGate('TEMPLATE_LIST_FAIL')) throw { code: 'TEMPLATE_LIST_FAIL', message: 'list fail' }
+      const ks = (await keys(kvStore)) as string[]
+      const out: TemplateInstance[] = []
+      for (const k of ks) {
+        if (typeof k !== 'string' || !k.startsWith(PREFIX)) continue
+        const v = await get(k, kvStore)
+        const r = validateInstance(v)
+        if (r.ok) out.push(r.value)
+      }
+      return out.sort((a, b) =>
+        String(b.meta?.savedAt ?? '').localeCompare(String(a.meta?.savedAt ?? '')),
+      )
+    },
+    async get(templateId: string) {
+      const v = await get(PREFIX + templateId, kvStore)
+      if (!v) return null
+      const r = validateInstance(v)
+      return r.ok ? r.value : null
+    },
+    async save(inst: TemplateInstance) {
+      if (faultGate('TEMPLATE_SAVE_FAIL')) {
+        throw { code: 'TEMPLATE_SAVE_FAIL', message: 'save fail', details: { reason: 'io' } }
+      }
+      const plain = JSON.parse(JSON.stringify(inst)) as TemplateInstance
+      await set(PREFIX + plain.templateId, plain, kvStore)
+    },
+    async remove(templateId: string) {
+      await del(PREFIX + templateId, kvStore)
+    },
+  }
+}
