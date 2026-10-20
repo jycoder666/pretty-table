@@ -43,5 +43,17 @@ export const useLibraryStore = defineStore('library', () => {
     return saved
   }
 
-  return { presets, mine, listError, loading, refreshMine, saveAsTemplate }
+  /** PX-01：删除「我的模板」（IndexedDB 键 tpl:<templateId>），成功后刷新列表。
+   * 返回是否成功，提示文案由页面层决定。 */
+  async function removeTemplate(templateId: string): Promise<boolean> {
+    try {
+      await repo.remove(templateId)
+      await refreshMine()
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  return { presets, mine, listError, loading, refreshMine, saveAsTemplate, removeTemplate }
 })

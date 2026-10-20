@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useLibraryStore } from '../stores/library'
 import { useEditorStore } from '../stores/editor'
 import PtButton from '../ui/PtButton.vue'
+import { errorCopy } from '../editor/errorCopy'
 import type { TemplateInstance } from '@/core'
 
 const library = useLibraryStore()
@@ -27,6 +28,14 @@ function useTpl(t: TemplateInstance) {
     if (!confirm('会替换当前的表，确定继续？')) return
   }
   editor.openTemplate(t)
+}
+
+/** PX-01：删除「我的模板」，二次确认后经 repo 删除并刷新列表 */
+async function removeTpl(t: TemplateInstance) {
+  if (!confirm('删除后这张模板就没了，确定删除？')) return
+  const ok = await library.removeTemplate(t.templateId)
+  if (ok) editor.showToast('已删除')
+  else editor.showToast(errorCopy('TEMPLATE_DELETE_FAIL'))
 }
 </script>
 
@@ -61,7 +70,10 @@ function useTpl(t: TemplateInstance) {
           <span class="chip mine">我的</span>
           <h3>{{ t.meta?.displayName || '未命名模板' }}</h3>
           <p>{{ t.meta?.savedAt ? new Date(t.meta.savedAt).toLocaleString() : '' }}</p>
-          <PtButton type="button" @click.stop="() => useTpl(t)">使用此模板</PtButton>
+          <div class="actions">
+            <PtButton type="button" @click.stop="() => useTpl(t)">使用此模板</PtButton>
+            <PtButton variant="ghost" type="button" @click.stop="() => removeTpl(t)">删除</PtButton>
+          </div>
         </article>
       </div>
     </section>
@@ -115,6 +127,11 @@ h2 {
   flex: 1;
   color: #6b7280;
   font-size: 13px;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .chip {
   align-self: flex-start;

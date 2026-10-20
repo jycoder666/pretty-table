@@ -15,6 +15,7 @@ const MAP: Partial<Record<ErrorCode, string>> = {
   EXPORT_PNG_TOO_LARGE: '图片太大，请改用更低倍率',
   TEMPLATE_LIST_FAIL: '我的模板加载失败，请重试',
   TEMPLATE_SAVE_FAIL: '保存失败，请重试',
+  TEMPLATE_DELETE_FAIL: '删除失败，请重试',
   DRAFT_RESTORE_FAIL: '上次的编辑没能恢复',
   DRAFT_SAVE_FAIL: '自动保存失败，刷新后可能无法恢复',
 }

@@ -40,6 +40,10 @@ export function createIdbTemplateRepo(): TemplateRepo {
       await set(PREFIX + plain.templateId, plain, kvStore)
     },
     async remove(templateId: string) {
+      // 故障注入（GC-19 / PX-01）：?pt-fault=TEMPLATE_DELETE_FAIL → 删除失败
+      if (PT_DEBUG && faultGate('TEMPLATE_DELETE_FAIL')) {
+        throw { code: 'TEMPLATE_DELETE_FAIL', message: 'remove fail', details: { reason: 'io' } }
+      }
       await del(PREFIX + templateId, kvStore)
     },
   }
