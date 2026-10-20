@@ -14,6 +14,9 @@ const open = defineModel<boolean>('open', { default: false })
 const editor = useEditorStore()
 const htmlFallback = ref<string | null>(null)
 
+/** GC-19：调试开关构建期常量；生产构建折叠为 false，调试调用被摇树 */
+const PT_DEBUG = import.meta.env.VITE_PT_DEBUG === '1' || import.meta.env.DEV
+
 // ── PNG 选项（T27）：倍率 1/2/3（默认 2，记住上次选择）+ 透明底 ──
 const scales: readonly PngScale[] = [1, 2, 3]
 const pngScale = ref<PngScale>(getPngScale())
@@ -31,7 +34,7 @@ const estimate = computed(() =>
 
 async function copyHtml() {
   if (!editor.current) return
-  if (faultGate('EXPORT_HTML_FAIL')) {
+  if (PT_DEBUG && faultGate('EXPORT_HTML_FAIL')) {
     editor.showToast(errorCopy('EXPORT_HTML_FAIL'))
     return
   }
@@ -59,7 +62,7 @@ async function copyHtml() {
 
 async function downloadPng() {
   if (!editor.current) return
-  if (faultGate('EXPORT_PNG_FAIL') || faultGate('EXPORT_PNG_TOO_LARGE')) {
+  if (PT_DEBUG && (faultGate('EXPORT_PNG_FAIL') || faultGate('EXPORT_PNG_TOO_LARGE'))) {
     editor.showToast(errorCopy('EXPORT_PNG_TOO_LARGE'))
     return
   }
@@ -69,7 +72,7 @@ async function downloadPng() {
     const r = await exportPng(editor.current, {
       scale: pngScale.value,
       transparent: pngTransparent.value,
-      maxPixels: pngMaxOverride(),
+      maxPixels: PT_DEBUG ? pngMaxOverride() : undefined,
     })
     if (!r.ok) {
       editor.showToast(errorCopy(r.error.code, r.error.message))
@@ -214,7 +217,7 @@ async function downloadPng() {
 .estimate {
   margin: 0;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--pt-muted);
 }
 .actions {
   display: flex;

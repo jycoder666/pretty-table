@@ -11,5 +11,6 @@ export function toCssVars(palette: Palette): Record<`--pt-${string}`, string> {
     '--pt-border': palette.border,
     '--pt-tag': palette.tag,
     '--pt-tag-text': palette.tagText,
+    '--pt-muted': palette.muted,
   }
 }

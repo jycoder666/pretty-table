@@ -13,6 +13,8 @@ export interface Palette {
   border: string
   tag: string
   tagText: string
+  /** 次要文字灰（提示/占位），供壳层 CSS 变量 --pt-muted 使用 */
+  muted: string
 }
 
 export const PALETTES: Readonly<Record<ThemeId, Palette>> = {
@@ -26,6 +28,7 @@ export const PALETTES: Readonly<Record<ThemeId, Palette>> = {
     border: '#C5D0DE',
     tag: '#E8EEF6',
     tagText: '#2F5B9A',
+    muted: '#6B7280',
   },
   'T-B': {
     paper: '#F4F6F3',
@@ -37,6 +40,7 @@ export const PALETTES: Readonly<Record<ThemeId, Palette>> = {
     border: '#B7C2B8',
     tag: '#DCE5DF',
     tagText: '#2F4F45',
+    muted: '#6B7280',
   },
   'T-C': {
     paper: '#FAF7F2',
@@ -48,6 +52,7 @@ export const PALETTES: Readonly<Record<ThemeId, Palette>> = {
     border: '#D4CBBC',
     tag: '#EDE6DA',
     tagText: '#4A463F',
+    muted: '#6B7280',
   },
 }
 

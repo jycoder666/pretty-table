@@ -6,13 +6,16 @@ import { faultGate } from '../debug/fault'
 
 const KEY = 'draft:current'
 
+/** GC-19：调试开关构建期常量；生产构建折叠为 false，faultGate 调用被摇树 */
+const PT_DEBUG = import.meta.env.VITE_PT_DEBUG === '1' || import.meta.env.DEV
+
 export interface DraftPayload {
   instance: TemplateInstance
   savedAt: string
 }
 
 export async function saveDraft(instance: TemplateInstance): Promise<void> {
-  if (faultGate('DRAFT_SAVE_FAIL')) throw { code: 'DRAFT_SAVE_FAIL', message: 'draft save fail' }
+  if (PT_DEBUG && faultGate('DRAFT_SAVE_FAIL')) throw { code: 'DRAFT_SAVE_FAIL', message: 'draft save fail' }
   // JSON round-trip: IndexedDB structuredClone cannot clone Vue reactive proxies
   const plain = JSON.parse(JSON.stringify(instance)) as TemplateInstance
   const payload: DraftPayload = { instance: plain, savedAt: new Date().toISOString() }
@@ -20,7 +23,7 @@ export async function saveDraft(instance: TemplateInstance): Promise<void> {
 }
 
 export async function loadDraft(): Promise<DraftPayload | null> {
-  if (faultGate('DRAFT_RESTORE_FAIL')) throw { code: 'DRAFT_RESTORE_FAIL', message: 'draft restore fail' }
+  if (PT_DEBUG && faultGate('DRAFT_RESTORE_FAIL')) throw { code: 'DRAFT_RESTORE_FAIL', message: 'draft restore fail' }
   const v = await get(KEY, kvStore)
   if (!v || typeof v !== 'object') return null
   const p = v as DraftPayload

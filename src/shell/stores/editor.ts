@@ -31,6 +31,9 @@ import { pasteCopy } from '../paste/pasteCopy'
 
 export type PageView = 'library' | 'editor'
 
+/** GC-19：调试开关构建期常量；生产构建折叠为 false，faultGate 调用被摇树 */
+const PT_DEBUG = import.meta.env.VITE_PT_DEBUG === '1' || import.meta.env.DEV
+
 export const useEditorStore = defineStore('editor', () => {
   const page = ref<PageView>('library')
   const state = ref<EditorState | null>(null)
@@ -73,7 +76,7 @@ export const useEditorStore = defineStore('editor', () => {
     pastePreview.value = null
     state.value.pastePending = false
     // 故障注入（GC-19）：?pt-fault=PASTE_COMMIT_FAILED → 提示且 store 不变
-    if (faultGate('PASTE_COMMIT_FAILED')) {
+    if (PT_DEBUG && faultGate('PASTE_COMMIT_FAILED')) {
       showToast(pasteCopy([{ code: 'PASTE_COMMIT_FAILED', message: '' }]))
       return
     }

@@ -186,7 +186,7 @@ const previewBarText = computed(() => {
 }
 .paste-cell i {
   font-style: italic;
-  color: #6b7280;
+  color: var(--pt-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -200,7 +200,7 @@ const previewBarText = computed(() => {
 .as-text-badge {
   flex-shrink: 0;
   font-size: 10px;
-  color: #6b7280;
+  color: var(--pt-muted);
   border: 1px solid var(--pt-border);
   border-radius: 4px;
   padding: 0 3px;

@@ -7,10 +7,13 @@ import { faultGate } from '../debug/fault'
 
 const PREFIX = 'tpl:'
 
+/** GC-19：调试开关构建期常量；生产构建折叠为 false，faultGate 调用被摇树 */
+const PT_DEBUG = import.meta.env.VITE_PT_DEBUG === '1' || import.meta.env.DEV
+
 export function createIdbTemplateRepo(): TemplateRepo {
   return {
     async list() {
-      if (faultGate('TEMPLATE_LIST_FAIL')) throw { code: 'TEMPLATE_LIST_FAIL', message: 'list fail' }
+      if (PT_DEBUG && faultGate('TEMPLATE_LIST_FAIL')) throw { code: 'TEMPLATE_LIST_FAIL', message: 'list fail' }
       const ks = (await keys(kvStore)) as string[]
       const out: TemplateInstance[] = []
       for (const k of ks) {
@@ -30,7 +33,7 @@ export function createIdbTemplateRepo(): TemplateRepo {
       return r.ok ? r.value : null
     },
     async save(inst: TemplateInstance) {
-      if (faultGate('TEMPLATE_SAVE_FAIL')) {
+      if (PT_DEBUG && faultGate('TEMPLATE_SAVE_FAIL')) {
         throw { code: 'TEMPLATE_SAVE_FAIL', message: 'save fail', details: { reason: 'io' } }
       }
       const plain = JSON.parse(JSON.stringify(inst)) as TemplateInstance
