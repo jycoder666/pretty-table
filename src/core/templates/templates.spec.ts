@@ -119,7 +119,7 @@ describe('价目 / 矩阵系统模板（T26 · U-1 §8）', () => {
     delete raw.slotDefs
     const layout = { ...copy.layout } as unknown as Record<string, unknown>
     delete layout.slotGrid
-    copy.layout = layout as typeof copy.layout
+    copy.layout = layout as unknown as typeof copy.layout
     const m = migrateInstance(copy, listPresetTemplates())
     expect(m.ok).toBe(true)
     expect(m.ok ? Object.keys(m.value.slotDefs ?? {}).length : 0).toBeGreaterThan(0)

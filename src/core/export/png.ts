@@ -4,7 +4,9 @@ import { fail, ok, type Result } from '../errors'
 import { toOption, measureContentSize } from '../adapter/toOption'
 import { resolveTheme } from '../theme/palettes'
 
-const DEFAULT_MAX_PIXELS = 16_777_216
+/** 输出像素上限（T19 门槛实测回写值：约 4096×4096，Safari 画布面积保守值） */
+export const PNG_MAX_PIXELS_DEFAULT = 16_777_216
+/** 四周留白（CSS px），输出尺寸 =（内容 + 2×PAD）× 倍率 */
 const PAD = 16
 
 function waitFrames(n: number): Promise<void> {
@@ -38,7 +40,12 @@ export async function exportPng(
 ): Promise<Result<Blob>> {
   const scale = opts.scale ?? 2
   const transparent = opts.transparent ?? false
-  const maxPixels = opts.maxPixels ?? DEFAULT_MAX_PIXELS
+  const maxPixels = opts.maxPixels ?? PNG_MAX_PIXELS_DEFAULT
+
+  // 只放开 1/2/3 倍（FR-24）；非法倍率直接拒绝，不进渲染
+  if (scale !== 1 && scale !== 2 && scale !== 3) {
+    return fail('EXPORT_PNG_FAIL', `不支持的倍率 ${String(scale)}，仅支持 1×/2×/3×`)
+  }
 
   const measured = measureContentSize(inst)
   const outW = (measured.width + PAD * 2) * scale

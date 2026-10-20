@@ -1,17 +1,33 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { DialogRoot, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 'reka-ui'
-import { exportHtml, exportPng } from '@/core'
+import { exportHtml, exportPng, measurePng } from '@/core'
 import { useEditorStore } from '../stores/editor'
 import { errorCopy } from '../editor/errorCopy'
 import { pngMaxOverride } from '../debug/flags'
 import { faultGate } from '../debug/fault'
+import { getPngScale, setPngScale, type PngScale } from '../repo/prefs'
 import { copyText } from './clipboard'
 import PtButton from '../ui/PtButton.vue'
 
 const open = defineModel<boolean>('open', { default: false })
 const editor = useEditorStore()
 const htmlFallback = ref<string | null>(null)
+
+// ── PNG 选项（T27）：倍率 1/2/3（默认 2，记住上次选择）+ 透明底 ──
+const scales: readonly PngScale[] = [1, 2, 3]
+const pngScale = ref<PngScale>(getPngScale())
+const pngTransparent = ref(false)
+
+function chooseScale(s: PngScale) {
+  pngScale.value = s
+  setPngScale(s)
+}
+
+/** 实时预估（只算不画）：约 W × H 像素 */
+const estimate = computed(() =>
+  editor.current ? measurePng(editor.current, pngScale.value) : null,
+)
 
 async function copyHtml() {
   if (!editor.current) return
@@ -43,15 +59,16 @@ async function copyHtml() {
 
 async function downloadPng() {
   if (!editor.current) return
-  if (faultGate('EXPORT_PNG_FAIL')) {
-    editor.showToast(errorCopy('EXPORT_PNG_FAIL'))
+  if (faultGate('EXPORT_PNG_FAIL') || faultGate('EXPORT_PNG_TOO_LARGE')) {
+    editor.showToast(errorCopy('EXPORT_PNG_TOO_LARGE'))
     return
   }
   editor.exporting = true
   editor.showToast('正在生成图片…')
   try {
     const r = await exportPng(editor.current, {
-      scale: 2,
+      scale: pngScale.value,
+      transparent: pngTransparent.value,
       maxPixels: pngMaxOverride(),
     })
     if (!r.ok) {
@@ -79,7 +96,38 @@ async function downloadPng() {
       <DialogOverlay class="overlay" />
       <DialogContent class="drawer">
         <DialogTitle>导出</DialogTitle>
-        <p>复制带样式的 HTML，或下载 2× PNG（与预览同源）。无 Excel 导出。</p>
+        <p>复制带样式的 HTML，或下载 PNG（与预览同源）。无 Excel 导出。</p>
+
+        <div class="png-opts">
+          <div class="opt-row">
+            <span class="opt-label">倍率</span>
+            <div class="seg" role="radiogroup" aria-label="PNG 倍率">
+              <button
+                v-for="s in scales"
+                :key="s"
+                type="button"
+                class="seg-btn"
+                :class="{ on: pngScale === s }"
+                :aria-pressed="pngScale === s"
+                :disabled="editor.exporting"
+                @click="chooseScale(s)"
+              >
+                {{ s }}×
+              </button>
+            </div>
+          </div>
+          <label class="opt-row check">
+            <input
+              type="checkbox"
+              :checked="pngTransparent"
+              :disabled="editor.exporting"
+              @change="pngTransparent = ($event.target as HTMLInputElement).checked"
+            />
+            透明底（表格外留白透明）
+          </label>
+          <p v-if="estimate" class="estimate">约 {{ estimate.outWidth }} × {{ estimate.outHeight }} 像素</p>
+        </div>
+
         <div class="actions">
           <PtButton :disabled="editor.exporting" @click="copyHtml">复制 HTML</PtButton>
           <PtButton :disabled="editor.exporting" @click="downloadPng">导出 PNG</PtButton>
@@ -115,6 +163,58 @@ async function downloadPng() {
   padding: 24px;
   z-index: 50;
   border-left: 1px solid var(--pt-border);
+}
+.png-opts {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--pt-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.opt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.opt-label {
+  font-size: 13px;
+  color: #374151;
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--pt-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.seg-btn {
+  border: none;
+  background: #fff;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.seg-btn + .seg-btn {
+  border-left: 1px solid var(--pt-border);
+}
+.seg-btn.on {
+  background: var(--pt-tag);
+  color: var(--pt-tag-text);
+  font-weight: 600;
+}
+.seg-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.check {
+  font-size: 13px;
+  color: #374151;
+}
+.estimate {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
 }
 .actions {
   display: flex;
