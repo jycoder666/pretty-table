@@ -11,13 +11,39 @@ export interface MergeRange {
   end: CellCoord
 }
 
-export type SlotObject = {
+export interface TextSlotObject {
   text: string | number
   align?: Align
   emphasize?: Emphasis | Emphasis[]
 }
 
+/** Schema 1.1: semantic mark value (never a glyph; glyph comes from FormatTokens) */
+export interface MarkSlotObject {
+  mark: 'yes' | 'no' | 'partial' | null
+  align?: Align
+  emphasize?: Emphasis | Emphasis[]
+}
+
+/** Schema 1.1: numeric value; display format comes from SlotDef */
+export interface NumSlotObject {
+  num: number | null
+  align?: Align
+  emphasize?: Emphasis | Emphasis[]
+}
+
+export type SlotObject = TextSlotObject | MarkSlotObject | NumSlotObject
+
 export type SlotValue = string | number | SlotObject
+
+/** Schema 1.1: per-slot declaration of kind and display format (FR-21/22, template-owned) */
+export interface SlotDef {
+  kind?: 'text' | 'number' | 'mark'
+  format?: 'number' | 'percent' | 'currency'
+  currency?: 'CNY' | 'USD'
+  fractionDigits?: 0 | 1 | 2 | 3 | 4
+  unit?: string
+  locked?: boolean
+}
 
 export interface ThemeTokens {
   primary: string
@@ -62,6 +88,10 @@ export interface LayoutSpec {
   slotGrid?: (string | null)[][]
   /** Cells that are template-fixed (not editable / not emphasizable) */
   readonlyCells?: CellCoord[]
+  /** Schema 1.1: columns eligible for the "recommended" badge; empty/absent = not supported */
+  recommendableCols?: number[]
+  /** Schema 1.1: slot used as the table caption in HTML export (FR-25) */
+  captionSlot?: string
 }
 
 export type TemplateType = 'compare' | 'detail' | 'pricing' | 'matrix'
@@ -84,6 +114,10 @@ export interface TemplateInstance {
   blocks: BlockDesc[]
   layout: LayoutSpec
   meta?: TemplateMeta
+  /** Schema 1.1: slot kind/format declarations; absent = all slots are plain text */
+  slotDefs?: Record<string, SlotDef>
+  /** Schema 1.1: at most one recommended column */
+  highlight?: { recommendCol: number | null }
   /** Runtime: zebra on/off; defaults true when unset */
   zebraOn?: boolean
 }

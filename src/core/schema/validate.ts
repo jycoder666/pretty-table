@@ -28,7 +28,13 @@ export function validateInstance(json: unknown): Result<TemplateInstance> {
 
   const inst = o as unknown as TemplateInstance
   if (!inst.schemaVersion) inst.schemaVersion = '1.0'
+  // schema 2.x 及以上为破坏性变更，读入即拒（增强期设计增量 §3.2）
+  const major = /^(\d+)/.exec(inst.schemaVersion)
+  if (major && Number(major[1]) >= 2) {
+    return fail('TEMPLATE_INVALID', '模板版本过新，无法读取', { schemaVersion: inst.schemaVersion })
+  }
   if (inst.zebraOn === undefined) inst.zebraOn = true
+  if (!inst.highlight) inst.highlight = { recommendCol: null }
   return ok(cloneInstance(inst))
 }
 

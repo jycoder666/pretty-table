@@ -9,6 +9,10 @@ export type {
   MergeRange,
   SlotObject,
   SlotValue,
+  MarkSlotObject,
+  NumSlotObject,
+  TextSlotObject,
+  SlotDef,
   ThemeTokens,
   BlockDesc,
   BlockSlotDef,
@@ -31,6 +35,7 @@ export type { ErrorCode, WarnCode, CoreError, CoreWarning, Result, PasteErrorCod
 export { ok, fail } from './errors'
 
 export { validateInstance, cloneInstance } from './schema/validate'
+export { migrateInstance, SCHEMA_VERSION_CURRENT } from './schema/migrate'
 
 export {
   PALETTES,

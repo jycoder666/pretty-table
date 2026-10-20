@@ -1,11 +1,13 @@
 import type { TemplateInstance } from '../types'
 
-/** T2 · C-detail · 通用商务样例（U-1 §7.2） */
+/** T2 · C-detail · 通用商务样例（U-1 §7.2）— schema 1.1 */
 export const DETAIL_ALPHA_V1: TemplateInstance = {
-  schemaVersion: '1.0',
+  schemaVersion: '1.1',
   templateId: 'detail-alpha-v1',
   themeId: 'T-A',
   zebraOn: true,
+  slotDefs: {},
+  highlight: { recommendCol: null },
   meta: {
     displayName: '单主体明细表',
     description: '分层说明属性与条款，适合规格/服务明细',

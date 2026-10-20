@@ -1,11 +1,20 @@
 import type { TemplateInstance } from '../types'
 
-/** T1 · C-compare · 通用商务样例（U-1 §7.1） */
+/** T1 · C-compare · 通用商务样例（U-1 §7.1）— schema 1.1 */
 export const COMPARE_ALPHA_V1: TemplateInstance = {
-  schemaVersion: '1.0',
+  schemaVersion: '1.1',
   templateId: 'compare-alpha-v1',
   themeId: 'T-A',
   zebraOn: true,
+  slotDefs: {
+    'row.2.val.a': { kind: 'mark' },
+    'row.2.val.b': { kind: 'mark' },
+    'row.2.val.c': { kind: 'mark' },
+    'row.5.val.a': { kind: 'number', format: 'currency', currency: 'CNY', fractionDigits: 0 },
+    'row.5.val.b': { kind: 'number', format: 'currency', currency: 'CNY', fractionDigits: 0 },
+    'row.5.val.c': { kind: 'number', format: 'currency', currency: 'CNY', fractionDigits: 0 },
+  },
+  highlight: { recommendCol: null },
   meta: {
     displayName: '多列对比表',
     description: '三方案并排对比，适合参数/条款对照',
@@ -19,9 +28,9 @@ export const COMPARE_ALPHA_V1: TemplateInstance = {
     'obj.name.b': '方案 B',
     'obj.name.c': '方案 C',
     'row.2.label': '核心指标',
-    'row.2.val.a': '支持',
-    'row.2.val.b': '支持',
-    'row.2.val.c': '部分支持',
+    'row.2.val.a': { mark: 'yes' },
+    'row.2.val.b': { mark: 'yes' },
+    'row.2.val.c': { mark: 'partial' },
     'row.3.label': '响应时效',
     'row.3.val.a': '1 个工作日',
     'row.3.val.b': '2 个工作日',
@@ -64,6 +73,7 @@ export const COMPARE_ALPHA_V1: TemplateInstance = {
     colCount: 4,
     frozenColCount: 1,
     headerLevels: 2,
+    recommendableCols: [1, 2, 3],
     merges: [
       { start: [0, 0], end: [1, 0] },
       { start: [0, 1], end: [0, 2] },
