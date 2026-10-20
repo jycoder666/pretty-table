@@ -137,8 +137,8 @@ function onDragEnd(event: {
         </div>
         <div class="right">
           <PtButton variant="ghost" :disabled="!editor.undoEnabled" @click="editor.undo()">撤销</PtButton>
-          <PtButton variant="ghost" @click="saveOpen = true">另存为模板</PtButton>
-          <PtButton @click="exportOpen = true">导出</PtButton>
+          <PtButton variant="ghost" :disabled="editor.pastePending" @click="saveOpen = true">另存为模板</PtButton>
+          <PtButton :disabled="editor.exporting || editor.pastePending" @click="exportOpen = true">导出</PtButton>
         </div>
       </header>
 

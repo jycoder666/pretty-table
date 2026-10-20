@@ -181,6 +181,7 @@ function removeBlock() {
             variant="ghost"
             :class="{ on: markValue === k }"
             :aria-pressed="markValue === k"
+            :disabled="editor.pastePending"
             @click="setMark(markValue === k ? null : (k as MarkValue))"
           >
             {{ glyphs[k as MarkValue] }} {{ label }}
@@ -203,14 +204,14 @@ function removeBlock() {
         <textarea v-model="slotText" rows="3" />
       </template>
       <div class="row">
-        <PtButton variant="ghost" @click="editor.setAlign('left')">左</PtButton>
-        <PtButton variant="ghost" @click="editor.setAlign('center')">中</PtButton>
-        <PtButton variant="ghost" @click="editor.setAlign('right')">右</PtButton>
+        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('left')">左</PtButton>
+        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('center')">中</PtButton>
+        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('right')">右</PtButton>
       </div>
       <div class="row">
-        <PtButton variant="ghost" :disabled="!canEmphasize" @click="toggleEm('red')">红字</PtButton>
-        <PtButton variant="ghost" :disabled="!canEmphasize" @click="toggleEm('bold')">加粗</PtButton>
-        <PtButton variant="ghost" :disabled="!canEmphasize" @click="toggleEm('bg')">底色</PtButton>
+        <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('red')">红字</PtButton>
+        <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bold')">加粗</PtButton>
+        <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bg')">底色</PtButton>
       </div>
       <p v-if="!canEmphasize" class="hint">此处由模板固定，不能强调</p>
     </div>
@@ -225,6 +226,7 @@ function removeBlock() {
           :key="c"
           variant="ghost"
           :class="{ on: recommendCol === c }"
+          :disabled="editor.pastePending"
           @click="toggleRecommend(c)"
         >
           {{ colLabels[c] }}<template v-if="recommendCol === c">（{{ RECOMMEND_BADGE_TEXT }}）</template>
@@ -235,15 +237,15 @@ function removeBlock() {
     <div v-if="editor.selectedBlockId" class="section">
       <h4>区块</h4>
       <textarea v-model="blockText" rows="2" />
-      <PtButton variant="danger" @click="removeBlock">删除区块</PtButton>
+      <PtButton variant="danger" :disabled="editor.pastePending" @click="removeBlock">删除区块</PtButton>
     </div>
 
     <div class="section">
       <h4>合并 / 拆分</h4>
       <p class="hint">仅在模板允许区内操作；锁定合并不可拆。</p>
       <div class="row">
-        <PtButton variant="ghost" @click="editor.mergeSelection()">合并选区</PtButton>
-        <PtButton variant="ghost" @click="editor.splitSelection()">拆分</PtButton>
+        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.mergeSelection()">合并选区</PtButton>
+        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.splitSelection()">拆分</PtButton>
       </div>
     </div>
   </aside>

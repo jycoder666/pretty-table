@@ -101,4 +101,11 @@ export { mount } from './render/coreHost'
 export { exportHtml } from './export/html'
 export { exportPng, measurePng } from './export/png'
 
-export { listPresetTemplates, getPresetTemplate, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1 } from './templates'
+export {
+  listPresetTemplates,
+  getPresetTemplate,
+  COMPARE_ALPHA_V1,
+  DETAIL_ALPHA_V1,
+  PRICING_V1,
+  MATRIX_V1,
+} from './templates'

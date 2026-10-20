@@ -73,8 +73,9 @@ function slotParts(
 function gapAfterSet(inst: TemplateInstance): Set<number> {
   const gapAfter = new Set<number>()
   for (const def of inst.layout.blockSlots) {
-    if (def.rowHint === 'after-1') gapAfter.add(1)
-    if (def.rowHint === 'after-5') gapAfter.add(5)
+    // 与 paste/planner 同一约定：rowHint = after-N（N 为逻辑行号）
+    const m = /^after-(\d+)$/.exec(def.rowHint ?? '')
+    if (m) gapAfter.add(Number(m[1]))
   }
   return gapAfter
 }
@@ -92,8 +93,8 @@ export function buildVisualRows(inst: TemplateInstance): {
   const blockRowIndexes = new Map<number, string>()
   const gapAfter = new Map<number, string>()
   for (const def of inst.layout.blockSlots) {
-    if (def.rowHint === 'after-1') gapAfter.set(1, def.id)
-    if (def.rowHint === 'after-5') gapAfter.set(5, def.id)
+    const m = /^after-(\d+)$/.exec(def.rowHint ?? '')
+    if (m) gapAfter.set(Number(m[1]), def.id)
   }
 
   for (let r = 0; r < grid.length; r++) {
