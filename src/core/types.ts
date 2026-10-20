@@ -147,6 +147,8 @@ export interface EditorState {
   undoSnapshot: TemplateInstance | null
   dirty: boolean
   version: number
+  /** 粘贴预览期间为 true：合并/拆分/对齐/强调/区块等编辑意图一律被拒（FR-17） */
+  pastePending?: boolean
 }
 
 export type RenderState = 'loading' | 'ready' | 'error'

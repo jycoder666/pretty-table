@@ -9,10 +9,25 @@ export function createEditorState(inst: TemplateInstance): EditorState {
     undoSnapshot: null,
     dirty: false,
     version: 0,
+    pastePending: false,
   }
 }
 
+/** 粘贴预览期间被拒绝的编辑意图（设计增量 §2.1 步 7 / FR-17） */
+const PASTE_BLOCKED_INTENTS: ReadonlySet<EditIntent['kind']> = new Set([
+  'merge',
+  'split',
+  'setAlign',
+  'setEmphasis',
+  'addBlock',
+  'updateBlock',
+  'removeBlock',
+])
+
 export function dispatch(state: EditorState, intent: EditIntent): Result<EditorState> {
+  if (state.pastePending === true && PASTE_BLOCKED_INTENTS.has(intent.kind)) {
+    return fail('SLOT_DROP_BLOCKED', '先确认或取消这次粘贴')
+  }
   const snapshot = cloneInstance(state.current)
   const result = applyEditIntent(state.current, intent)
   if (!result.ok) return result
@@ -21,6 +36,7 @@ export function dispatch(state: EditorState, intent: EditIntent): Result<EditorS
     undoSnapshot: snapshot,
     dirty: true,
     version: state.version + 1,
+    pastePending: state.pastePending,
   })
 }
 

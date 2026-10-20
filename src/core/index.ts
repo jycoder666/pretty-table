@@ -64,6 +64,20 @@ export { semanticColor, type SemanticColorKind } from './theme/semantic'
 
 export { applyEditIntent, isEmphasizable, getSlotDisplayText } from './store/intent'
 export { canMerge, canSplit, findMergeAt } from './store/mergeGuard'
+export { createStoreTxn, type StoreTxn, type StoreTxnResult } from './store/txn'
+export { parsePaste, type PasteCell, type PasteGrid } from './paste/parser'
+export {
+  buildVisibleGrid,
+  planPaste,
+  type VisibleRow,
+  type PastePlan,
+  type PastePlanCell,
+} from './paste/planner'
+export {
+  validatePaste,
+  type ValidatedPastePlan,
+  type PasteValidation,
+} from './paste/validator'
 export {
   createEditorState,
   dispatch,
