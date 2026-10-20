@@ -38,6 +38,16 @@ export { validateInstance, cloneInstance } from './schema/validate'
 export { migrateInstance, SCHEMA_VERSION_CURRENT } from './schema/migrate'
 
 export {
+  MARK_GLYPH,
+  MARK_LABEL,
+  MARK_WORDS,
+  RECOMMEND_BADGE_TEXT,
+  formatNumber,
+  parseMark,
+} from './format/formatTokens'
+export { parseNumeric } from './format/parseNumeric'
+
+export {
   PALETTES,
   THEME_NAMES,
   DEFAULT_THEME_ID,
