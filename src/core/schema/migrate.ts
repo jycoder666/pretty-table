@@ -62,7 +62,7 @@ export function migrateInstance(
   inst.schemaVersion = SCHEMA_VERSION_CURRENT
 
   // meta.templateType 缺省 → 按 templateId 推断，推断不到 compare
-  inst.meta = { ...(inst.meta ?? {}) }
+  inst.meta = { ...inst.meta }
   if (!inst.meta.templateType) {
     inst.meta.templateType = inferTemplateType(inst.templateId)
   }
@@ -159,7 +159,7 @@ export function migrateInstance(
 
   // themeTokens 里的语义色映射一律忽略（OUT-13）
   if (inst.themeTokens && typeof inst.themeTokens === 'object') {
-    const tokens = inst.themeTokens as Record<string, unknown>
+    const tokens = inst.themeTokens as unknown as Record<string, unknown>
     const hit = SEMANTIC_TOKEN_KEYS.filter((k) => k in tokens)
     if (hit.length) {
       for (const k of hit) delete tokens[k]

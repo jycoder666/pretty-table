@@ -1,7 +1,20 @@
-import type { Align, Emphasis, MergeRange, RenderContext, SlotValue, TemplateInstance } from '../types'
+import type {
+  Align,
+  Emphasis,
+  MarkSlotObject,
+  MarkValue,
+  MergeRange,
+  NumSlotObject,
+  RenderContext,
+  SlotDef,
+  SlotValue,
+  TemplateInstance,
+} from '../types'
 import { resolveTheme, type Palette } from '../theme/palettes'
 import { toVTableTheme } from '../theme/vtableTheme'
 import { FONT_STACK } from '../theme/font'
+import { semanticColor } from '../theme/semantic'
+import { MARK_GLYPH, RECOMMEND_BADGE_TEXT, formatNumber } from '../format/formatTokens'
 
 const COL_WIDTH = 140
 const LABEL_WIDTH = 120
@@ -16,18 +29,44 @@ export type CellMeta = {
   align?: Align
   emphasize?: Emphasis[]
   isPlaceholder?: boolean
+  /** Schema 1.1: semantic mark (glyph text already resolved into `text`) */
+  mark?: MarkValue | null
+  /** Schema 1.1: corner badge text on a header cell (e.g. 「推荐」) */
+  badge?: string
 }
 
-function slotParts(v: SlotValue | undefined): { text: string; align?: Align; emphasize?: Emphasis[] } {
+function slotParts(
+  v: SlotValue | undefined,
+  def: SlotDef | undefined,
+): {
+  text: string
+  align?: Align
+  emphasize?: Emphasis[]
+  mark?: MarkValue | null
+  num?: number | null
+} {
   if (v === undefined || v === null) return { text: '' }
-  if (typeof v === 'object' && 'text' in v) {
+  if (typeof v === 'object') {
     const em = v.emphasize
-    return {
-      text: String(v.text ?? ''),
+    const style = {
       align: v.align,
       emphasize: Array.isArray(em) ? em : em ? [em] : undefined,
     }
+    if ('mark' in v) {
+      const m = (v as MarkSlotObject).mark
+      return { text: m ? MARK_GLYPH[m] : '', mark: m, ...style }
+    }
+    if ('num' in v) {
+      const n = (v as NumSlotObject).num
+      return {
+        text: n === null || n === undefined ? '' : formatNumber(n, def ?? { format: 'number' }),
+        num: n,
+        ...style,
+      }
+    }
+    return { text: String(v.text ?? ''), ...style }
   }
+  // mark/num 槽存普通文字（如「面议」「100万」）→ 按文字显示，不套格式
   return { text: String(v) }
 }
 
@@ -67,6 +106,7 @@ export function buildVisualRows(inst: TemplateInstance): {
       let align: Align | undefined
       let emphasize: Emphasis[] | undefined
       let isPlaceholder = false
+      let mark: MarkValue | null | undefined
       let role: CellMeta['role'] = r < headerLevels ? 'header' : c === 0 ? 'label' : 'body'
 
       if (r === 0 && c === 0 && inst.meta?.templateType === 'compare') {
@@ -76,9 +116,13 @@ export function buildVisualRows(inst: TemplateInstance): {
         text = c === 0 ? '项目' : c === 1 ? '说明' : '备注'
         role = 'header'
       } else if (sid) {
-        const parts = slotParts(inst.slots[sid])
+        const parts = slotParts(inst.slots[sid], inst.slotDefs?.[sid])
         text = parts.text
-        align = parts.align
+        mark = parts.mark
+        // mark 默认居中、num 默认右对齐（设计增量 §4.4）
+        if (parts.mark !== undefined) align = parts.align ?? 'center'
+        else if (parts.num !== undefined) align = parts.align ?? 'right'
+        else align = parts.align
         emphasize = parts.emphasize
         if (text === '') {
           isPlaceholder = true
@@ -89,7 +133,15 @@ export function buildVisualRows(inst: TemplateInstance): {
         role = 'readonly'
       }
 
-      metaRow.push({ slotId: sid, role, text, align, emphasize, isPlaceholder })
+      metaRow.push({
+        slotId: sid,
+        role,
+        text,
+        align,
+        emphasize,
+        isPlaceholder,
+        mark,
+      })
     }
     metas.push(metaRow)
     rowHeights.push(r < headerLevels ? HEADER_HEIGHT : ROW_HEIGHT)
@@ -113,6 +165,13 @@ export function buildVisualRows(inst: TemplateInstance): {
       metas.push(blockRow)
       rowHeights.push(BLOCK_HEIGHT)
     }
+  }
+
+  // 推荐列表头角标（FR-23）：加在最深层表头行
+  const recCol = inst.highlight?.recommendCol ?? null
+  if (recCol !== null) {
+    const badgeCell = metas[headerLevels - 1]?.[recCol]
+    if (badgeCell && badgeCell.role === 'header') badgeCell.badge = RECOMMEND_BADGE_TEXT
   }
 
   return { metas, rowHeights, blockRowIndexes }
@@ -150,7 +209,9 @@ function styleForCell(
   palette: Palette,
   zebraOn: boolean,
   row: number,
+  col: number,
   mode: RenderContext['mode'],
+  recommendCol: number | null,
 ): Record<string, unknown> {
   const style: Record<string, unknown> = {
     fontFamily: FONT_STACK,
@@ -170,10 +231,18 @@ function styleForCell(
     style.textAlign = 'left'
   } else {
     const zebra = zebraOn && row % 2 === 1
-    style.bgColor = zebra ? palette.zebra : palette.paper
+    const isRecCol = recommendCol !== null && col === recommendCol
+    // 推荐列浅底优先于斑马纹（设计增量 §4.3）
+    style.bgColor = isRecCol
+      ? semanticColor(palette, 'recommendColBg')
+      : zebra
+        ? palette.zebra
+        : palette.paper
     style.color = '#1a1a1a'
     if (cell.role === 'label' || cell.role === 'readonly') style.fontWeight = 600
   }
+  // 语义符号色随主题（✓◐→primary、✗→emphasis）
+  if (cell.mark) style.color = semanticColor(palette, cell.mark)
   if (cell.align) style.textAlign = cell.align
   const em = cell.emphasize ?? []
   if (em.includes('bold')) style.fontWeight = 700
@@ -192,6 +261,7 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
   const { metas, rowHeights, blockRowIndexes } = buildVisualRows(inst)
   const merges = remapMerges(inst, blockRowIndexes)
   const colCount = inst.layout.colCount
+  const recommendCol = inst.highlight?.recommendCol ?? null
 
   const records = metas.map((row) => {
     const rec: Record<string, string> = {}
@@ -208,7 +278,7 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     style: (args: { row: number; col: number }) => {
       const cell = metas[args.row]?.[args.col]
       if (!cell) return {}
-      return styleForCell(cell, palette, effectiveZebra, args.row, ctx.mode)
+      return styleForCell(cell, palette, effectiveZebra, args.row, args.col, ctx.mode, recommendCol)
     },
   }))
 
@@ -256,6 +326,7 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
       contentHeight: rowHeights.reduce((a, b) => a + b, 0),
       mode: ctx.mode,
       merges,
+      recommendCol,
     },
   }
 }

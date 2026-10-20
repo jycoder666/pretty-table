@@ -4,20 +4,67 @@ import type {
   BlockDesc,
   EditIntent,
   Emphasis,
-  SlotObject,
+  MarkSlotObject,
+  NumSlotObject,
   SlotValue,
   TemplateInstance,
+  TextSlotObject,
 } from '../types'
 import { canMerge, canSplit } from './mergeGuard'
+import { MARK_LABEL } from '../format/formatTokens'
 
-function asSlotObject(v: SlotValue): SlotObject {
-  if (typeof v === 'object' && v !== null && 'text' in v) return { ...v }
-  return { text: v }
+function slotStyle(v: SlotValue | undefined): { align?: Align; emphasize?: Emphasis[] } {
+  if (typeof v === 'object' && v !== null) {
+    const em = v.emphasize
+    return {
+      align: v.align,
+      emphasize: Array.isArray(em) ? em : em ? [em] : undefined,
+    }
+  }
+  return {}
+}
+
+/** Merge incoming value with the previous align/emphasize (format follows the value's kind). */
+function mergeSlotValue(prev: SlotValue | undefined, incoming: SlotValue): SlotValue {
+  const base = slotStyle(prev)
+  const inc = slotStyle(incoming)
+  const align = inc.align ?? base.align
+  const emphasize = inc.emphasize ?? base.emphasize
+  if (typeof incoming === 'object' && incoming !== null && 'mark' in incoming) {
+    return { mark: incoming.mark, align, emphasize } satisfies MarkSlotObject
+  }
+  if (typeof incoming === 'object' && incoming !== null && 'num' in incoming) {
+    return { num: incoming.num, align, emphasize } satisfies NumSlotObject
+  }
+  const text = typeof incoming === 'object' ? String(incoming.text ?? '') : String(incoming)
+  return { text, align, emphasize } satisfies TextSlotObject
+}
+
+/** Keep the value's kind (text / mark / num), only patch align. */
+function withAlign(v: SlotValue | undefined, align: Align): SlotValue {
+  if (typeof v === 'object' && v !== null && ('mark' in v || 'num' in v)) {
+    return { ...v, align }
+  }
+  const text = typeof v === 'object' && v !== null ? String(v.text ?? '') : v === undefined ? '' : String(v)
+  return { text, align }
+}
+
+/** Keep the value's kind (text / mark / num), only patch emphasize. */
+function withEmphasis(v: SlotValue | undefined, emphasize: Emphasis[]): SlotValue {
+  if (typeof v === 'object' && v !== null && ('mark' in v || 'num' in v)) {
+    return { ...v, emphasize }
+  }
+  const text = typeof v === 'object' && v !== null ? String(v.text ?? '') : v === undefined ? '' : String(v)
+  return { text, emphasize }
 }
 
 function slotText(v: SlotValue | undefined): string {
   if (v === undefined || v === null) return ''
-  if (typeof v === 'object' && 'text' in v) return String(v.text ?? '')
+  if (typeof v === 'object') {
+    if ('mark' in v) return v.mark ? MARK_LABEL[v.mark] : ''
+    if ('num' in v) return v.num === null || v.num === undefined ? '' : String(v.num)
+    return String(v.text ?? '')
+  }
   return String(v)
 }
 
@@ -66,13 +113,7 @@ export function applyEditIntent(
       if (!(intent.slotId in next.slots) && !slotExistsInGrid(next, intent.slotId)) {
         return fail('SLOT_UNKNOWN', '未知槽位', { slotId: intent.slotId })
       }
-      const prev = asSlotObject(next.slots[intent.slotId] ?? '')
-      const incoming = asSlotObject(intent.value)
-      next.slots[intent.slotId] = {
-        text: incoming.text,
-        align: incoming.align ?? prev.align,
-        emphasize: incoming.emphasize ?? prev.emphasize,
-      }
+      next.slots[intent.slotId] = mergeSlotValue(next.slots[intent.slotId], intent.value)
       return ok(next)
     }
     case 'setTheme': {
@@ -108,18 +149,22 @@ export function applyEditIntent(
       if (!slotExistsInGrid(next, intent.slotId) && !(intent.slotId in next.slots)) {
         return fail('SLOT_UNKNOWN', '未知槽位', { slotId: intent.slotId })
       }
-      const obj = asSlotObject(next.slots[intent.slotId] ?? '')
-      obj.align = intent.align as Align
-      next.slots[intent.slotId] = obj
+      next.slots[intent.slotId] = withAlign(next.slots[intent.slotId], intent.align)
       return ok(next)
     }
     case 'setEmphasis': {
       if (!isEmphasizable(next, intent.slotId)) {
         return fail('SLOT_DROP_BLOCKED', '此处由模板固定，不能强调')
       }
-      const obj = asSlotObject(next.slots[intent.slotId] ?? '')
-      obj.emphasize = intent.emphasize as Emphasis[]
-      next.slots[intent.slotId] = obj
+      next.slots[intent.slotId] = withEmphasis(next.slots[intent.slotId], intent.emphasize)
+      return ok(next)
+    }
+    case 'setRecommendCol': {
+      const recs = next.layout.recommendableCols ?? []
+      if (intent.col !== null && !recs.includes(intent.col)) {
+        return fail('SLOT_UNKNOWN', '该列不能标记为推荐', { col: intent.col })
+      }
+      next.highlight = { ...(next.highlight ?? { recommendCol: null }), recommendCol: intent.col }
       return ok(next)
     }
     case 'addBlock': {
@@ -134,7 +179,7 @@ export function applyEditIntent(
     case 'updateBlock': {
       const b = next.blocks.find((x) => x.id === intent.blockId)
       if (!b) return fail('BLOCK_NOT_FOUND', '区块不存在', { blockId: intent.blockId })
-      b.props = { ...(b.props ?? {}), ...intent.props }
+      b.props = { ...b.props, ...intent.props }
       return ok(next)
     }
     default:

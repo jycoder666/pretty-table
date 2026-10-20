@@ -17,9 +17,12 @@ export interface TextSlotObject {
   emphasize?: Emphasis | Emphasis[]
 }
 
+/** Schema 1.1: three-state semantic mark */
+export type MarkValue = 'yes' | 'no' | 'partial'
+
 /** Schema 1.1: semantic mark value (never a glyph; glyph comes from FormatTokens) */
 export interface MarkSlotObject {
-  mark: 'yes' | 'no' | 'partial' | null
+  mark: MarkValue | null
   align?: Align
   emphasize?: Emphasis | Emphasis[]
 }
@@ -136,6 +139,8 @@ export type EditIntent =
   | { kind: 'addBlock'; block: BlockDesc }
   | { kind: 'removeBlock'; blockId: string }
   | { kind: 'updateBlock'; blockId: string; props: Partial<NonNullable<BlockDesc['props']>> }
+  /** 增强期 FR-23：最多一列推荐；设新列即替换旧值，null 取消 */
+  | { kind: 'setRecommendCol'; col: number | null }
 
 export interface EditorState {
   current: TemplateInstance

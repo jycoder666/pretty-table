@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useEditorStore } from '../stores/editor'
-import { isEmphasizable, PALETTES, type ThemeId, type Emphasis } from '@/core'
+import {
+  isEmphasizable,
+  PALETTES,
+  MARK_GLYPH,
+  MARK_LABEL,
+  RECOMMEND_BADGE_TEXT,
+  type ThemeId,
+  type Emphasis,
+  type MarkValue,
+  type SlotValue,
+} from '@/core'
 import PtButton from '../ui/PtButton.vue'
 
 const editor = useEditorStore()
@@ -9,17 +19,86 @@ const editor = useEditorStore()
 const themes: ThemeId[] = ['T-A', 'T-B', 'T-C']
 const themeSwatch = (id: ThemeId) => PALETTES[id].primary
 
+const marks: Record<MarkValue, string> = { ...MARK_LABEL }
+const glyphs: Record<MarkValue, string> = { ...MARK_GLYPH }
+
+function slotDisplay(v: SlotValue | undefined): string {
+  if (v === undefined || v === null) return ''
+  if (typeof v === 'object') {
+    if ('mark' in v) return v.mark ? MARK_LABEL[v.mark] : ''
+    if ('num' in v) return v.num === null || v.num === undefined ? '' : String(v.num)
+    return String(v.text ?? '')
+  }
+  return String(v)
+}
+
 const slotText = computed({
   get() {
     if (!editor.selectedSlotId || !editor.current) return ''
-    const v = editor.current.slots[editor.selectedSlotId]
-    if (v && typeof v === 'object' && 'text' in v) return String(v.text ?? '')
-    return v === undefined || v === null ? '' : String(v)
+    return slotDisplay(editor.current.slots[editor.selectedSlotId])
   },
   set(v: string) {
     if (editor.selectedSlotId) editor.setSlotText(editor.selectedSlotId, v)
   },
 })
+
+/** 选中槽的声明类型（schema 1.1）；缺省按 text */
+const slotKind = computed<'text' | 'number' | 'mark'>(() => {
+  const sid = editor.selectedSlotId
+  if (!editor.current || !sid) return 'text'
+  return editor.current.slotDefs?.[sid]?.kind ?? 'text'
+})
+
+const markValue = computed<MarkValue | null>(() => {
+  const sid = editor.selectedSlotId
+  const v = sid && editor.current ? editor.current.slots[sid] : undefined
+  return v && typeof v === 'object' && 'mark' in v ? v.mark : null
+})
+
+/** 三选一：再点当前项即取消（存 null，显示为空槽） */
+function setMark(m: MarkValue | null) {
+  if (!editor.selectedSlotId) return
+  editor.apply({ kind: 'setSlot', slotId: editor.selectedSlotId, value: { mark: m } })
+}
+
+const numText = computed({
+  get() {
+    const sid = editor.selectedSlotId
+    const v = sid && editor.current ? editor.current.slots[sid] : undefined
+    const n = v && typeof v === 'object' && 'num' in v ? v.num : null
+    return n === null || n === undefined ? '' : String(n)
+  },
+  set(v: string) {
+    if (!editor.selectedSlotId) return
+    const t = v.trim()
+    const n = t === '' ? null : Number(t)
+    editor.apply({
+      kind: 'setSlot',
+      slotId: editor.selectedSlotId,
+      value: { num: n !== null && Number.isFinite(n) ? n : null },
+    })
+  },
+})
+
+// ── 推荐列（FR-23）：最多一列，再点取消；无自定义符号/颜色入口 ──
+const recommendableCols = computed<number[]>(() => editor.current?.layout.recommendableCols ?? [])
+const recommendCol = computed<number | null>(() => editor.current?.highlight?.recommendCol ?? null)
+
+const colLabels = computed<Record<number, string>>(() => {
+  const inst = editor.current
+  const out: Record<number, string> = {}
+  if (!inst) return out
+  const headerRow = (inst.layout.headerLevels ?? 1) - 1
+  for (const c of recommendableCols.value) {
+    const sid = inst.layout.slotGrid?.[headerRow]?.[c]
+    out[c] = (sid && slotDisplay(inst.slots[sid])) || `第 ${c + 1} 列`
+  }
+  return out
+})
+
+function toggleRecommend(col: number) {
+  editor.apply({ kind: 'setRecommendCol', col: recommendCol.value === col ? null : col })
+}
 
 const blockText = computed({
   get() {
@@ -93,7 +172,36 @@ function removeBlock() {
     <div v-if="editor.selectedSlotId" class="section">
       <h4>槽位文案</h4>
       <p class="mono">{{ editor.selectedSlotId }}</p>
-      <textarea v-model="slotText" rows="3" />
+      <!-- 三态符号槽：只有三选一，无自定义符号/颜色入口（OUT-13 / TC-PT-075） -->
+      <template v-if="slotKind === 'mark'">
+        <div class="row" role="radiogroup" aria-label="支持状态">
+          <PtButton
+            v-for="(label, k) in marks"
+            :key="k"
+            variant="ghost"
+            :class="{ on: markValue === k }"
+            :aria-pressed="markValue === k"
+            @click="setMark(markValue === k ? null : (k as MarkValue))"
+          >
+            {{ glyphs[k as MarkValue] }} {{ label }}
+          </PtButton>
+        </div>
+        <p class="hint">符号与颜色随主题，不支持自定义。</p>
+      </template>
+      <!-- 数值槽：只能改数字，格式由模板决定 -->
+      <template v-else-if="slotKind === 'number'">
+        <input
+          class="num"
+          :value="numText"
+          type="text"
+          inputmode="decimal"
+          placeholder="填写数字"
+          @change="numText = ($event.target as HTMLInputElement).value"
+        />
+      </template>
+      <template v-else>
+        <textarea v-model="slotText" rows="3" />
+      </template>
       <div class="row">
         <PtButton variant="ghost" @click="editor.setAlign('left')">左</PtButton>
         <PtButton variant="ghost" @click="editor.setAlign('center')">中</PtButton>
@@ -105,6 +213,23 @@ function removeBlock() {
         <PtButton variant="ghost" :disabled="!canEmphasize" @click="toggleEm('bg')">底色</PtButton>
       </div>
       <p v-if="!canEmphasize" class="hint">此处由模板固定，不能强调</p>
+    </div>
+
+    <!-- 推荐列开关：只有选列/取消，最多一列（FR-23） -->
+    <div v-if="recommendableCols.length" class="section">
+      <h4>推荐列</h4>
+      <p class="hint">最多标一列；再点一次取消推荐。</p>
+      <div class="row">
+        <PtButton
+          v-for="c in recommendableCols"
+          :key="c"
+          variant="ghost"
+          :class="{ on: recommendCol === c }"
+          @click="toggleRecommend(c)"
+        >
+          {{ colLabels[c] }}<template v-if="recommendCol === c">（{{ RECOMMEND_BADGE_TEXT }}）</template>
+        </PtButton>
+      </div>
     </div>
 
     <div v-if="editor.selectedBlockId" class="section">
@@ -199,6 +324,19 @@ textarea {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+}
+.row :deep(.on),
+.on {
+  border-color: var(--pt-primary);
+  background: var(--pt-tag);
+}
+.num {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--pt-border);
+  border-radius: 8px;
+  padding: 8px;
+  font: inherit;
 }
 .mono {
   font-family: ui-monospace, monospace;

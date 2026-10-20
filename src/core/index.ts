@@ -9,6 +9,7 @@ export type {
   MergeRange,
   SlotObject,
   SlotValue,
+  MarkValue,
   MarkSlotObject,
   NumSlotObject,
   TextSlotObject,
@@ -59,6 +60,7 @@ export { FONT_STACK } from './theme/font'
 export { toCssVars } from './theme/cssVars'
 export { toVTableTheme } from './theme/vtableTheme'
 export { cellInlineStyle } from './theme/inlineStyle'
+export { semanticColor, type SemanticColorKind } from './theme/semantic'
 
 export { applyEditIntent, isEmphasizable, getSlotDisplayText } from './store/intent'
 export { canMerge, canSplit, findMergeAt } from './store/mergeGuard'
