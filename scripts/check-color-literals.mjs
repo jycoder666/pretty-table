@@ -26,6 +26,9 @@ const EXEMPT_FILES = new Set([
 
 const RG_ARGS = [
   '-n',
+  // Windows 下 rg 默认输出反斜杠路径，与 EXEMPT_FILES 的正斜杠键永不匹配 → 统一为 /
+  '--path-separator',
+  '/',
   '#[0-9a-fA-F]{6}\\b',
   'src',
   '--glob',
