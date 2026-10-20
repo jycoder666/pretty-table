@@ -25,8 +25,6 @@ describe('slotDnd', () => {
     const gap = targets.find((t) => t.blockSlotId === 'gap-g2')!
     const ok = resolveDrop(gap, 'groupHeader')
     expect('reject' in ok).toBe(false)
-    if (!('reject' in ok) && ok.kind === 'addBlock') {
-      expect(ok.block.slotId).toBe('gap-g2')
-    }
+    expect(ok.kind === 'addBlock' ? ok.block.slotId : '').toBe('gap-g2')
   })
 })

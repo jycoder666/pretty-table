@@ -32,7 +32,7 @@ export const useLibraryStore = defineStore('library', () => {
     const saved = cloneInstance(inst)
     saved.templateId = id
     saved.meta = {
-      ...(saved.meta ?? {}),
+      ...saved.meta,
       displayName,
       origin: 'user',
       sourceTemplateId: inst.templateId,

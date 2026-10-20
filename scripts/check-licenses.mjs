@@ -54,7 +54,7 @@ function isOk(name, lic, isDirect) {
 
 let json
 try {
-  const out = execSync('npx --yes license-checker --json --production', {
+  execSync('npx --yes license-checker --json --production', {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     cwd: new URL('..', import.meta.url).pathname.replace(/^\//, '').replace(/\//g, '\\').includes(':')
@@ -80,19 +80,13 @@ try {
 }
 
 const pkgJson = require('../package.json')
-const directNames = new Set([
-  ...Object.keys(pkgJson.dependencies || {}),
-  ...Object.keys(pkgJson.devDependencies || {}),
-])
 
 const bad = []
 for (const [nameVer, info] of Object.entries(json)) {
-  const name = nameVer.replace(/@\d.*$/, '').replace(/\/\d.*$/, '')
   // nameVer like @scope/pkg@1.2.3
   const bare = nameVer.startsWith('@')
     ? nameVer.split('@').slice(0, 2).join('@')
     : nameVer.split('@')[0]
-  const isDirect = directNames.has(bare)
   // Only enforce production runtime deps strictly for "direct"
   const prodDirect = new Set(Object.keys(pkgJson.dependencies || {}))
   const isProdDirect = prodDirect.has(bare)

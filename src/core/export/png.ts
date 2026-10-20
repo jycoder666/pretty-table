@@ -32,15 +32,6 @@ async function waitCanvasStable(table: ListTable): Promise<{ w: number; h: numbe
   throw new Error('画布尺寸未就绪')
 }
 
-function dataUrlToBlob(dataUrl: string): Blob {
-  const [meta, b64] = dataUrl.split(',')
-  const mime = /data:(.*?);/.exec(meta ?? '')?.[1] ?? 'image/png'
-  const bin = atob(b64 ?? '')
-  const arr = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
-  return new Blob([arr], { type: mime })
-}
-
 export async function exportPng(
   inst: TemplateInstance,
   opts: PngExportOptions = {},

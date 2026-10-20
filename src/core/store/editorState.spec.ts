@@ -29,24 +29,17 @@ describe('editorState Fill path', () => {
       range: { start: [2, 1], end: [2, 2] },
     })
     expect(bad.ok).toBe(false)
-    const good = dispatch(state, {
+    // 预置模板 [0,1]-[0,2] 已是合并区：先拆（失败则原状态），再合 [0,1]-[0,3]
+    const pre = dispatch(state, {
+      kind: 'split',
+      range: { start: [0, 1], end: [0, 2] },
+    })
+    const base = pre.ok ? pre.value : state
+    const good = dispatch(base, {
       kind: 'merge',
       range: { start: [0, 1], end: [0, 3] },
     })
-    // may fail if overlaps existing merge — split first
-    if (!good.ok) {
-      const split = dispatch(state, {
-        kind: 'split',
-        range: { start: [0, 1], end: [0, 2] },
-      })
-      expect(split.ok).toBe(true)
-      if (!split.ok) return
-      const again = dispatch(split.value, {
-        kind: 'merge',
-        range: { start: [0, 1], end: [0, 3] },
-      })
-      expect(again.ok).toBe(true)
-    }
+    expect(good.ok).toBe(true)
   })
 
   it('cannot split structural merge', () => {
