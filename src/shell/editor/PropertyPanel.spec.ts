@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { mount, flushPromises } from '@vue/test-utils'
 import {
   BLANK_V1,
+  COMPARE_ALPHA_V1,
   cloneInstance,
   effectivePalette,
   isRoleOverridden,
@@ -287,6 +288,55 @@ describe('PropertyPanel · 格式微调区（FR-C2）', () => {
     await input2.trigger('input')
     await input2.trigger('change')
     expect(editor.current!.layout.style?.colWidths?.[1]).toBeNull()
+  })
+})
+
+describe('PropertyPanel · 槽位标题改人话（PX-07）', () => {
+  it('空槽显示「第 X 行 · 第 Y 列」，不露 u 序号 / 内部 ID', async () => {
+    const { editor, wrapper } = await setup()
+    // BLANK_V1：slotGrid[1][2] = 'u7'（第 2 行第 3 列），值为空
+    editor.selectedSlotId = 'u7'
+    await wrapper.vm.$nextTick()
+    const headline = wrapper.find('[data-testid="slot-headline"]')
+    expect(headline.text()).toBe('第 2 行 · 第 3 列')
+    expect(headline.text()).not.toContain('u7')
+    expect(headline.text()).not.toMatch(/r\d+c\d+/)
+  })
+
+  it('有内容的槽显示前 8 字摘要，超出截断加 …', async () => {
+    const { editor, wrapper } = await setup()
+    editor.selectedSlotId = 'u7'
+    editor.setSlotText('u7', '这是一个超过八个字的槽位内容')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="slot-headline"]').text()).toBe(
+      '当前内容：这是一个超过八个…',
+    )
+  })
+
+  it('摘要恰为 8 字时不加省略号；数值/标记槽取显示文本', async () => {
+    const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    // 恰好 8 字
+    editor.setSlotText('row.3.val.a', '一二三四五六七八')
+    editor.selectedSlotId = 'row.3.val.a'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="slot-headline"]').text()).toBe('当前内容：一二三四五六七八')
+    // 数值槽：取数字显示文本
+    editor.selectedSlotId = 'row.5.val.a'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="slot-headline"]').text()).toContain('9,800')
+    // 标记槽：取标记文案（partial → 部分支持）
+    editor.selectedSlotId = 'row.2.val.c'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="slot-headline"]').text()).toBe('当前内容：部分支持')
+  })
+
+  it('区块标题：有文字显示摘要，禁止露出区块槽内部 ID', async () => {
+    const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    editor.selectedBlockId = 'preset-g1'
+    await wrapper.vm.$nextTick()
+    const headline = wrapper.find('[data-testid="block-headline"]')
+    expect(headline.text()).toBe('当前内容：分组一')
+    expect(headline.text()).not.toContain('gap-g1')
   })
 })
 

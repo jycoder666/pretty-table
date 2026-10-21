@@ -175,6 +175,50 @@ function slotDisplay(v: SlotValue | undefined): string {
   return String(v)
 }
 
+// ── PX-07：标题改人话——内容摘要 / 行列位置，禁止露出内部 ID（u 序号 / r2c3） ──
+const SUMMARY_LIMIT = 8
+
+/** 内容摘要：前 8 字，超出截断加 … */
+function summarizeText(s: string): string {
+  if (!s) return ''
+  const chars = [...s]
+  return chars.length > SUMMARY_LIMIT ? chars.slice(0, SUMMARY_LIMIT).join('') + '…' : s
+}
+
+/** 槽位在 slotGrid 里的位置（0 基行列）；找不到返回 null */
+function slotPosOf(slotId: string): [number, number] | null {
+  const grid = editor.current?.layout.slotGrid
+  if (!grid) return null
+  for (let r = 0; r < grid.length; r++) {
+    const c = grid[r]?.indexOf(slotId) ?? -1
+    if (c >= 0) return [r, c]
+  }
+  return null
+}
+
+const slotHeadline = computed<string>(() => {
+  const sid = editor.selectedSlotId
+  if (!sid || !editor.current) return ''
+  const summary = summarizeText(slotDisplay(editor.current.slots[sid]))
+  if (summary) return `当前内容：${summary}`
+  const pos = slotPosOf(sid)
+  return pos ? `第 ${pos[0] + 1} 行 · 第 ${pos[1] + 1} 列` : ''
+})
+
+const blockHeadline = computed<string>(() => {
+  const bid = editor.selectedBlockId
+  if (!bid || !editor.current) return ''
+  const b = editor.current.blocks.find((x) => x.id === bid)
+  const text = summarizeText(String(b?.props?.label ?? b?.props?.text ?? ''))
+  if (text) return `当前内容：${text}`
+  // 空区块 → 人话位置：优先查 slotGrid，再退回区块槽 rowHint（after-N = 第 N+1 行）
+  const pos = b ? slotPosOf(b.slotId) : null
+  if (pos) return `区块 · 第 ${pos[0] + 1} 行`
+  const hint = editor.current.layout.blockSlots.find((s) => s.id === b?.slotId)?.rowHint
+  const m = typeof hint === 'string' ? /^after-(\d+)$/.exec(hint) : null
+  return m ? `区块 · 第 ${Number(m[1]) + 1} 行` : '区块'
+})
+
 const slotText = computed({
   get() {
     if (!editor.selectedSlotId || !editor.current) return ''
@@ -339,7 +383,8 @@ async function removeBlock() {
 
     <div v-if="editor.selectedSlotId" class="section">
       <h4>槽位文案</h4>
-      <p class="mono">{{ editor.selectedSlotId }}</p>
+      <!-- PX-07：人话标题（内容摘要 / 行列位置），不露内部 ID -->
+      <p class="headline" data-testid="slot-headline">{{ slotHeadline }}</p>
       <!-- 三态符号槽：只有三选一，无自定义符号/颜色入口（OUT-13 / TC-PT-075） -->
       <template v-if="slotKind === 'mark'">
         <div class="row" role="radiogroup" aria-label="支持状态">
@@ -404,6 +449,8 @@ async function removeBlock() {
 
     <div v-if="editor.selectedBlockId" class="section">
       <h4>区块</h4>
+      <!-- PX-07：区块同理显示文字摘要或「区块 · 第 X 行」 -->
+      <p class="headline" data-testid="block-headline">{{ blockHeadline }}</p>
       <textarea v-model="blockText" rows="2" @blur="editor.endTextSession()" />
       <PtButton variant="danger" :disabled="editor.pastePending" @click="removeBlock">删除区块</PtButton>
     </div>
@@ -646,10 +693,10 @@ textarea {
   padding: 8px;
   font: inherit;
 }
-.mono {
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
-  color: #6b7280;
+.headline {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--pt-muted);
 }
 .hint {
   font-size: 12px;
