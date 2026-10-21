@@ -103,3 +103,29 @@ if (bad.length) {
   process.exit(1)
 }
 console.log(`License check OK (${Object.keys(json).length} packages)`)
+
+// T31 交付要求：构建产物附带第三方许可证文本。dist/ 存在时生成 dist/THIRD-PARTY-LICENSES.txt。
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+const distDir = resolve(process.cwd(), 'dist')
+if (existsSync(distDir)) {
+  const parts = []
+  for (const [nameVer, info] of Object.entries(json)) {
+    parts.push(`============================================================`)
+    parts.push(`${nameVer}  |  ${info.licenses || 'UNKNOWN'}`)
+    if (info.publisher || info.url) parts.push(`by ${info.publisher || ''} ${info.url || ''}`.trim())
+    parts.push(`------------------------------------------------------------`)
+    if (info.licenseFile && existsSync(info.licenseFile)) {
+      try {
+        parts.push(readFileSync(info.licenseFile, 'utf8').trim())
+      } catch {
+        parts.push(`(license text unreadable: ${info.licenseFile})`)
+      }
+    } else {
+      parts.push(`(no license file recorded)`)
+    }
+    parts.push('')
+  }
+  writeFileSync(join(distDir, 'THIRD-PARTY-LICENSES.txt'), parts.join('\n'), 'utf8')
+  console.log(`Wrote dist/THIRD-PARTY-LICENSES.txt (${Object.keys(json).length} packages)`)
+}
