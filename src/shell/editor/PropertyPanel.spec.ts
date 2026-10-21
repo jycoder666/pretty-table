@@ -12,6 +12,7 @@ import {
 } from '@/core'
 import { applyThemeCssVars } from '../theme/applyCssVars'
 import { useEditorStore } from '../stores/editor'
+import { panelGroupOpen } from './panelGroups'
 import PropertyPanel from './PropertyPanel.vue'
 
 // 组件测试不碰真实 IndexedDB：草稿读写 mock 为空操作，避免异步失败覆盖 toast 断言
@@ -60,6 +61,10 @@ beforeEach(() => {
   document.documentElement.style.cssText = ''
   document.documentElement.removeAttribute('data-theme')
   vi.restoreAllMocks()
+  // PX-16：分组展开状态是模块级会话记忆，测试间复位为默认态
+  panelGroupOpen.content = true
+  panelGroupOpen.style = false
+  panelGroupOpen.structure = false
 })
 
 describe('PropertyPanel · 颜色自定义区（FR-C1）', () => {
@@ -396,6 +401,87 @@ describe('PropertyPanel · 合并/拆分按钮随选区置灰（PX-08）', () =>
     // [0,0]-[1,0] 是锁定合并（structuralMerges）→ 不能拆分
     expect(splitBtn(wrapper).attributes('disabled')).toBeDefined()
     expect(splitBtn(wrapper).attributes('title')).toContain('不能拆分')
+  })
+})
+
+describe('PropertyPanel · 分组折叠（PX-16）', () => {
+  function head(wrapper: ReturnType<typeof mount>, key: string) {
+    return wrapper.find(`[data-testid="group-head-${key}"]`)
+  }
+  /** v-show 收起 = inline style 带 display:none（jsdom 对游离节点 computed style 有缓存，翻转后不能用 isVisible 判定） */
+  function bodyStyle(wrapper: ReturnType<typeof mount>, key: string) {
+    return wrapper.find(`[data-testid="group-${key}"] .group-body`).attributes('style') ?? ''
+  }
+
+  it('默认态：内容展开、样式/结构收起；组头是带 aria-expanded 的按钮', async () => {
+    const { wrapper } = await setup()
+    for (const key of ['content', 'style', 'structure']) {
+      expect(head(wrapper, key).element.tagName).toBe('BUTTON')
+    }
+    expect(head(wrapper, 'content').attributes('aria-expanded')).toBe('true')
+    expect(head(wrapper, 'style').attributes('aria-expanded')).toBe('false')
+    expect(head(wrapper, 'structure').attributes('aria-expanded')).toBe('false')
+    // 展开态与可见性一致
+    expect(bodyStyle(wrapper, 'content')).not.toContain('display: none')
+    expect(bodyStyle(wrapper, 'style')).toContain('display: none')
+    expect(bodyStyle(wrapper, 'structure')).toContain('display: none')
+  })
+
+  it('点击组头整行切换；组间不互斥（可多组同开）', async () => {
+    const { wrapper } = await setup()
+    await head(wrapper, 'style').trigger('click')
+    await head(wrapper, 'structure').trigger('click')
+    expect(head(wrapper, 'style').attributes('aria-expanded')).toBe('true')
+    expect(head(wrapper, 'structure').attributes('aria-expanded')).toBe('true')
+    expect(head(wrapper, 'content').attributes('aria-expanded')).toBe('true')
+    expect(bodyStyle(wrapper, 'style')).not.toContain('display: none')
+    // 再点收起
+    await head(wrapper, 'style').trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(head(wrapper, 'style').attributes('aria-expanded')).toBe('false')
+    expect(bodyStyle(wrapper, 'style')).toContain('display: none')
+    // 结构组不受影响
+    expect(head(wrapper, 'structure').attributes('aria-expanded')).toBe('true')
+    expect(bodyStyle(wrapper, 'structure')).not.toContain('display: none')
+  })
+
+  it('会话内记忆：切槽位 / 选区块不重置用户展开状态', async () => {
+    const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    await head(wrapper, 'structure').trigger('click')
+    expect(head(wrapper, 'structure').attributes('aria-expanded')).toBe('true')
+    // 切槽位
+    editor.selectedSlotId = 'row.3.val.a'
+    await wrapper.vm.$nextTick()
+    expect(head(wrapper, 'structure').attributes('aria-expanded')).toBe('true')
+    // 选区块
+    editor.selectedBlockId = 'preset-g1'
+    await wrapper.vm.$nextTick()
+    expect(head(wrapper, 'structure').attributes('aria-expanded')).toBe('true')
+    // 面板重挂载（同会话）也不重置
+    wrapper.unmount()
+    const { wrapper: wrapper2 } = await setup(COMPARE_ALPHA_V1)
+    expect(head(wrapper2, 'structure').attributes('aria-expanded')).toBe('true')
+    expect(head(wrapper2, 'content').attributes('aria-expanded')).toBe('true')
+  })
+
+  it('默认收起组内的功能入口不丢失：结构组「加一行」可直接点按生效', async () => {
+    const { editor, wrapper } = await setup()
+    const rowsBefore = editor.current!.layout.slotGrid!.length
+    // 结构组默认收起（v-show 隐藏），入口仍在文档中可操作
+    expect(wrapper.find('[data-testid="group-structure"] .group-body').isVisible()).toBe(false)
+    await wrapper.findAll('button').find((b) => b.text() === '加一行')!.trigger('click')
+    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore + 1)
+  })
+
+  it('删区块入口归入结构组；区块文字编辑留在内容组', async () => {
+    const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    editor.selectedBlockId = 'preset-g1'
+    await wrapper.vm.$nextTick()
+    const contentBody = wrapper.find('[data-testid="group-content"] .group-body')
+    const structureBody = wrapper.find('[data-testid="group-structure"] .group-body')
+    expect(contentBody.text()).toContain('区块')
+    expect(contentBody.find('textarea').exists()).toBe(true)
+    expect(structureBody.text()).toContain('删除区块')
   })
 })
 

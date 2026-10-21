@@ -30,6 +30,7 @@ import PtButton from '../ui/PtButton.vue'
 import PtSegmented from '../ui/PtSegmented.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import { confirmAction } from '../ui/confirm'
+import { panelGroupOpen, togglePanelGroup } from './panelGroups'
 import ColorField from './ColorField.vue'
 
 const editor = useEditorStore()
@@ -369,251 +370,298 @@ async function removeBlock() {
     <h3>属性</h3>
     <p class="lead">一键换表头、分区与强调色</p>
 
-    <div class="section">
-      <h4>主题</h4>
-      <div class="themes">
-        <button
-          v-for="id in themes"
-          :key="id"
-          type="button"
-          class="theme-btn"
-          :class="{ on: editor.current?.themeId === id }"
-          :style="{ '--swatch': themeSwatch(id) }"
-          @click="editor.setTheme(id)"
-        >
-          <i />
-          {{ editor.themeLabel(id) }}
-        </button>
+    <!-- ── 内容组（PX-16，默认展开）：改的是格子里有什么 ── -->
+    <section class="group" data-testid="group-content">
+      <button
+        type="button"
+        class="group-head"
+        data-testid="group-head-content"
+        :aria-expanded="panelGroupOpen.content"
+        @click="togglePanelGroup('content')"
+      >
+        <i class="arrow" aria-hidden="true">{{ panelGroupOpen.content ? '▼' : '▶' }}</i>内容
+      </button>
+      <div v-show="panelGroupOpen.content" class="group-body">
+        <div v-if="editor.selectedSlotId" class="section">
+          <h4>槽位文案</h4>
+          <!-- PX-07：人话标题（内容摘要 / 行列位置），不露内部 ID -->
+          <p class="headline" data-testid="slot-headline">{{ slotHeadline }}</p>
+          <!-- 三态符号槽：只有三选一，无自定义符号/颜色入口（OUT-13 / TC-PT-075） -->
+          <template v-if="slotKind === 'mark'">
+            <div class="row" role="radiogroup" aria-label="支持状态">
+              <PtButton
+                v-for="(label, k) in marks"
+                :key="k"
+                variant="ghost"
+                :class="{ on: markValue === k }"
+                :aria-pressed="markValue === k"
+                :disabled="editor.pastePending"
+                @click="setMark(markValue === k ? null : (k as MarkValue))"
+              >
+                {{ glyphs[k as MarkValue] }} {{ label }}
+              </PtButton>
+            </div>
+            <p class="hint">符号与颜色随主题，不支持自定义。</p>
+          </template>
+          <!-- 数值槽：只能改数字，格式由模板决定 -->
+          <template v-else-if="slotKind === 'number'">
+            <input
+              class="num"
+              :value="numText"
+              type="text"
+              inputmode="decimal"
+              placeholder="填写数字"
+              @change="numText = ($event.target as HTMLInputElement).value"
+            />
+          </template>
+          <template v-else>
+            <textarea v-model="slotText" rows="3" @blur="editor.endTextSession()" />
+          </template>
+          <div class="row">
+            <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('left')">左</PtButton>
+            <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('center')">中</PtButton>
+            <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('right')">右</PtButton>
+          </div>
+          <div class="row">
+            <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('red')">红字</PtButton>
+            <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bold')">加粗</PtButton>
+            <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bg')">底色</PtButton>
+          </div>
+          <p v-if="!canEmphasize" class="hint">此处由模板固定，不能强调</p>
+        </div>
+
+        <div v-if="editor.selectedBlockId" class="section">
+          <h4>区块</h4>
+          <!-- PX-07：区块同理显示文字摘要或「区块 · 第 X 行」 -->
+          <p class="headline" data-testid="block-headline">{{ blockHeadline }}</p>
+          <textarea v-model="blockText" rows="2" @blur="editor.endTextSession()" />
+        </div>
       </div>
-      <label class="zebra">
-        <input
-          type="checkbox"
-          :checked="editor.current?.zebraOn !== false"
-          @change="editor.setZebra(($event.target as HTMLInputElement).checked)"
-        />
-        斑马纹
-      </label>
-    </div>
+    </section>
 
-    <!-- 颜色自定义（FR-C1）：改的是当前主题的角色色，随改随生效 -->
-    <div class="section">
-      <h4>颜色</h4>
-      <ColorField
-        v-for="r in colorRoles"
-        :key="r.key"
-        :role="r.key"
-        :label="r.label"
-        :value="roleColorOf(editor.current, r.key).toLowerCase()"
-        :overridden="isRoleOverridden(editor.current, r.key)"
-        :disabled="editor.pastePending"
-        @commit="(hex) => commitColor(r.key, hex)"
-        @invalid="onInvalidColor"
-      />
-      <PtButton variant="ghost" :disabled="editor.pastePending" @click="resetColors">
-        全部恢复预设
-      </PtButton>
-    </div>
+    <!-- ── 样式组（PX-16，默认收起）：改外观 ── -->
+    <section class="group" data-testid="group-style">
+      <button
+        type="button"
+        class="group-head"
+        data-testid="group-head-style"
+        :aria-expanded="panelGroupOpen.style"
+        @click="togglePanelGroup('style')"
+      >
+        <i class="arrow" aria-hidden="true">{{ panelGroupOpen.style ? '▼' : '▶' }}</i>样式
+      </button>
+      <div v-show="panelGroupOpen.style" class="group-body">
+        <div class="section">
+          <h4>主题</h4>
+          <div class="themes">
+            <button
+              v-for="id in themes"
+              :key="id"
+              type="button"
+              class="theme-btn"
+              :class="{ on: editor.current?.themeId === id }"
+              :style="{ '--swatch': themeSwatch(id) }"
+              @click="editor.setTheme(id)"
+            >
+              <i />
+              {{ editor.themeLabel(id) }}
+            </button>
+          </div>
+          <label class="zebra">
+            <input
+              type="checkbox"
+              :checked="editor.current?.zebraOn !== false"
+              @change="editor.setZebra(($event.target as HTMLInputElement).checked)"
+            />
+            斑马纹
+          </label>
+        </div>
 
-    <div v-if="editor.selectedSlotId" class="section">
-      <h4>槽位文案</h4>
-      <!-- PX-07：人话标题（内容摘要 / 行列位置），不露内部 ID -->
-      <p class="headline" data-testid="slot-headline">{{ slotHeadline }}</p>
-      <!-- 三态符号槽：只有三选一，无自定义符号/颜色入口（OUT-13 / TC-PT-075） -->
-      <template v-if="slotKind === 'mark'">
-        <div class="row" role="radiogroup" aria-label="支持状态">
-          <PtButton
-            v-for="(label, k) in marks"
-            :key="k"
-            variant="ghost"
-            :class="{ on: markValue === k }"
-            :aria-pressed="markValue === k"
+        <!-- 颜色自定义（FR-C1）：改的是当前主题的角色色，随改随生效 -->
+        <div class="section">
+          <h4>颜色</h4>
+          <ColorField
+            v-for="r in colorRoles"
+            :key="r.key"
+            :role="r.key"
+            :label="r.label"
+            :value="roleColorOf(editor.current, r.key).toLowerCase()"
+            :overridden="isRoleOverridden(editor.current, r.key)"
             :disabled="editor.pastePending"
-            @click="setMark(markValue === k ? null : (k as MarkValue))"
-          >
-            {{ glyphs[k as MarkValue] }} {{ label }}
+            @commit="(hex) => commitColor(r.key, hex)"
+            @invalid="onInvalidColor"
+          />
+          <PtButton variant="ghost" :disabled="editor.pastePending" @click="resetColors">
+            全部恢复预设
           </PtButton>
         </div>
-        <p class="hint">符号与颜色随主题，不支持自定义。</p>
-      </template>
-      <!-- 数值槽：只能改数字，格式由模板决定 -->
-      <template v-else-if="slotKind === 'number'">
-        <input
-          class="num"
-          :value="numText"
-          type="text"
-          inputmode="decimal"
-          placeholder="填写数字"
-          @change="numText = ($event.target as HTMLInputElement).value"
-        />
-      </template>
-      <template v-else>
-        <textarea v-model="slotText" rows="3" @blur="editor.endTextSession()" />
-      </template>
-      <div class="row">
-        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('left')">左</PtButton>
-        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('center')">中</PtButton>
-        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('right')">右</PtButton>
-      </div>
-      <div class="row">
-        <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('red')">红字</PtButton>
-        <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bold')">加粗</PtButton>
-        <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bg')">底色</PtButton>
-      </div>
-      <p v-if="!canEmphasize" class="hint">此处由模板固定，不能强调</p>
-    </div>
 
-    <!-- 推荐列开关：只有选列/取消，最多一列（FR-23） -->
-    <div v-if="recommendableCols.length" class="section">
-      <h4>推荐列</h4>
-      <p class="hint">最多标一列；再点一次取消推荐。</p>
-      <div class="row">
-        <PtButton
-          v-for="c in recommendableCols"
-          :key="c"
-          variant="ghost"
-          :class="{ on: recommendCol === c }"
-          :disabled="editor.pastePending"
-          @click="toggleRecommend(c)"
-        >
-          {{ colLabels[c] }}<template v-if="recommendCol === c">（{{ RECOMMEND_BADGE_TEXT }}）</template>
-        </PtButton>
+        <!-- 格式微调（FR-C2）：全局档位 + 逐列列宽，超界由核内收口 -->
+        <div class="section">
+          <h4>格式微调</h4>
+          <div class="field">
+            <span>行高</span>
+            <PtSegmented
+              :options="rowTierOptions"
+              :model-value="rowTier"
+              :disabled="editor.pastePending"
+              @update:model-value="(v) => editor.apply({ kind: 'setRowHeightTier', tier: v as 1 | 2 | 3 })"
+            />
+          </div>
+          <div class="field">
+            <span>字号</span>
+            <PtSegmented
+              :options="fontTierOptions"
+              :model-value="fontTier"
+              :disabled="editor.pastePending"
+              @update:model-value="(v) => editor.apply({ kind: 'setFontSizeTier', tier: v as 1 | 2 | 3 })"
+            />
+          </div>
+          <div class="field">
+            <span>内边距</span>
+            <PtSegmented
+              :options="padTierOptions"
+              :model-value="padTier"
+              :disabled="editor.pastePending"
+              @update:model-value="(v) => editor.apply({ kind: 'setPaddingTier', tier: v as 1 | 2 | 3 })"
+            />
+          </div>
+          <div class="colwidths">
+            <label v-for="item in colWidthInputs" :key="item.col" class="cw">
+              第{{ item.col + 1 }}列
+              <input
+                type="number"
+                min="64"
+                max="360"
+                :value="item.width"
+                :disabled="editor.pastePending"
+                :aria-label="`第${item.col + 1}列宽`"
+                @change="commitColWidth(item.col, ($event.target as HTMLInputElement).value)"
+              />
+            </label>
+          </div>
+          <p class="hint">列宽范围 64～360，留空恢复默认。</p>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div v-if="editor.selectedBlockId" class="section">
-      <h4>区块</h4>
-      <!-- PX-07：区块同理显示文字摘要或「区块 · 第 X 行」 -->
-      <p class="headline" data-testid="block-headline">{{ blockHeadline }}</p>
-      <textarea v-model="blockText" rows="2" @blur="editor.endTextSession()" />
-      <PtButton variant="danger" :disabled="editor.pastePending" @click="removeBlock">删除区块</PtButton>
-    </div>
+    <!-- ── 结构组（PX-16，默认收起）：动结构 ── -->
+    <section class="group" data-testid="group-structure">
+      <button
+        type="button"
+        class="group-head"
+        data-testid="group-head-structure"
+        :aria-expanded="panelGroupOpen.structure"
+        @click="togglePanelGroup('structure')"
+      >
+        <i class="arrow" aria-hidden="true">{{ panelGroupOpen.structure ? '▼' : '▶' }}</i>结构
+      </button>
+      <div v-show="panelGroupOpen.structure" class="group-body">
+        <!-- 结构编辑（FR-C3）：行列增删 / 表头层级；达上限置灰，删非空先确认 -->
+        <div class="section">
+          <h4>结构</h4>
+          <p class="hint">删行/删列删的是选中格所在的行列；未选中时删最后一行/列。</p>
+          <div class="row">
+            <PtButton
+              variant="ghost"
+              :disabled="!canAddRowNow || editor.pastePending"
+              title="在表格末尾加一行"
+              @click="addRow"
+            >
+              加一行
+            </PtButton>
+            <PtButton
+              variant="ghost"
+              :disabled="editor.pastePending"
+              :title="`删除第 ${targetRow + 1} 行`"
+              @click="removeRow"
+            >
+              删行
+            </PtButton>
+          </div>
+          <div class="row">
+            <PtButton
+              variant="ghost"
+              :disabled="!canAddColNow || editor.pastePending"
+              title="在表格末尾加一列"
+              @click="addCol"
+            >
+              加一列
+            </PtButton>
+            <PtButton
+              variant="ghost"
+              :disabled="editor.pastePending"
+              :title="`删除第 ${targetCol + 1} 列`"
+              @click="removeCol"
+            >
+              删列
+            </PtButton>
+          </div>
+          <div class="field">
+            <span>表头层数</span>
+            <PtSegmented
+              :options="[
+                { value: 1, label: '1 层' },
+                { value: 2, label: '2 层' },
+                { value: 3, label: '3 层' },
+              ]"
+              :model-value="headerLevels"
+              :disabled="editor.pastePending"
+              @update:model-value="setHeaderLevels"
+            />
+          </div>
+        </div>
 
-    <!-- 格式微调（FR-C2）：全局档位 + 逐列列宽，超界由核内收口 -->
-    <div class="section">
-      <h4>格式微调</h4>
-      <div class="field">
-        <span>行高</span>
-        <PtSegmented
-          :options="rowTierOptions"
-          :model-value="rowTier"
-          :disabled="editor.pastePending"
-          @update:model-value="(v) => editor.apply({ kind: 'setRowHeightTier', tier: v as 1 | 2 | 3 })"
-        />
-      </div>
-      <div class="field">
-        <span>字号</span>
-        <PtSegmented
-          :options="fontTierOptions"
-          :model-value="fontTier"
-          :disabled="editor.pastePending"
-          @update:model-value="(v) => editor.apply({ kind: 'setFontSizeTier', tier: v as 1 | 2 | 3 })"
-        />
-      </div>
-      <div class="field">
-        <span>内边距</span>
-        <PtSegmented
-          :options="padTierOptions"
-          :model-value="padTier"
-          :disabled="editor.pastePending"
-          @update:model-value="(v) => editor.apply({ kind: 'setPaddingTier', tier: v as 1 | 2 | 3 })"
-        />
-      </div>
-      <div class="colwidths">
-        <label v-for="item in colWidthInputs" :key="item.col" class="cw">
-          第{{ item.col + 1 }}列
-          <input
-            type="number"
-            min="64"
-            max="360"
-            :value="item.width"
-            :disabled="editor.pastePending"
-            :aria-label="`第${item.col + 1}列宽`"
-            @change="commitColWidth(item.col, ($event.target as HTMLInputElement).value)"
-          />
-        </label>
-      </div>
-      <p class="hint">列宽范围 64～360，留空恢复默认。</p>
-    </div>
+        <div class="section">
+          <h4>合并 / 拆分</h4>
+          <p class="hint">仅在模板允许区内操作；锁定合并不可拆。</p>
+          <div class="row">
+            <PtButton
+              variant="ghost"
+              :disabled="!mergeGate.ok"
+              :title="mergeGate.reason || '合并选区'"
+              data-testid="merge-btn"
+              @click="editor.mergeSelection()"
+            >
+              合并选区
+            </PtButton>
+            <PtButton
+              variant="ghost"
+              :disabled="!splitGate.ok"
+              :title="splitGate.reason || '拆分'"
+              data-testid="split-btn"
+              @click="editor.splitSelection()"
+            >
+              拆分
+            </PtButton>
+          </div>
+        </div>
 
-    <!-- 结构编辑（FR-C3）：行列增删 / 表头层级；达上限置灰，删非空先确认 -->
-    <div class="section">
-      <h4>结构</h4>
-      <p class="hint">删行/删列删的是选中格所在的行列；未选中时删最后一行/列。</p>
-      <div class="row">
-        <PtButton
-          variant="ghost"
-          :disabled="!canAddRowNow || editor.pastePending"
-          title="在表格末尾加一行"
-          @click="addRow"
-        >
-          加一行
-        </PtButton>
-        <PtButton
-          variant="ghost"
-          :disabled="editor.pastePending"
-          :title="`删除第 ${targetRow + 1} 行`"
-          @click="removeRow"
-        >
-          删行
-        </PtButton>
-      </div>
-      <div class="row">
-        <PtButton
-          variant="ghost"
-          :disabled="!canAddColNow || editor.pastePending"
-          title="在表格末尾加一列"
-          @click="addCol"
-        >
-          加一列
-        </PtButton>
-        <PtButton
-          variant="ghost"
-          :disabled="editor.pastePending"
-          :title="`删除第 ${targetCol + 1} 列`"
-          @click="removeCol"
-        >
-          删列
-        </PtButton>
-      </div>
-      <div class="field">
-        <span>表头层数</span>
-        <PtSegmented
-          :options="[
-            { value: 1, label: '1 层' },
-            { value: 2, label: '2 层' },
-            { value: 3, label: '3 层' },
-          ]"
-          :model-value="headerLevels"
-          :disabled="editor.pastePending"
-          @update:model-value="setHeaderLevels"
-        />
-      </div>
-    </div>
+        <!-- 推荐列开关：只有选列/取消，最多一列（FR-23） -->
+        <div v-if="recommendableCols.length" class="section">
+          <h4>推荐列</h4>
+          <p class="hint">最多标一列；再点一次取消推荐。</p>
+          <div class="row">
+            <PtButton
+              v-for="c in recommendableCols"
+              :key="c"
+              variant="ghost"
+              :class="{ on: recommendCol === c }"
+              :disabled="editor.pastePending"
+              @click="toggleRecommend(c)"
+            >
+              {{ colLabels[c] }}<template v-if="recommendCol === c">（{{ RECOMMEND_BADGE_TEXT }}）</template>
+            </PtButton>
+          </div>
+        </div>
 
-    <div class="section">
-      <h4>合并 / 拆分</h4>
-      <p class="hint">仅在模板允许区内操作；锁定合并不可拆。</p>
-      <div class="row">
-        <PtButton
-          variant="ghost"
-          :disabled="!mergeGate.ok"
-          :title="mergeGate.reason || '合并选区'"
-          data-testid="merge-btn"
-          @click="editor.mergeSelection()"
-        >
-          合并选区
-        </PtButton>
-        <PtButton
-          variant="ghost"
-          :disabled="!splitGate.ok"
-          :title="splitGate.reason || '拆分'"
-          data-testid="split-btn"
-          @click="editor.splitSelection()"
-        >
-          拆分
-        </PtButton>
+        <!-- 删区块（动结构）从内容组拆出：编辑文字在「内容」，删除入口在这里 -->
+        <div v-if="editor.selectedBlockId" class="section">
+          <h4>区块操作</h4>
+          <PtButton variant="danger" :disabled="editor.pastePending" @click="removeBlock">删除区块</PtButton>
+        </div>
       </div>
-    </div>
+    </section>
 
     <!-- PX-05：统一确认弹窗（删区块 / 删非空行列） -->
     <ConfirmDialog />
@@ -637,6 +685,36 @@ h3 {
   font-size: 12px;
   color: #6b7280;
   margin: 4px 0 12px;
+}
+/* ── PX-16 分组折叠 ── */
+.group {
+  margin-bottom: 8px;
+  border-top: 1px solid var(--pt-border);
+}
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 8px 2px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pt-muted);
+  cursor: pointer;
+  text-align: left;
+}
+.group-head .arrow {
+  font-style: normal;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.group-body {
+  padding: 0 2px 8px;
 }
 .section {
   margin-bottom: 16px;
