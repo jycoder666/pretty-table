@@ -2,7 +2,7 @@
 import { defineAsyncComponent, onMounted, watch, type Component } from 'vue'
 import { useEditorStore } from './shell/stores/editor'
 import { applyThemeCssVars } from './shell/theme/applyCssVars'
-import { DEFAULT_THEME_ID } from './core'
+import { DEFAULT_THEME_ID, effectivePalette } from './core'
 import LibraryPage from './shell/pages/LibraryPage.vue'
 import EditorPage from './shell/pages/EditorPage.vue'
 import PtToast from './shell/ui/PtToast.vue'
@@ -21,9 +21,11 @@ onMounted(async () => {
 })
 
 watch(
-  () => editor.current?.themeId,
-  (id) => {
-    if (id) applyThemeCssVars(id)
+  // themeId（换主题）+ version（含 setThemeToken 颜色覆盖）任一变化都重刷 CSS 变量（FR-C1）
+  () => [editor.current?.themeId, editor.state?.version],
+  () => {
+    if (editor.current) applyThemeCssVars(editor.current.themeId, effectivePalette(editor.current))
+    else applyThemeCssVars(DEFAULT_THEME_ID)
   },
 )
 </script>

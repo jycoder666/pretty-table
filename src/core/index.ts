@@ -70,6 +70,13 @@ export {
   visibleRowCount,
 } from './theme/layoutScales'
 export { ROLE_SWATCHES } from './theme/swatch'
+export {
+  ROLE_KEYS,
+  ROLE_LABELS,
+  effectivePalette,
+  roleColorOf,
+  isRoleOverridden,
+} from './theme/roles'
 export { FONT_STACK } from './theme/font'
 export { toCssVars } from './theme/cssVars'
 export { toVTableTheme } from './theme/vtableTheme'

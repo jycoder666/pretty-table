@@ -7,17 +7,41 @@ import {
   MARK_GLYPH,
   MARK_LABEL,
   RECOMMEND_BADGE_TEXT,
+  ROLE_KEYS,
+  ROLE_LABELS,
+  isRoleOverridden,
+  roleColorOf,
+  type RoleColorKey,
   type ThemeId,
   type Emphasis,
   type MarkValue,
   type SlotValue,
 } from '@/core'
 import PtButton from '../ui/PtButton.vue'
+import ColorField from './ColorField.vue'
 
 const editor = useEditorStore()
 
 const themes: ThemeId[] = ['T-A', 'T-B', 'T-C']
 const themeSwatch = (id: ThemeId) => PALETTES[id].primary
+
+// ── 颜色自定义（FR-C1）：六角色，提交走 setThemeToken / resetThemeTokens ──
+const colorRoles: { key: RoleColorKey; label: string }[] = ROLE_KEYS.map((key) => ({
+  key,
+  label: ROLE_LABELS[key],
+}))
+
+function commitColor(role: RoleColorKey, hex: string | null) {
+  editor.apply({ kind: 'setThemeToken', token: role, value: hex })
+}
+
+function onInvalidColor() {
+  editor.showToast('颜色格式不对，请填 6 位十六进制，例如 #1f7a8c')
+}
+
+function resetColors() {
+  editor.apply({ kind: 'resetThemeTokens' })
+}
 
 const marks: Record<MarkValue, string> = { ...MARK_LABEL }
 const glyphs: Record<MarkValue, string> = { ...MARK_GLYPH }
@@ -167,6 +191,25 @@ function removeBlock() {
         />
         斑马纹
       </label>
+    </div>
+
+    <!-- 颜色自定义（FR-C1）：改的是当前主题的角色色，随改随生效 -->
+    <div class="section">
+      <h4>颜色</h4>
+      <ColorField
+        v-for="r in colorRoles"
+        :key="r.key"
+        :role="r.key"
+        :label="r.label"
+        :value="roleColorOf(editor.current, r.key).toLowerCase()"
+        :overridden="isRoleOverridden(editor.current, r.key)"
+        :disabled="editor.pastePending"
+        @commit="(hex) => commitColor(r.key, hex)"
+        @invalid="onInvalidColor"
+      />
+      <PtButton variant="ghost" :disabled="editor.pastePending" @click="resetColors">
+        全部恢复预设
+      </PtButton>
     </div>
 
     <div v-if="editor.selectedSlotId" class="section">

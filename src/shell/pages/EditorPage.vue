@@ -4,6 +4,7 @@ import { DragDropProvider, DragOverlay } from '@dnd-kit/vue'
 import { useEditorStore } from '../stores/editor'
 import { useLibraryStore } from '../stores/library'
 import { applyThemeCssVars } from '../theme/applyCssVars'
+import { effectivePalette } from '@/core'
 import BlockLibrary from '../editor/BlockLibrary.vue'
 import PreviewHost from '../editor/PreviewHost.vue'
 import PropertyPanel from '../editor/PropertyPanel.vue'
@@ -23,9 +24,10 @@ const previewRef = ref<InstanceType<typeof PreviewHost> | null>(null)
 const ghostLabel = ref('')
 
 watch(
-  () => editor.current?.themeId,
-  (id) => {
-    if (id) applyThemeCssVars(id)
+  // themeId（换主题）+ version（含 setThemeToken 颜色覆盖）任一变化都重刷 CSS 变量（FR-C1）
+  () => [editor.current?.themeId, editor.state?.version],
+  () => {
+    if (editor.current) applyThemeCssVars(editor.current.themeId, effectivePalette(editor.current))
   },
   { immediate: true },
 )
