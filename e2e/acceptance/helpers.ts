@@ -1,0 +1,212 @@
+import { expect, type Page } from '@playwright/test'
+import {
+  buildVisualRows,
+  colWidthAt,
+  getPresetTemplate,
+  type TemplateInstance,
+} from '../../src/core/index'
+
+/**
+ * T30 验收公共助手（TC-PT-051～088）：
+ * - 打开系统预设模板：走库页 UI 真实链路（使用此模板 → 预览就绪）
+ * - 画布选格：按 buildVisualRows / colWidthAt 同源几何换算点击坐标（与 previewHit.locateVisual 一致）
+ * - 模拟剪贴板：Excel/WPS 来源统一用 DataTransfer 构造 text/plain(+text/html) 粘贴事件注入
+ * - 导出 HTML 读回：走导出抽屉「复制 HTML」→ 剪贴板读回（等价粘贴产物）
+ */
+
+/** 库页按展示名打开系统预设并等预览画布就绪（二次进入时先清草稿，保证落在库页） */
+export async function openPreset(page: Page, displayName: string, query = ''): Promise<void> {
+  // 同一测试内第二次进入（换模板）时清掉 IndexedDB 草稿位；首次为全新上下文无需清理
+  const url = page.url()
+  if (url && url !== 'about:blank') {
+    await page.evaluate(() => indexedDB.deleteDatabase('pretty-table'))
+  }
+  await page.goto(`/${query}`)
+  const card = page.locator('article.card', {
+    has: page.locator('h3', { hasText: displayName }),
+  })
+  await card.getByRole('button', { name: '使用此模板' }).click()
+  await expect(page.locator('.preview-host canvas').first()).toBeVisible()
+  // 等渲染核首帧后命中几何稳定
+  await page.waitForTimeout(300)
+}
+
+/** 预设模板实例（克隆件，与编辑台初始实例同源） */
+export function presetOf(templateId: string): TemplateInstance {
+  const t = getPresetTemplate(templateId)
+  if (!t) throw new Error(`preset not found: ${templateId}`)
+  return t
+}
+
+/** 槽位 → 可视行列（与 buildVisualRows 的 metas 对齐，含区块行） */
+export function slotVisualPos(
+  inst: TemplateInstance,
+  slotId: string,
+): { row: number; col: number } {
+  const { metas } = buildVisualRows(inst)
+  for (let r = 0; r < metas.length; r++) {
+    const row = metas[r]!
+    for (let c = 0; c < row.length; c++) {
+      if (row[c]?.slotId === slotId) return { row: r, col: c }
+    }
+  }
+  throw new Error(`slot not in visual grid: ${slotId}`)
+}
+
+/** 点击预览画布上的槽位（选中为粘贴起点） */
+export async function clickSlot(page: Page, inst: TemplateInstance, slotId: string): Promise<void> {
+  const { row, col } = slotVisualPos(inst, slotId)
+  const { rowHeights } = buildVisualRows(inst)
+  let x = 0
+  for (let c = 0; c < col; c++) x += colWidthAt(inst, c)
+  let y = 0
+  for (let r = 0; r < row; r++) y += rowHeights[r] ?? 36
+  const canvas = page.locator('.preview-host canvas').first()
+  const box = await canvas.boundingBox()
+  if (!box) throw new Error('preview canvas not found')
+  await page.mouse.click(box.x + x + colWidthAt(inst, col) / 2, box.y + y + (rowHeights[row] ?? 36) / 2)
+  // 等选中态落到新槽（headline 已可见时避免读到上一格的值）
+  await page.waitForTimeout(150)
+  await expect(page.locator('[data-testid="slot-headline"]')).toBeVisible()
+}
+
+/** 模拟剪贴板粘贴：向 window 派发带 DataTransfer 的 paste 事件（Excel/WPS 来源等价 TSV/HTML 载荷） */
+export async function pasteClipboard(
+  page: Page,
+  payload: { text?: string; html?: string; file?: { name: string; type: string; base64: string } },
+): Promise<void> {
+  await page.evaluate((p) => {
+    const dt = new DataTransfer()
+    if (p.file) {
+      const bytes = Uint8Array.from(atob(p.file.base64), (ch) => ch.charCodeAt(0))
+      dt.items.add(new File([bytes], p.file.name, { type: p.file.type }))
+    }
+    if (p.text !== undefined) dt.setData('text/plain', p.text)
+    if (p.html !== undefined) dt.setData('text/html', p.html)
+    let ev = new ClipboardEvent('paste', {
+      clipboardData: dt,
+      bubbles: true,
+      cancelable: true,
+    } as ClipboardEventInit)
+    if (ev.clipboardData !== dt) {
+      ev = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
+      Object.defineProperty(ev, 'clipboardData', { value: dt })
+    }
+    window.dispatchEvent(ev)
+  }, payload)
+}
+
+/** 读 toast（.pt-toast）文本 */
+export async function toastText(page: Page): Promise<string | null> {
+  const toast = page.locator('.pt-toast')
+  if ((await toast.count()) === 0) return null
+  return toast.textContent()
+}
+
+export async function expectToast(page: Page, text: string | RegExp): Promise<void> {
+  await expect(page.locator('.pt-toast')).toHaveText(text)
+}
+
+/** 粘贴预览条文本 */
+export function pasteBarText(page: Page) {
+  return page.locator('[data-testid="paste-bar-text"]')
+}
+
+/** 确认写入 / 取消 */
+export async function confirmPaste(page: Page): Promise<void> {
+  await page.locator('[data-testid="paste-confirm"]').click()
+}
+export async function cancelPaste(page: Page): Promise<void> {
+  await page.locator('[data-testid="paste-cancel"]').click()
+}
+
+/** 覆盖层格（含识别结果显示） */
+export function pasteCells(page: Page) {
+  return page.locator('.paste-cell')
+}
+
+/** 打开导出抽屉 */
+export async function openExportDrawer(page: Page): Promise<void> {
+  await page.getByRole('button', { name: '导出', exact: true }).click()
+  await expect(page.locator('.drawer')).toBeVisible()
+}
+
+/** 导出 HTML 读回（走「复制 HTML」→ 剪贴板 readText，等价粘贴产物） */
+export async function exportedHtml(page: Page): Promise<string> {
+  await openExportDrawer(page)
+  await page.getByRole('button', { name: '复制 HTML' }).click()
+  await expect(page.locator('.pt-toast')).toHaveText('已复制 HTML')
+  const html = await page.evaluate(() => navigator.clipboard.readText())
+  await page.getByRole('button', { name: '关闭' }).click()
+  return html
+}
+
+/** 导出 PNG 下载并返回文件字节（触发真实下载事件） */
+export async function downloadPng(page: Page): Promise<Uint8Array> {
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: '导出 PNG' }).click(),
+  ])
+  const path = await download.path()
+  const { readFileSync } = await import('node:fs')
+  return new Uint8Array(readFileSync(path!))
+}
+
+/** PNG IHDR 宽高（字节 16～24） */
+export function pngSize(bytes: Uint8Array): { width: number; height: number } {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  return { width: view.getUint32(16), height: view.getUint32(20) }
+}
+
+/** 在浏览器里解码 PNG 并统计接近指定颜色的像素数（容差欧氏距离，用于符号主题色断言） */
+export async function countPngNearColor(
+  page: Page,
+  bytes: Uint8Array,
+  hex: string,
+  tol = 60,
+): Promise<number> {
+  const base64 = Buffer.from(bytes).toString('base64')
+  return page.evaluate(async ({ b64, color, tol }) => {
+    const bin = atob(b64)
+    const buf = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
+    const bmp = await createImageBitmap(new Blob([buf], { type: 'image/png' }))
+    const canvas = new OffscreenCanvas(bmp.width, bmp.height)
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(bmp, 0, 0)
+    const r0 = parseInt(color.slice(1, 3), 16)
+    const g0 = parseInt(color.slice(3, 5), 16)
+    const b0 = parseInt(color.slice(5, 7), 16)
+    const data = ctx.getImageData(0, 0, bmp.width, bmp.height).data
+    let count = 0
+    for (let i = 0; i < data.length; i += 4) {
+      const dr = data[i]! - r0
+      const dg = data[i + 1]! - g0
+      const db = data[i + 2]! - b0
+      if (dr * dr + dg * dg + db * db <= tol * tol) count++
+    }
+    return count
+  }, { b64: base64, color: hex, tol })
+}
+
+/** 在浏览器里解码 PNG 并取样像素（r,g,b,a），坐标为图像像素坐标 */
+export async function samplePngPixels(
+  page: Page,
+  bytes: Uint8Array,
+  points: [number, number][],
+): Promise<{ x: number; y: number; r: number; g: number; b: number; a: number }[]> {
+  const base64 = btoa(String.fromCharCode(...bytes))
+  return page.evaluate(async ({ b64, pts }) => {
+    const bin = atob(b64)
+    const buf = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
+    const bmp = await createImageBitmap(new Blob([buf], { type: 'image/png' }))
+    const canvas = new OffscreenCanvas(bmp.width, bmp.height)
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(bmp, 0, 0)
+    return pts.map(([x, y]) => {
+      const d = ctx.getImageData(x, y, 1, 1).data
+      return { x, y, r: d[0]!, g: d[1]!, b: d[2]!, a: d[3]! }
+    })
+  }, { b64: base64, pts: points })
+}
