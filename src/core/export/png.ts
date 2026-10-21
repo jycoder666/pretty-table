@@ -1,14 +1,16 @@
-import { ListTable } from '@visactor/vtable'
+// T34：VTable 深入口（ListTable-simple，仅注册文本格基础能力），避免连带
+// index 全量入口（PivotChart / 图表格注册 → vrender-components 图表依赖进包）。
+import { ListTableSimple as ListTable } from '@visactor/vtable/es/ListTable-simple'
 import type { PngExportOptions, TemplateInstance } from '../types'
 import { fail, ok, type Result } from '../errors'
 import { toOption, measureContentSize } from '../adapter/toOption'
 import { resolveTheme } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
+import { PNG_MAX_PIXELS_DEFAULT, PNG_PAD, measurePng } from './pngSize'
 
-/** 输出像素上限（T19 门槛实测回写值：约 4096×4096，Safari 画布面积保守值） */
-export const PNG_MAX_PIXELS_DEFAULT = 16_777_216
-/** 四周留白（CSS px），输出尺寸 =（内容 + 2×PAD）× 倍率 */
-const PAD = 16
+// pngSize 是与 VTable 解耦的估算模块（壳层静态消费）；此处 re-export 保持
+// 核内旧路径（./png）可用，但 @/core 出口只从 pngSize 静态导出（T34 切 chunk）。
+export { PNG_MAX_PIXELS_DEFAULT, measurePng }
 
 function waitFrames(n: number): Promise<void> {
   return new Promise((resolve) => {
@@ -49,8 +51,8 @@ export async function exportPng(
   }
 
   const measured = measureContentSize(inst)
-  const outW = (measured.width + PAD * 2) * scale
-  const outH = (measured.height + PAD * 2) * scale
+  const outW = (measured.width + PNG_PAD * 2) * scale
+  const outH = (measured.height + PNG_PAD * 2) * scale
   if (outW * outH > maxPixels) {
     return fail('EXPORT_PNG_TOO_LARGE', `输出 ${Math.round(outW)}×${Math.round(outH)}=${Math.round(outW * outH)} 像素超过上限 ${maxPixels}，请改用更低倍率重试`, {
       width: outW,
@@ -108,7 +110,7 @@ export async function exportPng(
       ctx.fillStyle = palette.paper
       ctx.fillRect(0, 0, canvas.width, canvas.height)
     }
-    ctx.drawImage(img, PAD * scale, PAD * scale, img.width, img.height)
+    ctx.drawImage(img, PNG_PAD * scale, PNG_PAD * scale, img.width, img.height)
 
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
     if (!blob) return fail('EXPORT_PNG_FAIL', 'PNG 编码失败')
@@ -157,14 +159,4 @@ export async function preloadImages(urls: string[]): Promise<Map<string, HTMLIma
     if (r.status === 'fulfilled') map.set(urls[i]!, r.value)
   })
   return map
-}
-
-export function measurePng(inst: TemplateInstance, scale: 1 | 2 | 3 = 2) {
-  const m = measureContentSize(inst)
-  return {
-    contentWidth: m.width,
-    contentHeight: m.height,
-    outWidth: (m.width + PAD * 2) * scale,
-    outHeight: (m.height + PAD * 2) * scale,
-  }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { DialogRoot, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 'reka-ui'
-import { exportHtml, exportPng, measurePng } from '@/core'
+import { exportHtml, loadRenderCore, measurePng } from '@/core'
 import { useEditorStore } from '../stores/editor'
 import { errorCopy } from '../editor/errorCopy'
 import { pngMaxOverride } from '../debug/flags'
@@ -107,6 +107,8 @@ async function downloadPng() {
   editor.exporting = true
   editor.showToast('正在生成图片…')
   try {
+    // T34：exportPng 在渲染核动态 chunk 里（VTable），首次导出时按需加载
+    const { exportPng } = await loadRenderCore()
     const r = await exportPng(editor.current, {
       scale: pngScale.value,
       transparent: pngTransparent.value,

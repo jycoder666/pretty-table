@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { COMPARE_ALPHA_V1 } from '../templates'
 import { measureContentSize } from '../adapter/toOption'
-import { measurePng } from './png'
+// T34：估算与渲染解耦，从 pngSize（无 VTable 依赖）导入
+import { measurePng } from './pngSize'
 import { cloneInstance } from '../schema/validate'
 
 describe('PNG measure (MVP 2x formula)', () => {

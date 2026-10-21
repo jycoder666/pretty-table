@@ -150,7 +150,8 @@ export {
   type VCellRect,
 } from './adapter/toOption'
 
-export { mount } from './render/coreHost'
+// T34：渲染核（VTable 依赖图）只经动态导入出口暴露，壳层用 loadRenderCore()
+export { loadRenderCore, type RenderCore } from './render/lazyCore'
 export { exportHtml } from './export/html'
 export {
   buildExportModel,
@@ -158,7 +159,8 @@ export {
   type ExportModel,
   type ExportCell,
 } from './export/model'
-export { exportPng, measurePng, PNG_MAX_PIXELS_DEFAULT } from './export/png'
+// PNG 估算/门槛常量不依赖 VTable，从 pngSize 静态导出（exportPng 走 loadRenderCore）
+export { measurePng, PNG_MAX_PIXELS_DEFAULT } from './export/pngSize'
 
 export {
   listPresetTemplates,

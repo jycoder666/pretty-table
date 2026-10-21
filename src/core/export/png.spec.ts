@@ -4,6 +4,13 @@ import { measureContentSize } from '../adapter/toOption'
 import { cloneInstance } from '../schema/validate'
 import { exportPng, measurePng, PNG_MAX_PIXELS_DEFAULT, collectImageUrls, preloadImages } from './png'
 
+// T34：VTable 改深入口后绕开了 vitest 依赖预打包，lottie-web（vrender 动画依赖）
+// 在 jsdom（无 canvas）模块求值期即崩。本文件全部为失败路径/估算用例，不构造真表，
+// 直接 stub 掉渲染类。
+vi.mock('@visactor/vtable/es/ListTable-simple', () => ({
+  ListTableSimple: class {},
+}))
+
 describe('PNG 倍率与透明底（T27）', () => {
   it('三档倍率预估 =（内容 + 32）× 倍率（±2px）', () => {
     const inst = cloneInstance(COMPARE_ALPHA_V1)

@@ -17,7 +17,8 @@
     "lint:eslint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
     "check:licenses": "node scripts/check-licenses.mjs",
-    "check:colors": "node scripts/check-color-literals.mjs"
+    "check:colors": "node scripts/check-color-literals.mjs",
+    "check:bundle": "node scripts/report-bundle.mjs"
   },
   "packageManager": "pnpm@10.34.1",
   "dependencies": {

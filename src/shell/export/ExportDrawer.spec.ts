@@ -24,8 +24,14 @@ vi.mock('@/core', async (importOriginal) => {
   return {
     ...orig,
     exportHtml: exportHtmlMock,
-    exportPng: exportPngMock,
     measurePng: measurePngMock,
+    // T34：组件经 loadRenderCore 取 exportPng（渲染核动态 chunk），此处直连 mock
+    loadRenderCore: vi.fn(async () => ({
+      mount: vi.fn(),
+      exportPng: exportPngMock,
+      measurePng: measurePngMock,
+      measureContentSize: orig.measureContentSize,
+    })),
   }
 })
 

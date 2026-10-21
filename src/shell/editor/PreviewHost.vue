@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { mount, type CoreHandle, findSlotAtVisual, findMergeAt, visualToLogicalRow } from '@/core'
+import { loadRenderCore, type CoreHandle, findSlotAtVisual, findMergeAt, visualToLogicalRow } from '@/core'
 import { useEditorStore } from '../stores/editor'
 import SlotOverlay from '../dnd/SlotOverlay.vue'
 import { computeDropTargets, estimateCellRects, type DropTarget } from '../dnd/slotDnd'
@@ -16,6 +16,8 @@ const host = ref<HTMLDivElement | null>(null)
 const dropTargets = ref<DropTarget[]>([])
 const hostOrigin = ref({ left: 0, top: 0 })
 let handle: CoreHandle | null = null
+// T34：渲染核经 loadRenderCore 动态加载（VTable 独立 chunk）；卸载竞态用 disposed 收口
+let disposed = false
 
 function refreshTargets() {
   if (!editor.current || !host.value) {
@@ -29,8 +31,11 @@ function refreshTargets() {
   session.setCatalogTargets(dropTargets.value)
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (!el.value || !editor.current) return
+  const { mount } = await loadRenderCore()
+  // 动态加载期间可能已卸载 / 切空：不再挂载
+  if (disposed || !el.value || !editor.current) return
   handle = mount(el.value, {
     initial: editor.current,
     onError: (err) => editor.showToast(err.message),
@@ -48,6 +53,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  disposed = true
   window.removeEventListener('resize', refreshTargets)
   handle?.destroy()
   handle = null
