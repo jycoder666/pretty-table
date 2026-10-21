@@ -7,6 +7,7 @@ import { errorCopy } from '../editor/errorCopy'
 import { pngMaxOverride } from '../debug/flags'
 import { faultGate } from '../debug/fault'
 import { getPngScale, setPngScale, type PngScale } from '../repo/prefs'
+import { triggerBlobDownload } from './blobDownload'
 import { copyText } from './clipboard'
 import PtButton from '../ui/PtButton.vue'
 import PtTooltip from '../ui/PtTooltip.vue'
@@ -124,12 +125,9 @@ async function downloadPng() {
       }
       return
     }
-    const url = URL.createObjectURL(r.value)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${editor.current.meta?.displayName ?? 'table'}.png`
-    a.click()
-    URL.revokeObjectURL(url)
+    // blob URL 延迟释放（此前同步 revoke 在极端 CPU 饥饿下会抢在下载启动前
+    // 失效 URL，导致静默丢下载——见 blobDownload.ts 文件头说明）
+    triggerBlobDownload(r.value, `${editor.current.meta?.displayName ?? 'table'}.png`)
     editor.showToast('PNG 已下载')
   } catch {
     editor.showToast(errorCopy('EXPORT_PNG_FAIL'))
