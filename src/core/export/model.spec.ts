@@ -115,6 +115,63 @@ describe('buildExportModel（T28 · ExportModel）', () => {
   })
 })
 
+// ── TC-088 回归：HTML 属性转义（style 属性双引号截断致内联样式全丢）──
+
+describe('renderExportHtml · 属性转义（TC-088）', () => {
+  it('style 属性值经 &quot; 转义：FONT_STACK 双引号不截断，其后声明仍留在属性内', () => {
+    const m = buildExportModel(cloneInstance(PRICING_V1))
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    const html = renderExportHtml(m.value)
+    // 字体栈双引号已实体化
+    expect(html).toContain('font-family:&quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;')
+    // FONT_STACK 之后的声明未被截断出属性外（同一属性内 font-family 后仍有 font-size/background）
+    expect(html).toContain('sans-serif;font-size:')
+    // 每个捕获到的 style 属性值里不含裸 `"`（引号只作定界符），且含 font-family 的属性完整起始
+    for (const [, v] of html.matchAll(/style="([^"]*)"/g)) {
+      const s = v ?? ''
+      expect(s).not.toMatch(/(?<!&)quot;/)
+      expect(s.startsWith('font-family:&quot;') || !s.includes('font-family:')).toBe(true)
+    }
+  })
+
+  it('解析往返：真实 DOM 读回的 style 属性完整（背景色/字号/sticky 不丢）', () => {
+    const m = buildExportModel(cloneInstance(MATRIX_V1))
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    const html = renderExportHtml(m.value)
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    // 真实解析视角：属性值不再被截断为 font-family:
+    for (const el of doc.querySelectorAll('[style]')) {
+      const s = el.getAttribute('style') ?? ''
+      expect(s.length).toBeGreaterThan(10)
+      expect(s.endsWith('font-family:')).toBe(false)
+      expect(s).not.toBe('font-family:')
+    }
+    // 表体格：字体栈 + 底色声明齐备；首列表头 sticky 保留（FR-26）
+    const td = doc.querySelector('tbody td')
+    expect(td?.getAttribute('style')).toContain('font-family:"PingFang SC"')
+    expect(td?.getAttribute('style')).toContain('background:')
+    expect(doc.querySelector('th')?.getAttribute('style')).toContain('position:sticky;left:0')
+  })
+
+  it('其余属性输出点核查：scope/rowspan/colspan/aria-label 转义后均可被真实 DOM 完整解析', () => {
+    const m = buildExportModel(cloneInstance(MATRIX_V1))
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    const html = renderExportHtml(m.value)
+    expect(html).toContain('scope="col"')
+    expect(html).toContain('rowspan="2"')
+    expect(html).toContain('colspan=')
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    // aria-label（MARK_LABEL 中文枚举）挂在符号 td 上，解析回读不丢
+    expect(doc.querySelector('td[aria-label="支持"]')).not.toBeNull()
+    expect(doc.querySelector('td[aria-label="部分支持"]')).not.toBeNull()
+    // 数值 span 属性解析回读为数字
+    expect(doc.querySelector('th[rowspan="2"]')).not.toBeNull()
+  })
+})
+
 // ── 自定义格式 T03：档位 px / 自定义色内联 / min-width 求和 / 任意结构（FR-C1/C2/C8）──
 
 import { BLANK_V1 } from '../templates'

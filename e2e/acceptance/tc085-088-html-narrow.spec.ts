@@ -78,14 +78,9 @@ test.describe('TC-PT-085 · HTML 语义结构 + 全内联样式', () => {
     expect(html2).toContain('新建空白表')
   })
 
-  // 【已证实缺陷 · 待修】TC-PT-085/086/088 共用根因：
-  // model.ts 的 style 属性未转义 FONT_STACK 的双引号（style="font-family:"PingFang SC"…"），
-  // 浏览器把属性值截断为 "font-family:"，所有单元格内联样式（底色/字色/对齐/sticky）在真实
-  // DOM 解析中全部丢失——原始字符串包含样式但渲染不生效。修复方向：style 属性值经
-  // escapeHtml（&quot;）后再拼接，或 FONT_STACK 去引号。修复后本用例应转为真实断言。
-  test.fixme(true, 'TC-PT-088 FAIL：style 属性双引号未转义 → 内联样式全丢（见 reports/t30-execution.md）')
-
-  test('【缺陷复现】导出 HTML 真实渲染：单元格背景色与首列 sticky 全部失效', async ({ page }) => {
+  // TC-PT-088 修复回归（原 fixme 缺陷复现用例，转真实断言）：
+  // model.ts 的 style 属性值现经 escapeHtml 转义（`"` → `&quot;`），真实 DOM 解析后内联样式完整。
+  test('导出 HTML 真实渲染：单元格背景色与首列 sticky 生效（TC-088 修复回归）', async ({ page }) => {
     await openPreset(page, '功能矩阵表')
     const html = await exportedHtml(page)
     await page.setContent(html)
@@ -98,10 +93,12 @@ test.describe('TC-PT-085 · HTML 语义结构 + 全内联样式', () => {
         firstTdStyleAttr: td?.getAttribute('style') ?? '',
       }
     })
-    // 期望（修复后）：td 有纸色底、th 为 sticky；现状：td 背景透明、th static、attr 截断为 font-family:
+    // 修复后：td 有纸色底、th 为 sticky、style 属性完整（未被截断为 font-family:）
     expect(m.tdBg).not.toBe('rgba(0, 0, 0, 0)')
     expect(m.thPos).toBe('sticky')
     expect(m.firstTdStyleAttr.length).toBeGreaterThan(60)
+    expect(m.firstTdStyleAttr).toContain('font-family:"PingFang SC"')
+    expect(m.firstTdStyleAttr).toContain('background:')
   })
 })
 
@@ -147,8 +144,9 @@ test.describe('TC-PT-088 · 375px 窄屏不撑破页面、表格区横滚、首�
     // 表格容器内可横滚
     expect(m.wrapOverflow).toBe('auto')
     expect(m.wrapScrollable).toBe(true)
-    // 首列钉住：源码层面含 position:sticky（真实渲染受 style 属性转义缺陷影响，见上方 fixme 用例）
+    // 首列钉住：源码含 position:sticky，且真实 DOM 渲染后 computed position=sticky（TC-088 修复后可达）
     expect(html).toContain('position:sticky;left:0')
+    expect(m.stickyPos).toBe('sticky')
     expect(m.scrolled).toBe(true)
     // 偏差：右缘淡出阴影 / 钉列右侧细分隔阴影未实现（记录，见报告）
     // 不做卡片式：仍为单一 <table> 结构

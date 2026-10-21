@@ -259,12 +259,18 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
 
 /** 渲染 ExportModel → 全内联样式 HTML 片段（无 <style>/<script>/外链/事件属性） */
 export function renderExportHtml(model: ExportModel): string {
+  // 属性值单点转义（GC-22）：复用 escapeHtml，把 FONT_STACK 等值里的 `"` 转成 &quot;，
+  // 避免浏览器在第一个 `"` 处截断 style 属性致全部内联样式丢失（TC-088）。
+  // 不在此处理 <img src>：它由 isImageDataUrl 白名单前置闸门（GC-22），data URI 本身不转义。
+  const attr = (v: string): string => escapeHtml(v)
   const cellHtml = (cell: ExportCell): string => {
-    const attrs = [`style="${cell.style}"`]
-    if (cell.scope) attrs.push(`scope="${cell.scope}"`)
-    if (cell.rowSpan !== undefined) attrs.push(`rowspan="${cell.rowSpan}"`)
-    if (cell.colSpan !== undefined) attrs.push(`colspan="${cell.colSpan}"`)
-    if (cell.ariaLabel) attrs.push(`aria-label="${escapeHtml(cell.ariaLabel)}"`)
+    const attrs = [`style="${attr(cell.style)}"`]
+    // scope 为内部枚举、rowspan/colspan 为内部数字，理论不含危险字符；
+    // 仍统一过 attr 兜底（防止未来类型漂移引入用户数据），成本可忽略
+    if (cell.scope) attrs.push(`scope="${attr(cell.scope)}"`)
+    if (cell.rowSpan !== undefined) attrs.push(`rowspan="${attr(String(cell.rowSpan))}"`)
+    if (cell.colSpan !== undefined) attrs.push(`colspan="${attr(String(cell.colSpan))}"`)
+    if (cell.ariaLabel) attrs.push(`aria-label="${attr(cell.ariaLabel)}"`)
     const badge = cell.badge ? `<span style="font-size:11px">${escapeHtml(cell.badge)}</span>` : ''
     // GC-22：src 只可能来自 isImageDataUrl 白名单校验通过的值（buildExportModel 已闸），
     // 白名单正则保证无引号/无标签注入，data URI 本身不转义
