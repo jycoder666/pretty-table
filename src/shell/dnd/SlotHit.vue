@@ -7,6 +7,8 @@ const props = defineProps<{
   target: DropTarget
   index: number
   focused: boolean
+  /** R-1：拖拽进行中 accept 不匹配 → 弱化（低透明度虚框） */
+  dimmed?: boolean
   hostLeft: number
   hostTop: number
   tabindex: number
@@ -43,7 +45,7 @@ const style = () => {
     ref="el"
     type="button"
     class="slot-hit"
-    :class="{ focused }"
+    :class="{ focused, dim: dimmed }"
     role="button"
     :tabindex="tabindex"
     :data-pt-slot-index="index"
@@ -71,5 +73,11 @@ const style = () => {
   outline: 2px solid var(--pt-primary, #2f5b9a);
   outline-offset: 1px;
   background: color-mix(in srgb, var(--pt-primary, #2f5b9a) 22%, transparent);
+}
+/* R-1：不可放置（accept 不匹配）→ 低透明度弱化虚框 */
+.slot-hit.dim {
+  opacity: 0.35;
+  border-color: var(--pt-border, #c5d0de);
+  background: transparent;
 }
 </style>

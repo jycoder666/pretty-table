@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { mount, type CoreHandle, findSlotAtVisual, findMergeAt, visualToLogicalRow } from '@/core'
 import { useEditorStore } from '../stores/editor'
 import SlotOverlay from '../dnd/SlotOverlay.vue'
 import { computeDropTargets, estimateCellRects, type DropTarget } from '../dnd/slotDnd'
 import { usePlaceSession } from '../dnd/placeSession'
 import { locateVisual } from './previewHit'
+import { expandRectSelection, selectionCellRects } from './selection'
 import PasteEntry from '../paste/PasteEntry.vue'
 
 const editor = useEditorStore()
@@ -76,10 +77,21 @@ function onClick(ev: MouseEvent) {
     editor.selectionRange = null
     return
   }
+  // R-2：Shift+点终点 → 与既有选区起点围成矩形（点起点 → 普通点击 → Shift 点终点）
+  if (ev.shiftKey && editor.selectionRange) {
+    editor.selectionRange = expandRectSelection(editor.selectionRange, logical, col)
+    return
+  }
   const merge = findMergeAt(editor.current.layout, logical, col)
   if (merge) editor.selectionRange = merge
   else editor.selectionRange = { start: [logical, col], end: [logical, col] }
 }
+
+// R-2：选区可视化（壳叠加层描边，与 estimateCellRects 同源几何）
+const selectionRects = computed(() => {
+  if (!editor.current || !editor.selectionRange) return []
+  return selectionCellRects(editor.current, editor.selectionRange)
+})
 
 function onPlace(slotId: string) {
   const type = session.blockType.value
@@ -102,9 +114,21 @@ defineExpose({
 </script>
 
 <template>
-  <div ref="host" class="preview-host" @click="onClick">
+  <div ref="host" class="preview-host" :class="{ 'drag-active': session.dragging.value }" @click="onClick">
     <!-- PX-09：悬浮粘贴按钮已并入顶部工具条（EditorPage header），预览区保持纯净 -->
     <div ref="el" class="vtable-root" />
+    <!-- R-2：选区描边叠加层（纯壳，不刷核） -->
+    <div
+      v-for="(r, i) in selectionRects"
+      :key="`sel-${i}`"
+      class="selection-cell"
+      :style="{
+        left: r.left + 'px',
+        top: r.top + 'px',
+        width: r.width + 'px',
+        height: r.height + 'px',
+      }"
+    />
     <SlotOverlay
       :targets="dropTargets"
       :host-left="hostOrigin.left"
@@ -130,5 +154,18 @@ defineExpose({
 .vtable-root {
   width: 100%;
   min-height: 400px;
+  transition: opacity 200ms ease;
+}
+/* R-1：拖拽进行中非目标区弱化（低透明度），松手恢复 */
+.preview-host.drag-active .vtable-root {
+  opacity: 0.55;
+}
+.selection-cell {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  border: 2px solid var(--pt-primary);
+  background: color-mix(in srgb, var(--pt-primary) 10%, transparent);
+  pointer-events: none;
 }
 </style>

@@ -83,3 +83,81 @@ describe('editor store · 核内 warn 聚合 toast（T04）', () => {
     expect(store.state?.version).toBe(versionBefore)
   })
 })
+
+// ── R-3 图片上传/替换/移除（交互升级 T04）──
+
+const T04_IMG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+
+function pngFile(): File {
+  const bin = atob(T04_IMG.split(',')[1]!)
+  const bytes = new Uint8Array([...bin].map((ch) => ch.charCodeAt(0)))
+  return new File([bytes], 'a.png', { type: 'image/png' })
+}
+
+/** 超 2MB 的伪 PNG（合法头 + 零填充；字节闸在格式/解码前拦截） */
+function oversizedPngFile(): File {
+  const bin = atob(T04_IMG.split(',')[1]!)
+  const head = new Uint8Array([...bin].map((ch) => ch.charCodeAt(0)))
+  const bytes = new Uint8Array(2 * 1024 * 1024 + 100)
+  bytes.set(head)
+  return new File([bytes], 'big.png', { type: 'image/png' })
+}
+
+describe('editor store · 图片上传/替换/移除（R-3 / 交互升级 T04）', () => {
+  it('上传合法图片 → 槽值变 {image}，一步撤销复原', async () => {
+    const store = await setup()
+    const sid = store.current!.layout.slotGrid![3]![1]! // row.3.val.a：text 槽（[2][1] 是 mark 槽）
+    const before = JSON.parse(JSON.stringify(store.current!.slots[sid]))
+    expect(await store.uploadImage(sid, pngFile())).toBe(true)
+    expect(store.current!.slots[sid]).toMatchObject({ image: T04_IMG })
+    store.undo()
+    expect(store.current!.slots[sid]).toEqual(before)
+  })
+
+  it('替换图片 = 再设一次（同一意图链路），可撤销一步', async () => {
+    const store = await setup()
+    const sid = store.current!.layout.slotGrid![3]![1]! // row.3.val.a：text 槽（[2][1] 是 mark 槽）
+    expect(await store.uploadImage(sid, pngFile())).toBe(true)
+    // 换成另一张（这里用同一 data URL 模拟：写入路径一致）
+    expect(await store.uploadImage(sid, pngFile())).toBe(true)
+    expect(store.current!.slots[sid]).toMatchObject({ image: T04_IMG })
+    store.undo()
+    expect(store.current!.slots[sid]).toMatchObject({ image: T04_IMG })
+  })
+
+  it('超 2MB → 白话 toast（图片太大），store 不变', async () => {
+    const store = await setup()
+    const sid = store.current!.layout.slotGrid![3]![1]! // row.3.val.a：text 槽（[2][1] 是 mark 槽）
+    const versionBefore = store.state?.version
+    expect(await store.uploadImage(sid, oversizedPngFile())).toBe(false)
+    expect(store.toast).toContain('图片太大')
+    expect(store.state?.version).toBe(versionBefore)
+  })
+
+  it('mark 槽拒绝设图 → IMAGE_NOT_ALLOWED 白话文案，store 不变', async () => {
+    const store = await setup()
+    const before = JSON.stringify(store.current!.slots['row.2.val.a'])
+    expect(await store.uploadImage('row.2.val.a', pngFile())).toBe(false)
+    expect(store.toast).toContain('不能放图片')
+    expect(JSON.stringify(store.current!.slots['row.2.val.a'])).toBe(before)
+  })
+
+  it('移除图片 = setSlot("")，回到文字空槽，可撤销', async () => {
+    const store = await setup()
+    const sid = store.current!.layout.slotGrid![3]![1]! // row.3.val.a：text 槽（[2][1] 是 mark 槽）
+    expect(await store.uploadImage(sid, pngFile())).toBe(true)
+    expect(store.removeImage(sid)).toBe(true)
+    // setSlot('') 经 mergeSlotValue 回文字空槽（空串或 {text:''} 均为空）
+    const v = store.current!.slots[sid]
+    const shown =
+      typeof v === 'string'
+        ? v
+        : typeof v === 'object' && v !== null && 'text' in v
+          ? String(v.text)
+          : 'x'
+    expect(shown).toBe('')
+    store.undo()
+    expect(store.current!.slots[sid]).toMatchObject({ image: T04_IMG })
+  })
+})

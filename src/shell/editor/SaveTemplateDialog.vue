@@ -26,6 +26,10 @@ function submit() {
       <DialogContent class="dialog">
         <DialogTitle>另存为模板</DialogTitle>
         <p>只新增不覆盖。重名也可以保存。</p>
+        <!-- IA-2 口径对齐（交互升级 T04）：图片不计入模板文本配额 -->
+        <p class="quota-hint" data-testid="quota-hint">
+          模板连同图片一起保存：图片不计入 2MB 文本额度，仍受每表最多 10 张、总 20MB 约束。
+        </p>
         <label>
           名称
           <input v-model="name" autofocus @keydown.enter.prevent="submit" />
@@ -70,6 +74,11 @@ input {
   border-radius: 8px;
   padding: 8px 10px;
   font: inherit;
+}
+.quota-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--pt-muted);
 }
 .actions {
   display: flex;

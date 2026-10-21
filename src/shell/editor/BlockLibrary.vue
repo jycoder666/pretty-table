@@ -1,34 +1,27 @@
 <script setup lang="ts">
-import { useEditorStore } from '../stores/editor'
 import BlockDraggable from '../dnd/BlockDraggable.vue'
 import { usePlaceSession } from '../dnd/placeSession'
 import type { BlockType } from '@/core'
 
-const editor = useEditorStore()
 const session = usePlaceSession()
 
-const items: Array<{ type: BlockType; label: string; enabled: boolean; hint: string }> = [
+// R-4：四类区块全部开放（emphFooter 只进 footer 槽、leftTag 只进左栏标签槽，accept 由核内闸）
+const items: Array<{ type: BlockType; label: string; hint: string }> = [
   {
     type: 'sectionBar',
     label: '分区色条',
-    enabled: true,
     hint: '拖入表内虚线槽，或 Enter / 点击进入待放置后选槽',
   },
   {
     type: 'groupHeader',
     label: '分组标题行',
-    enabled: true,
     hint: '拖入表内虚线槽，或 Enter / 点击进入待放置后选槽',
   },
-  { type: 'emphFooter', label: '强调注脚', enabled: false, hint: '二期开放' },
-  { type: 'leftTag', label: '左栏标签块', enabled: false, hint: '二期开放' },
+  { type: 'emphFooter', label: '强调注脚', hint: '拖入表底注脚槽，小字纸底整行显示' },
+  { type: 'leftTag', label: '左栏标签块', hint: '拖入左栏标签槽，首列标签色底显示' },
 ]
 
-function activate(type: BlockType, enabled: boolean) {
-  if (!enabled) {
-    editor.showToast('该区块本期不可用')
-    return
-  }
+function activate(type: BlockType) {
   if (session.active.value && session.blockType.value === type) {
     session.cancelPlace()
     return
@@ -36,11 +29,7 @@ function activate(type: BlockType, enabled: boolean) {
   session.startPlace(type)
 }
 
-function keyPlace(type: BlockType, enabled: boolean) {
-  if (!enabled) {
-    editor.showToast('该区块本期不可用')
-    return
-  }
+function keyPlace(type: BlockType) {
   session.startPlace(type)
 }
 </script>
@@ -57,11 +46,10 @@ function keyPlace(type: BlockType, enabled: boolean) {
         :key="it.type"
         :type="it.type"
         :label="it.label"
-        :enabled="it.enabled"
         :hint="it.hint"
         :active="session.active.value && session.blockType.value === it.type"
-        @activate="activate(it.type, it.enabled)"
-        @key-place="keyPlace(it.type, it.enabled)"
+        @activate="activate(it.type)"
+        @key-place="keyPlace(it.type)"
       />
     </ul>
   </aside>

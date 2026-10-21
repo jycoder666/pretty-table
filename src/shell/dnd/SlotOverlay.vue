@@ -19,6 +19,8 @@ const session = usePlaceSession()
 
 const visibleTargets = computed(() => {
   if (!session.overlayVisible.value) return [] as DropTarget[]
+  // R-1：拖拽进行中 → 全部槽可见（accept 匹配高亮、不匹配由 dimmed 弱化）
+  if (session.dragging.value) return props.targets
   if (session.active.value && session.blockType.value) {
     return props.targets.filter((t) => t.accept.includes(session.blockType.value!))
   }
@@ -26,6 +28,12 @@ const visibleTargets = computed(() => {
     (t) => t.accept.includes('sectionBar') || t.accept.includes('groupHeader'),
   )
 })
+
+/** R-1：拖拽进行中 accept 不匹配当前拖拽类型 → 弱化（低透明度虚框） */
+function dimmedFor(t: DropTarget): boolean {
+  const type = session.dragType.value
+  return session.dragging.value && !(type && t.accept.includes(type))
+}
 
 watch(
   () => [session.active.value, session.focusIndex.value, visibleTargets.value.length] as const,
@@ -78,6 +86,7 @@ function onSlotClick(slotId: string) {
         :target="t"
         :index="i"
         :focused="session.active.value && session.focusIndex.value === i"
+        :dimmed="dimmedFor(t)"
         :host-left="hostLeft"
         :host-top="hostTop"
         :tabindex="session.active.value ? 0 : -1"

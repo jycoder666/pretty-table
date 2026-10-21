@@ -18,4 +18,14 @@ describe('errorCopy — 错误/警告白话文案', () => {
     expect(warnCopy('UNKNOWN_FIELD')).toContain('忽略')
     expect(warnCopy('MARK_UNKNOWN')).toBe('部分内容已按默认处理')
   })
+
+  it('图片类错误码（R-3 / 交互升级 T04）：白话文案，不露码', () => {
+    expect(errorCopy('IMAGE_TOO_LARGE')).toContain('图片太大')
+    expect(errorCopy('IMAGE_BUDGET_EXCEEDED')).toContain('上限')
+    expect(errorCopy('IMAGE_FORMAT_UNSUPPORTED')).toContain('PNG')
+    expect(errorCopy('IMAGE_NOT_ALLOWED')).toContain('不能放图片')
+    expect(errorCopy('IMAGE_DECODE_FAIL')).toContain('读不出来')
+    // 读时清洗 warn：IMAGE_INVALID 聚合白话
+    expect(warnCopy('IMAGE_INVALID')).toContain('已清空')
+  })
 })

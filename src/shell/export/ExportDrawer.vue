@@ -9,6 +9,7 @@ import { faultGate } from '../debug/fault'
 import { getPngScale, setPngScale, type PngScale } from '../repo/prefs'
 import { copyText } from './clipboard'
 import PtButton from '../ui/PtButton.vue'
+import PtTooltip from '../ui/PtTooltip.vue'
 
 const open = defineModel<boolean>('open', { default: false })
 const editor = useEditorStore()
@@ -132,8 +133,12 @@ async function downloadPng() {
         </div>
 
         <div class="actions">
-          <PtButton :disabled="editor.exporting" @click="copyHtml">复制 HTML</PtButton>
-          <PtButton :disabled="editor.exporting" @click="downloadPng">导出 PNG</PtButton>
+          <PtTooltip text="复制带样式的 HTML，粘贴到支持富文本的编辑器">
+            <PtButton class="wide" :disabled="editor.exporting" @click="copyHtml">复制 HTML</PtButton>
+          </PtTooltip>
+          <PtTooltip text="按当前倍率导出 PNG 图片（与预览同源）">
+            <PtButton class="wide" :disabled="editor.exporting" @click="downloadPng">导出 PNG</PtButton>
+          </PtTooltip>
           <PtButton variant="ghost" @click="open = false">关闭</PtButton>
         </div>
         <textarea
@@ -224,6 +229,11 @@ async function downloadPng() {
   flex-direction: column;
   gap: 10px;
   margin-top: 20px;
+}
+/* PtTooltip 包裹后按钮撑满整行 */
+.actions :deep(.pt-tooltip-trigger),
+.actions button {
+  width: 100%;
 }
 .fallback {
   margin-top: 14px;

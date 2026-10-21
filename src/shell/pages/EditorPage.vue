@@ -12,6 +12,7 @@ import EditorToolbar from '../editor/EditorToolbar.vue'
 import SaveTemplateDialog from '../editor/SaveTemplateDialog.vue'
 import ExportDrawer from '../export/ExportDrawer.vue'
 import PtButton from '../ui/PtButton.vue'
+import PtTooltip from '../ui/PtTooltip.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import { confirmAction } from '../ui/confirm'
 import { pointerOnlySensors, readBlockType } from '../dnd/dndKitAdapter'
@@ -99,9 +100,10 @@ async function discardRestore() {
 }
 
 function onDragStart(event: { operation: { source?: { data?: unknown } | null } }) {
-  session.setDragging(true)
-  session.cancelPlace()
   const type = readBlockType(event.operation.source?.data)
+  // R-1：把拖拽类型带进会话（SlotOverlay 按 accept 匹配高亮 / 弱化）
+  session.setDragging(true, type ?? undefined)
+  session.cancelPlace()
   ghostLabel.value =
     type === 'sectionBar' ? '分区色条' : type === 'groupHeader' ? '分组标题行' : '区块'
   previewRef.value?.refreshTargets?.()
@@ -155,9 +157,15 @@ function onDragEnd(event: {
         <div class="right">
           <!-- PX-09：粘贴入口并入顶部工具条，预览区不再被悬浮按钮遮挡 -->
           <EditorToolbar />
-          <PtButton variant="ghost" :disabled="!editor.undoEnabled" @click="editor.undo()">撤销</PtButton>
-          <PtButton variant="ghost" :disabled="editor.pastePending" @click="saveOpen = true">另存为模板</PtButton>
-          <PtButton :disabled="editor.exporting || editor.pastePending" @click="exportOpen = true">导出</PtButton>
+          <PtTooltip text="撤销上一步操作">
+            <PtButton variant="ghost" :disabled="!editor.undoEnabled" @click="editor.undo()">撤销</PtButton>
+          </PtTooltip>
+          <PtTooltip text="把当前表格另存为我的模板（图片一起保存）">
+            <PtButton variant="ghost" :disabled="editor.pastePending" @click="saveOpen = true">另存为模板</PtButton>
+          </PtTooltip>
+          <PtTooltip text="复制带样式的 HTML 或导出 PNG">
+            <PtButton :disabled="editor.exporting || editor.pastePending" @click="exportOpen = true">导出</PtButton>
+          </PtTooltip>
         </div>
       </header>
 

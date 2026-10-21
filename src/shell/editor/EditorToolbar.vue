@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useEditorStore } from '../stores/editor'
 import PtButton from '../ui/PtButton.vue'
+import PtTooltip from '../ui/PtTooltip.vue'
 
 /** 工具条「粘贴表格内容」按钮（交互 §1.1 / S11）：clipboard.readText 被拒时弹手动粘贴框 */
 const editor = useEditorStore()
@@ -35,15 +36,19 @@ function onManualClose() {
 
 <template>
   <div class="paste-toolbar" @click.stop>
-    <PtButton
-      variant="ghost"
-      :disabled="!editor.selectedSlotId || editor.pastePending"
-      :title="editor.selectedSlotId ? '以选中格为起点，粘贴一块表格内容' : '先点一个格子作为起点'"
-      data-testid="paste-toolbar-btn"
-      @click="onToolbarPaste"
+    <!-- R-5 十项清单：粘贴入口（表格文本 → 填槽；图片 → 填图） -->
+    <PtTooltip
+      :text="editor.selectedSlotId ? '以选中格为起点，粘贴一块表格内容' : '先点一个格子作为起点'"
     >
-      粘贴表格内容
-    </PtButton>
+      <PtButton
+        variant="ghost"
+        :disabled="!editor.selectedSlotId || editor.pastePending"
+        data-testid="paste-toolbar-btn"
+        @click="onToolbarPaste"
+      >
+        粘贴表格内容
+      </PtButton>
+    </PtTooltip>
 
     <!-- S11 手动粘贴小框 -->
     <div v-if="manualOpen" class="manual-box" data-testid="paste-manual-box">

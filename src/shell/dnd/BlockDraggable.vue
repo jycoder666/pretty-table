@@ -3,13 +3,16 @@ import { ref, toRef } from 'vue'
 import { useDraggable } from '@dnd-kit/vue'
 import type { BlockType } from '@/core'
 
-const props = defineProps<{
-  type: BlockType
-  label: string
-  enabled: boolean
-  hint: string
-  active: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    type: BlockType
+    label: string
+    enabled?: boolean
+    hint: string
+    active: boolean
+  }>(),
+  { enabled: true },
+)
 
 const emit = defineEmits<{
   activate: []
@@ -51,9 +54,10 @@ function onKeydown(e: KeyboardEvent) {
     @click="onClick"
     @keydown="onKeydown"
   >
+    <!-- R-1 拖拽把手：整卡仍可拖（保留现有手势，不缩热区），把手提供视觉锚点 -->
+    <span class="handle" role="img" aria-label="拖动区块">⠿</span>
     {{ label }}
     <span :id="`hint-${type}`" class="hint-sr">{{ hint }}</span>
-    <span v-if="!enabled" class="soon">即将开放</span>
   </li>
 </template>
 
@@ -79,10 +83,16 @@ li.disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.soon {
-  display: block;
-  font-size: 11px;
-  color: #9ca3af;
+.handle {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--pt-muted);
+  cursor: grab;
+  user-select: none;
+}
+li.disabled .handle {
+  color: var(--pt-border);
+  cursor: not-allowed;
 }
 .hint-sr {
   position: absolute;

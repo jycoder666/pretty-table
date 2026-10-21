@@ -29,7 +29,7 @@ import {
 import { saveDraft, loadDraft, clearDraft } from '../repo/draftRepo'
 import { faultGate } from '../debug/fault'
 import { pasteCopy } from '../paste/pasteCopy'
-import { warnCopy } from '../editor/errorCopy'
+import { errorCopy, warnCopy } from '../editor/errorCopy'
 
 export type PageView = 'library' | 'editor'
 
@@ -296,6 +296,59 @@ export const useEditorStore = defineStore('editor', () => {
     selectedBlockId.value = null
   }
 
+  // ── R-3 图片写入（交互升级 T04）：上传 / 粘贴同一入口 ──
+
+  /** File → data URL（壳层唯一读取点；校验全部在核内三连闸） */
+  function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(new Error('图片读取失败'))
+      reader.readAsDataURL(file)
+    })
+  }
+
+  /**
+   * 上传图片（P0）：File → dataURL → setSlot 意图。
+   * 校验失败（格式/大小/预算/格子不允许）→ errorCopy 白话 toast，store 不变。
+   */
+  async function uploadImage(slotId: string, file: File): Promise<boolean> {
+    if (!state.value) return false
+    let dataUrl: string
+    try {
+      dataUrl = await fileToDataUrl(file)
+    } catch {
+      showToast('图片读取失败，请重试')
+      return false
+    }
+    return setImageDataUrl(slotId, dataUrl)
+  }
+
+  /**
+   * data URL 写入（上传/粘贴共用）：走既有 setSlot 意图 → 一意图一张撤销快照。
+   * 核内 canSetImage / validateImageDataUrl / checkImageBudget 三连校验，
+   * 失败经 errorCopy 映射白话文案（GC-25 码不外露）。
+   */
+  function setImageDataUrl(slotId: string, dataUrl: string): boolean {
+    if (!state.value) return false
+    const r = dispatch(state.value, { kind: 'setSlot', slotId, value: { image: dataUrl } })
+    if (!r.ok) {
+      showToast(errorCopy(r.error.code, r.error.message))
+      return false
+    }
+    state.value = r.value
+    if (r.warnings?.length) {
+      showToast(r.warnings.map((w) => warnCopy(w.code)).join('；'))
+    }
+    void persistDraft()
+    return true
+  }
+
+  /** 移除图片 = setSlot('')（设计 1.2.2：回到文字空槽），一次意图可撤销 */
+  function removeImage(slotId: string): boolean {
+    return apply({ kind: 'setSlot', slotId, value: '' })
+  }
+
   function updateBlockText(text: string) {
     if (!selectedBlockId.value || !current.value) return
     const b = current.value.blocks.find((x) => x.id === selectedBlockId.value)
@@ -375,6 +428,9 @@ export const useEditorStore = defineStore('editor', () => {
     addBlock,
     removeSelectedBlock,
     updateBlockText,
+    uploadImage,
+    setImageDataUrl,
+    removeImage,
     markSaved,
     goLibrary,
     themeLabel,

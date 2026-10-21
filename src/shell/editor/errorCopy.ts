@@ -21,6 +21,12 @@ const MAP: Partial<Record<ErrorCode, string>> = {
   TEMPLATE_DELETE_FAIL: '删除失败，请重试',
   DRAFT_RESTORE_FAIL: '上次的编辑没能恢复',
   DRAFT_SAVE_FAIL: '自动保存失败，刷新后可能无法恢复',
+  // R-3 图片（GC-25：码不外露，白话文案）
+  IMAGE_TOO_LARGE: '图片太大，请换一张 2MB 以内的',
+  IMAGE_BUDGET_EXCEEDED: '图片数量或总大小到上限了，先删几张再试',
+  IMAGE_FORMAT_UNSUPPORTED: '只支持 PNG / JPG / WebP / GIF 图片',
+  IMAGE_NOT_ALLOWED: '这个格子不能放图片',
+  IMAGE_DECODE_FAIL: '图片读不出来，请换一张试试',
 }
 
 /** 结构/导入类 warn（STRUCT_LOSS / UNKNOWN_FIELD 等）的聚合白话文案（T04） */
@@ -29,6 +35,7 @@ const WARN_MAP: Partial<Record<WarnCode, string>> = {
   UNKNOWN_FIELD: '部分不支持的字段已被忽略',
   TOKEN_INVALID: '个别颜色值格式不对，已按预设处理',
   THEME_MISSING: '主题不存在，已用默认',
+  IMAGE_INVALID: '有一张图片读不出来，已清空该格',
 }
 
 export function errorCopy(code: ErrorCode, fallback?: string): string {

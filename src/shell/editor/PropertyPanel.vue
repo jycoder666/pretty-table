@@ -15,6 +15,7 @@ import {
   canAddCol,
   canMerge,
   canSplit,
+  canSetImage,
   clampColWidth,
   colWidthAt,
   hasContentInRow,
@@ -27,6 +28,7 @@ import {
   type SlotValue,
 } from '@/core'
 import PtButton from '../ui/PtButton.vue'
+import PtTooltip from '../ui/PtTooltip.vue'
 import PtSegmented from '../ui/PtSegmented.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import { confirmAction } from '../ui/confirm'
@@ -210,6 +212,32 @@ function slotDisplay(v: SlotValue | undefined): string {
   return String(v)
 }
 
+// ── R-3 图片区（交互升级 T04）：可设图的 text 槽显示上传/替换/移除 ──
+
+/** 选中槽当前是否已设图 */
+const selectedImage = computed<string | null>(() => {
+  const sid = editor.selectedSlotId
+  const v = sid && editor.current ? editor.current.slots[sid] : undefined
+  return v && typeof v === 'object' && 'image' in v ? v.image : null
+})
+
+/** 图片能力闸（核内 canSetImage 同源）：存在于 slotGrid、非 readonly、非 locked、kind text/缺省 */
+const canImage = computed(() => {
+  const inst = editor.current
+  const sid = editor.selectedSlotId
+  if (!inst || !sid || editor.pastePending) return false
+  return canSetImage(inst, sid).ok
+})
+
+function onImageFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // 清空以便同一文件可重复选择
+  const sid = editor.selectedSlotId
+  if (!file || !sid) return
+  void editor.uploadImage(sid, file)
+}
+
 // ── PX-07：标题改人话——内容摘要 / 行列位置，禁止露出内部 ID（u 序号 / r2c3） ──
 const SUMMARY_LIMIT = 8
 
@@ -234,7 +262,10 @@ function slotPosOf(slotId: string): [number, number] | null {
 const slotHeadline = computed<string>(() => {
   const sid = editor.selectedSlotId
   if (!sid || !editor.current) return ''
-  const summary = summarizeText(slotDisplay(editor.current.slots[sid]))
+  // R-3：图片槽 headline 显示「图片」（PX-07 人话，不露 data URL）
+  const v = editor.current.slots[sid]
+  if (v && typeof v === 'object' && 'image' in v) return '图片'
+  const summary = summarizeText(slotDisplay(v))
   if (summary) return `当前内容：${summary}`
   const pos = slotPosOf(sid)
   return pos ? `第 ${pos[0] + 1} 行 · 第 ${pos[1] + 1} 列` : ''
@@ -389,6 +420,49 @@ async function removeBlock() {
           <h4>槽位文案</h4>
           <!-- PX-07：人话标题（内容摘要 / 行列位置），不露内部 ID -->
           <p class="headline" data-testid="slot-headline">{{ slotHeadline }}</p>
+          <!-- R-3 图片区：可设图的 text 槽（含已设图）显示上传/替换/移除 -->
+          <div v-if="canImage || selectedImage" class="image-area" data-testid="image-area">
+            <template v-if="selectedImage">
+              <img class="thumb" :src="selectedImage" alt="已设置的图片" data-testid="image-thumb" />
+              <div class="row">
+                <PtTooltip text="换一张图片放进这个格子">
+                  <label class="file-btn">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      data-testid="image-file-replace"
+                      @change="onImageFile"
+                    />
+                    替换图片
+                  </label>
+                </PtTooltip>
+                <PtTooltip text="移除这张图片，格子恢复为文字格">
+                  <PtButton
+                    variant="ghost"
+                    data-testid="image-remove"
+                    :disabled="editor.pastePending"
+                    @click="editor.removeImage(editor.selectedSlotId!)"
+                  >
+                    移除图片
+                  </PtButton>
+                </PtTooltip>
+              </div>
+            </template>
+            <template v-else>
+              <PtTooltip text="上传一张图片放进这个格子">
+                <label class="file-btn">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    data-testid="image-file"
+                    @change="onImageFile"
+                  />
+                  上传图片
+                </label>
+              </PtTooltip>
+            </template>
+            <p class="hint">PNG / JPG / WebP / GIF，单张 2MB 内；动图按第一帧显示。</p>
+          </div>
           <!-- 三态符号槽：只有三选一，无自定义符号/颜色入口（OUT-13 / TC-PT-075） -->
           <template v-if="slotKind === 'mark'">
             <div class="row" role="radiogroup" aria-label="支持状态">
@@ -418,7 +492,7 @@ async function removeBlock() {
             />
           </template>
           <template v-else>
-            <textarea v-model="slotText" rows="3" @blur="editor.endTextSession()" />
+            <textarea v-if="!selectedImage" v-model="slotText" rows="3" @blur="editor.endTextSession()" />
           </template>
           <div class="row">
             <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('left')">左</PtButton>
@@ -426,9 +500,15 @@ async function removeBlock() {
             <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('right')">右</PtButton>
           </div>
           <div class="row">
-            <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('red')">红字</PtButton>
-            <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bold')">加粗</PtButton>
-            <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bg')">底色</PtButton>
+            <PtTooltip text="给选中格子加红字">
+              <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('red')">红字</PtButton>
+            </PtTooltip>
+            <PtTooltip text="加粗选中格子">
+              <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bold')">加粗</PtButton>
+            </PtTooltip>
+            <PtTooltip text="给选中格子加底色">
+              <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bg')">底色</PtButton>
+            </PtTooltip>
           </div>
           <p v-if="!canEmphasize" class="hint">此处由模板固定，不能强调</p>
         </div>
@@ -457,18 +537,18 @@ async function removeBlock() {
         <div class="section">
           <h4>主题</h4>
           <div class="themes">
-            <button
-              v-for="id in themes"
-              :key="id"
-              type="button"
-              class="theme-btn"
-              :class="{ on: editor.current?.themeId === id }"
-              :style="{ '--swatch': themeSwatch(id) }"
-              @click="editor.setTheme(id)"
-            >
-              <i />
-              {{ editor.themeLabel(id) }}
-            </button>
+            <PtTooltip v-for="id in themes" :key="id" :text="`切换到${editor.themeLabel(id)}`">
+              <button
+                type="button"
+                class="theme-btn"
+                :class="{ on: editor.current?.themeId === id }"
+                :style="{ '--swatch': themeSwatch(id) }"
+                @click="editor.setTheme(id)"
+              >
+                <i />
+                {{ editor.themeLabel(id) }}
+              </button>
+            </PtTooltip>
           </div>
           <label class="zebra">
             <input
@@ -619,24 +699,26 @@ async function removeBlock() {
           <h4>合并 / 拆分</h4>
           <p class="hint">仅在模板允许区内操作；锁定合并不可拆。</p>
           <div class="row">
-            <PtButton
-              variant="ghost"
-              :disabled="!mergeGate.ok"
-              :title="mergeGate.reason || '合并选区'"
-              data-testid="merge-btn"
-              @click="editor.mergeSelection()"
-            >
-              合并选区
-            </PtButton>
-            <PtButton
-              variant="ghost"
-              :disabled="!splitGate.ok"
-              :title="splitGate.reason || '拆分'"
-              data-testid="split-btn"
-              @click="editor.splitSelection()"
-            >
-              拆分
-            </PtButton>
+            <PtTooltip :text="mergeGate.reason || '合并当前选区的格子'">
+              <PtButton
+                variant="ghost"
+                :disabled="!mergeGate.ok"
+                data-testid="merge-btn"
+                @click="editor.mergeSelection()"
+              >
+                合并选区
+              </PtButton>
+            </PtTooltip>
+            <PtTooltip :text="splitGate.reason || '拆分当前选中的合并区'">
+              <PtButton
+                variant="ghost"
+                :disabled="!splitGate.ok"
+                data-testid="split-btn"
+                @click="editor.splitSelection()"
+              >
+                拆分
+              </PtButton>
+            </PtTooltip>
           </div>
         </div>
 
@@ -645,16 +727,20 @@ async function removeBlock() {
           <h4>推荐列</h4>
           <p class="hint">最多标一列；再点一次取消推荐。</p>
           <div class="row">
-            <PtButton
+            <PtTooltip
               v-for="c in recommendableCols"
               :key="c"
-              variant="ghost"
-              :class="{ on: recommendCol === c }"
-              :disabled="editor.pastePending"
-              @click="toggleRecommend(c)"
+              text="把这一列标记为推荐列，再点一次取消"
             >
-              {{ colLabels[c] }}<template v-if="recommendCol === c">（{{ RECOMMEND_BADGE_TEXT }}）</template>
-            </PtButton>
+              <PtButton
+                variant="ghost"
+                :class="{ on: recommendCol === c }"
+                :disabled="editor.pastePending"
+                @click="toggleRecommend(c)"
+              >
+                {{ colLabels[c] }}<template v-if="recommendCol === c">（{{ RECOMMEND_BADGE_TEXT }}）</template>
+              </PtButton>
+            </PtTooltip>
           </div>
         </div>
 
@@ -827,6 +913,39 @@ textarea {
   margin: 0 0 6px;
   font-size: 12px;
   color: var(--pt-muted);
+}
+/* R-3 图片区 */
+.image-area {
+  margin-bottom: 8px;
+}
+.image-area .thumb {
+  display: block;
+  max-width: 100%;
+  max-height: 96px;
+  border: 1px solid var(--pt-border);
+  border-radius: 8px;
+  object-fit: cover;
+}
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px dashed var(--pt-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--pt-paper);
+}
+.file-btn input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+.file-btn:hover {
+  border-color: var(--pt-primary);
 }
 .hint {
   font-size: 12px;

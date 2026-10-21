@@ -13,6 +13,8 @@ import type { DropTarget } from './slotDnd'
 /** Shared place / drag chrome state for editor shell (not Pinia — local to DnD). */
 const place = shallowRef<PlaceMode>(idlePlaceMode())
 const dragging = ref(false)
+/** R-1：拖拽进行中的区块类型（SlotOverlay 按 accept 匹配高亮/弱化） */
+const dragType = shallowRef<BlockType | null>(null)
 const liveAnnounce = ref('')
 const catalogTargets = shallowRef<DropTarget[]>([])
 
@@ -54,8 +56,9 @@ export function usePlaceSession() {
     return { type, slotId }
   }
 
-  function setDragging(on: boolean) {
+  function setDragging(on: boolean, type?: BlockType) {
     dragging.value = on
+    dragType.value = on ? (type ?? null) : null
   }
 
   return {
@@ -66,6 +69,7 @@ export function usePlaceSession() {
     targets,
     catalogTargets,
     dragging,
+    dragType,
     overlayVisible,
     liveAnnounce,
     setCatalogTargets,

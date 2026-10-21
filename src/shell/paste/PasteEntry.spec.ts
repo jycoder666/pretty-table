@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import type { VueWrapper } from '@vue/test-utils'
 import { COMPARE_ALPHA_V1, cloneInstance } from '@/core'
@@ -221,5 +221,69 @@ describe('PasteEntry · 预览期守卫', async () => {
     await guard.trigger('click')
     expect(store.pastePreview).toBeNull()
     expect(wrapper!.find('[data-testid="paste-guard"]').exists()).toBe(false)
+  })
+})
+
+// ── R-3 剪贴板图片粘贴优先（交互升级 T04）──
+
+const T04_IMG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+
+function pngFile(): File {
+  const bin = atob(T04_IMG.split(',')[1]!)
+  const bytes = new Uint8Array([...bin].map((ch) => ch.charCodeAt(0)))
+  return new File([bytes], 'clip.png', { type: 'image/png' })
+}
+
+function dispatchPasteWithItems(
+  items: Array<{ type: string; getAsFile: () => File | null }>,
+  text = '',
+  target?: EventTarget,
+): ClipboardEvent {
+  const ev = new Event('paste', { cancelable: true, bubbles: true }) as ClipboardEvent
+  Object.defineProperty(ev, 'clipboardData', {
+    value: {
+      getData: (t: string) => (t === 'text/plain' ? text : ''),
+      items,
+    },
+  })
+  Object.defineProperty(ev, 'target', { value: target ?? window })
+  window.dispatchEvent(ev)
+  return ev
+}
+
+describe('PasteEntry · 图片粘贴优先（R-3 / 交互升级 T04）', () => {
+  it('剪贴板同时有 image 与 text → 图片优先写入选中格（不走文本解析）', async () => {
+    const store = setup()
+    store.selectedSlotId = 'row.3.val.a'
+    dispatchPasteWithItems([{ type: 'image/png', getAsFile: () => pngFile() }], '1\t2')
+    await flushPromises()
+    expect(store.pastePending).toBe(false)
+    // FileReader 异步完成（宏任务），用 vi.waitFor 等写入
+    await vi.waitFor(() => {
+      expect(store.current!.slots['row.3.val.a']).toMatchObject({ image: T04_IMG })
+    })
+  })
+
+  it('image item 但未选中格子 → 白话提示，store 不变', async () => {
+    const store = setup()
+    const before = JSON.stringify(store.current)
+    dispatchPasteWithItems([{ type: 'image/png', getAsFile: () => pngFile() }])
+    await flushPromises()
+    expect(store.toast).toContain('先点一个格子')
+    expect(JSON.stringify(store.current)).toBe(before)
+  })
+
+  it('image item 但选中格是 mark 槽 → 不能放图片提示，store 不变', async () => {
+    const store = setup()
+    store.selectedSlotId = 'row.2.val.a'
+    const before = JSON.stringify(store.current)
+    dispatchPasteWithItems([{ type: 'image/png', getAsFile: () => pngFile() }])
+    await flushPromises()
+    // 校验在核内（FileReader 异步完成后），用 vi.waitFor 等 toast
+    await vi.waitFor(() => {
+      expect(store.toast).toContain('不能放图片')
+    })
+    expect(JSON.stringify(store.current)).toBe(before)
   })
 })

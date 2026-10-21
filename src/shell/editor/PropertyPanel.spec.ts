@@ -363,12 +363,12 @@ describe('PropertyPanel · 合并/拆分按钮随选区置灰（PX-08）', () =>
     return wrapper.find('[data-testid="split-btn"]')
   }
 
-  it('无选区：合并/拆分都置灰，title 给白话原因', async () => {
+  it('无选区：合并/拆分都置灰（原因改走 PtTooltip，不留裸 title）', async () => {
     const { wrapper } = await setup(COMPARE_ALPHA_V1)
     expect(mergeBtn(wrapper).attributes('disabled')).toBeDefined()
-    expect(mergeBtn(wrapper).attributes('title')).toContain('矩形区域')
+    expect(mergeBtn(wrapper).attributes('title')).toBeUndefined()
     expect(splitBtn(wrapper).attributes('disabled')).toBeDefined()
-    expect(splitBtn(wrapper).attributes('title')).toContain('选中一个已合并的格子')
+    expect(splitBtn(wrapper).attributes('title')).toBeUndefined()
   })
 
   it('单格选区：合并置灰（单格无需合并），拆分置灰（没有可拆分的合并）', async () => {
@@ -376,9 +376,7 @@ describe('PropertyPanel · 合并/拆分按钮随选区置灰（PX-08）', () =>
     editor.selectionRange = { start: [3, 1], end: [3, 1] }
     await wrapper.vm.$nextTick()
     expect(mergeBtn(wrapper).attributes('disabled')).toBeDefined()
-    expect(mergeBtn(wrapper).attributes('title')).toBe('单格无需合并')
     expect(splitBtn(wrapper).attributes('disabled')).toBeDefined()
-    expect(splitBtn(wrapper).attributes('title')).toBe('没有可拆分的合并')
   })
 
   it('选区命中已有合并（同范围）：合并与拆分都可用', async () => {
@@ -405,9 +403,8 @@ describe('PropertyPanel · 合并/拆分按钮随选区置灰（PX-08）', () =>
     expect(splitBtn(wrapper).attributes('disabled')).toBeDefined()
     editor.selectionRange = { start: [0, 0], end: [1, 0] }
     await wrapper.vm.$nextTick()
-    // [0,0]-[1,0] 是锁定合并（structuralMerges）→ 不能拆分
+    // [0,0]-[1,0] 是锁定合并（structuralMerges）→ 不能拆分（原因走 PtTooltip）
     expect(splitBtn(wrapper).attributes('disabled')).toBeDefined()
-    expect(splitBtn(wrapper).attributes('title')).toContain('不能拆分')
   })
 })
 
@@ -496,3 +493,73 @@ async function syncAndFlush(wrapper: ReturnType<typeof mount>) {
   syncCssVars()
   await wrapper.vm.$nextTick()
 }
+
+// ── R-3 图片区（交互升级 T04）──
+
+const T04_IMG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+
+function pngFile(): File {
+  const bin = atob(T04_IMG.split(',')[1]!)
+  const bytes = new Uint8Array([...bin].map((ch) => ch.charCodeAt(0)))
+  return new File([bytes], 'a.png', { type: 'image/png' })
+}
+
+describe('PropertyPanel · 图片区（R-3 / 交互升级 T04）', () => {
+  it('选中文本槽显示「上传图片」；设图后 headline 显示「图片」+ 缩略图 + 替换/移除', async () => {
+    const { editor, wrapper } = await setup()
+    editor.selectedSlotId = 'u7'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="image-area"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="image-file"]').exists()).toBe(true)
+    // 设图后：headline「图片」、缩略图、替换与移除入口
+    editor.setImageDataUrl('u7', T04_IMG)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="slot-headline"]').text()).toBe('图片')
+    expect(wrapper.find('[data-testid="image-thumb"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="image-file-replace"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="image-remove"]').exists()).toBe(true)
+  })
+
+  it('选择图片文件 → uploadImage 写入 {image}；移除后可撤销复原', async () => {
+    const { editor, wrapper } = await setup()
+    editor.selectedSlotId = 'u7'
+    await wrapper.vm.$nextTick()
+    const input = wrapper.find('[data-testid="image-file"]')
+    Object.defineProperty(input.element, 'files', { value: [pngFile()] })
+    await input.trigger('change')
+    await flushPromises()
+    // FileReader 异步完成（宏任务），用 vi.waitFor 等写入
+    await vi.waitFor(() => {
+      expect(editor.current!.slots['u7']).toMatchObject({ image: T04_IMG })
+    })
+    // 移除（setSlot('') 经 mergeSlotValue 回文字空槽：空串或 {text:''}）
+    await wrapper.find('[data-testid="image-remove"]').trigger('click')
+    await flushPromises()
+    const v = editor.current!.slots['u7']
+    const shown =
+      typeof v === 'string'
+        ? v
+        : typeof v === 'object' && v !== null && 'text' in v
+          ? String(v.text)
+          : 'x'
+    expect(shown).toBe('')
+    editor.undo()
+    expect(editor.current!.slots['u7']).toMatchObject({ image: T04_IMG })
+  })
+
+  it('mark 槽不显示图片区（kind 闸）', async () => {
+    const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    editor.selectedSlotId = 'row.2.val.a'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="image-area"]').exists()).toBe(false)
+  })
+
+  it('十项清单：合并/拆分按钮迁移到 PtTooltip，不留裸 title（C-2 抽查）', async () => {
+    const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    editor.selectionRange = { start: [3, 1], end: [3, 1] }
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="merge-btn"]').attributes('title')).toBeUndefined()
+    expect(wrapper.find('[data-testid="split-btn"]').attributes('title')).toBeUndefined()
+  })
+})

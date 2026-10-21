@@ -23,9 +23,27 @@ function isEditableTarget(t: EventTarget | null): boolean {
 function onWindowPaste(e: ClipboardEvent) {
   if (editor.pastePending) return
   if (isEditableTarget(e.target)) return // 输入态走原生（只进当前格）
-  if (!editor.selectedSlotId) return
   const data = e.clipboardData
   if (!data) return
+  // R-3 剪贴板图片优先（交互升级 T04）：截图工具常同时附 image + text/html，
+  // 图片意图明确，先判文本会截走 HTML → 图片永远粘不上
+  const imageItem = Array.from(data.items ?? []).find((it) => it.type.startsWith('image/'))
+  if (imageItem) {
+    e.preventDefault()
+    if (!editor.selectedSlotId) {
+      editor.showToast('先点一个格子，再粘贴图片')
+      return
+    }
+    const file = imageItem.getAsFile()
+    if (!file) {
+      editor.showToast('剪贴板里的图片读不出来，请重新截图再试')
+      return
+    }
+    // 校验在核内三连闸（canSetImage / validate / budget），失败经 errorCopy 白话 toast
+    void editor.uploadImage(editor.selectedSlotId, file)
+    return
+  }
+  if (!editor.selectedSlotId) return
   const text = data.getData('text/plain') ?? ''
   const html = data.getData('text/html') ?? ''
   if (text.trim() === '' && html.trim() === '') {
