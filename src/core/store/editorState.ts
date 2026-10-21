@@ -68,15 +68,19 @@ export function dispatch(
   if (state.pastePending === true && PASTE_BLOCKED_INTENTS.has(intent.kind)) {
     return fail('SLOT_DROP_BLOCKED', '先确认或取消这次粘贴')
   }
-  // 防御：栈为空时 coalesce 退化为默认行为，保证会话首键可撤销
+  // 防御：栈空时 coalesce 退化为默认路径（coalesce=false）——此时清 redoStack 是正确语义：
+  // 栈空说明这是会话首键（或首次编辑），push 快照即开启新分支，按约定新分支必须断开旧重做链
   const coalesce = opts.coalesceUndo === true && state.undoStack.length > 0
-  const snapshot = snapshotForUndo(state.current)
   const result = applyEditIntent(state.current, intent)
   if (!result.ok) return result
+  // QA 观察项（E3 验收遗留）：快照延迟到实际需要时再算——coalesce 命中时入栈被跳过，
+  // 提前深拷贝只会白算一份。applyEditIntent 返回新对象、不改入参，此处读 current 时序安全。
   return ok(
     {
       current: result.value,
-      undoStack: coalesce ? state.undoStack : pushSnapshot(state.undoStack, snapshot),
+      undoStack: coalesce
+        ? state.undoStack
+        : pushSnapshot(state.undoStack, snapshotForUndo(state.current)),
       // coalesce 未产生新分支，不清 redo；其余新操作一律断开重做链
       redoStack: coalesce ? state.redoStack : [],
       dirty: true,

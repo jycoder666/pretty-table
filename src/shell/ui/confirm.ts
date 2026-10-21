@@ -29,6 +29,8 @@ interface ConfirmState {
   danger: boolean
   /** 当前未决 promise 的 resolve；null = 无未决请求 */
   resolver: ((v: boolean) => void) | null
+  /** 打开那一刻的焦点元素（触发按钮）；关闭时归还焦点（最小焦点管理） */
+  returnFocusEl: HTMLElement | null
 }
 
 export const confirmState = reactive<ConfirmState>({
@@ -39,6 +41,7 @@ export const confirmState = reactive<ConfirmState>({
   cancelText: '取消',
   danger: false,
   resolver: null,
+  returnFocusEl: null,
 })
 
 /** 弹确认框并等待用户选择；resolve(true) = 确认，resolve(false) = 取消 / 关闭 */
@@ -51,6 +54,9 @@ export function confirmAction(opts: ConfirmOptions): Promise<boolean> {
     confirmState.confirmText = opts.confirmText ?? '确认'
     confirmState.cancelText = opts.cancelText ?? '取消'
     confirmState.danger = opts.danger ?? false
+    // 焦点归还锚点：打开瞬间的 document.activeElement（触发按钮）；不可聚焦时为 null
+    confirmState.returnFocusEl =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
     confirmState.resolver = resolve
     confirmState.open = true
   })
@@ -58,8 +64,11 @@ export function confirmAction(opts: ConfirmOptions): Promise<boolean> {
 
 /** ConfirmDialog 内部收口：关闭弹窗并结算未决 promise */
 export function settleConfirm(result: boolean): void {
+  const wasOpen = confirmState.open
   confirmState.open = false
   const resolver = confirmState.resolver
   confirmState.resolver = null
   resolver?.(result)
+  // 最小焦点管理：关闭后把焦点归还给触发元素（ConfirmDialog 打开时聚焦确认按钮，两半闭环）
+  if (wasOpen) confirmState.returnFocusEl?.focus()
 }

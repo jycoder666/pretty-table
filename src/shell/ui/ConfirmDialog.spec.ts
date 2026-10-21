@@ -86,3 +86,48 @@ describe('ConfirmDialog · 统一确认弹窗（PX-05）', () => {
     expect(await p2).toBe(true)
   })
 })
+
+// ── 最小焦点管理（测试基建 C4）：打开聚焦确认按钮 / Esc 关闭 / 关闭后焦点归还触发元素 ──
+// 焦点断言要求组件挂在文档树里（jsdom 对游离节点 focus() 是 no-op），用 attachTo 挂载
+
+describe('ConfirmDialog · 焦点管理', () => {
+  function mountAttached() {
+    return mount(ConfirmDialog, { attachTo: document.body })
+  }
+
+  it('打开后焦点落在确认按钮；点确认关闭后焦点归还触发元素', async () => {
+    const wrapper = mountAttached()
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+    expect(document.activeElement).toBe(trigger)
+    const p = confirmAction({ title: 'T', message: 'M', confirmText: '确认' })
+    await wrapper.vm.$nextTick()
+    const ok = wrapper.find('[data-testid="confirm-ok"]')
+    expect(document.activeElement).toBe(ok.element)
+    await ok.trigger('click')
+    expect(await p).toBe(true)
+    await wrapper.vm.$nextTick()
+    expect(document.activeElement).toBe(trigger)
+    wrapper.unmount()
+  })
+
+  it('Esc 关闭同样归还焦点；触发元素未聚焦时打开聚焦确认按钮不抛错', async () => {
+    const wrapper = mountAttached()
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+    const p = confirmAction({ title: 'T', message: 'M', confirmText: '确认' })
+    await wrapper.vm.$nextTick()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(await p).toBe(false)
+    await wrapper.vm.$nextTick()
+    expect(document.activeElement).toBe(trigger)
+    // 触发元素无焦点（activeElement = body）→ returnFocusEl 为 null，归还路径安全跳过
+    const p2 = confirmAction({ title: 'T', message: 'M', confirmText: '确认' })
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="confirm-ok"]').trigger('click')
+    expect(await p2).toBe(true)
+    wrapper.unmount()
+  })
+})
