@@ -6,7 +6,6 @@ import SlotOverlay from '../dnd/SlotOverlay.vue'
 import { computeDropTargets, estimateCellRects, type DropTarget } from '../dnd/slotDnd'
 import { usePlaceSession } from '../dnd/placeSession'
 import { locateVisual } from './previewHit'
-import EditorToolbar from './EditorToolbar.vue'
 import PasteEntry from '../paste/PasteEntry.vue'
 
 const editor = useEditorStore()
@@ -104,7 +103,7 @@ defineExpose({
 
 <template>
   <div ref="host" class="preview-host" @click="onClick">
-    <EditorToolbar />
+    <!-- PX-09：悬浮粘贴按钮已并入顶部工具条（EditorPage header），预览区保持纯净 -->
     <div ref="el" class="vtable-root" />
     <SlotOverlay
       :targets="dropTargets"

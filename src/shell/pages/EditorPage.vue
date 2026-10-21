@@ -8,6 +8,7 @@ import { effectivePalette } from '@/core'
 import BlockLibrary from '../editor/BlockLibrary.vue'
 import PreviewHost from '../editor/PreviewHost.vue'
 import PropertyPanel from '../editor/PropertyPanel.vue'
+import EditorToolbar from '../editor/EditorToolbar.vue'
 import SaveTemplateDialog from '../editor/SaveTemplateDialog.vue'
 import ExportDrawer from '../export/ExportDrawer.vue'
 import PtButton from '../ui/PtButton.vue'
@@ -152,6 +153,8 @@ function onDragEnd(event: {
           <strong>{{ editor.current.meta?.displayName ?? '编辑台' }}</strong>
         </div>
         <div class="right">
+          <!-- PX-09：粘贴入口并入顶部工具条，预览区不再被悬浮按钮遮挡 -->
+          <EditorToolbar />
           <PtButton variant="ghost" :disabled="!editor.undoEnabled" @click="editor.undo()">撤销</PtButton>
           <PtButton variant="ghost" :disabled="editor.pastePending" @click="saveOpen = true">另存为模板</PtButton>
           <PtButton :disabled="editor.exporting || editor.pastePending" @click="exportOpen = true">导出</PtButton>

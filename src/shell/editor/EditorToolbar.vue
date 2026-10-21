@@ -61,17 +61,19 @@ function onManualClose() {
 </template>
 
 <style scoped>
+/* PX-09：不再悬浮在预览区上（已并入顶部工具条），改为顶栏内联排布 */
 .paste-toolbar {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  z-index: 20;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
 }
 .manual-box {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
   display: flex;
   flex-direction: column;
   gap: 8px;
