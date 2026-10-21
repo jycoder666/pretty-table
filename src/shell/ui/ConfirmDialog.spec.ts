@@ -42,11 +42,10 @@ describe('ConfirmDialog · 统一确认弹窗（PX-05）', () => {
     expect(box.attributes('role')).toBe('alertdialog')
     expect(box.attributes('aria-modal')).toBe('true')
     // 点确认 → promise resolve(true)，弹窗关闭
-    const assertion = expect(p).resolves.toBe(true)
     await ok.trigger('click')
+    expect(await p).toBe(true)
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(false)
-    await assertion
   })
 
   it('非破坏性操作确认按钮用主色实心；点取消 resolve(false)', async () => {
@@ -58,28 +57,22 @@ describe('ConfirmDialog · 统一确认弹窗（PX-05）', () => {
     })
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="confirm-ok"]').classes()).toContain('primary')
-    const assertion = expect(p).resolves.toBe(false)
     await wrapper.find('[data-testid="confirm-cancel"]').trigger('click')
-    await wrapper.vm.$nextTick()
-    await assertion
+    expect(await p).toBe(false)
   })
 
   it('Esc 键 = 取消；点遮罩 = 取消', async () => {
     const wrapper = mountDialog()
     const p1 = confirmAction({ title: 'T', message: 'M', confirmText: '确认' })
     await wrapper.vm.$nextTick()
-    const assertion1 = expect(p1).resolves.toBe(false)
     // 组件监听在 window 上，直接向 window 派发键盘事件
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
-    await wrapper.vm.$nextTick()
-    await assertion1
+    expect(await p1).toBe(false)
 
     const p2 = confirmAction({ title: 'T', message: 'M', confirmText: '确认' })
     await wrapper.vm.$nextTick()
-    const assertion2 = expect(p2).resolves.toBe(false)
     await wrapper.find('[data-testid="confirm-overlay"]').trigger('click')
-    await wrapper.vm.$nextTick()
-    await assertion2
+    expect(await p2).toBe(false)
   })
 
   it('同一线只有最后一次请求生效：新请求把旧的以取消收场，不悬挂', async () => {
@@ -87,11 +80,9 @@ describe('ConfirmDialog · 统一确认弹窗（PX-05）', () => {
     const p1 = confirmAction({ title: 'T1', message: 'M1', confirmText: '确认' })
     const p2 = confirmAction({ title: 'T2', message: 'M2', confirmText: '确认' })
     await wrapper.vm.$nextTick()
-    const assertion1 = expect(p1).resolves.toBe(false)
     expect(wrapper.find('[data-testid="confirm-title"]').text()).toBe('T2')
-    const assertion2 = expect(p2).resolves.toBe(true)
     await wrapper.find('[data-testid="confirm-ok"]').trigger('click')
-    await wrapper.vm.$nextTick()
-    await Promise.all([assertion1, assertion2])
+    expect(await p1).toBe(false)
+    expect(await p2).toBe(true)
   })
 })

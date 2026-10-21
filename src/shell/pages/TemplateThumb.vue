@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { effectivePalette, type MergeRange, type TemplateInstance } from '@/core'
+import { effectivePalette, resolveTheme, type MergeRange, type TemplateInstance } from '@/core'
 
 /**
  * PX-06 模板卡缩略图：纯 CSS 骨架示意（不用 canvas / 截图 / 新依赖）。
@@ -36,9 +36,9 @@ const truncated = computed(
   () => totalRows.value > showRows.value || totalCols.value > showCols.value,
 )
 
-/** 生效配色 → 缩略图局部 CSS 变量（随主题与角色覆盖同步） */
+/** 生效配色 → 缩略图局部 CSS 变量（随主题与角色覆盖同步）；实例无配色时回退主题预设 */
 const thumbVars = computed(() => {
-  const p = effectivePalette(props.instance)
+  const p = effectivePalette(props.instance) ?? resolveTheme(props.instance.themeId).palette
   return {
     '--th-primary': p.primary,
     '--th-header-text': p.headerText,
