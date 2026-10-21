@@ -1,5 +1,6 @@
 import type { TemplateInstance } from '../types'
 import { LIMITS } from '../theme/layoutScales'
+import { footerSlot, leftTagSlots } from './blockSlotHelpers'
 
 /**
  * FR-C6 / T05：按向导参数生成空白表实例（blank-v1 为底稿的可参数化版本）。
@@ -58,7 +59,8 @@ export function createBlankInstance(opts?: BlankOptions): TemplateInstance {
       merges: [],
       structuralMerges: [],
       allowedMerges: [{ start: [0, 0], end: [rows - 1, cols - 1] }],
-      blockSlots: [],
+      // R-4：footer + 逐正文行 leftTag 槽（正文行 = headerLevels..rows−1）
+      blockSlots: [footerSlot(rows - 1), ...leftTagSlots(headerLevels, rows - 1)],
       slotGrid: grid,
     },
   }

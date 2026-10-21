@@ -195,7 +195,17 @@ export interface EditorState {
 }
 
 export type RenderState = 'loading' | 'ready' | 'error'
-export type RenderContext = { mode: 'preview' | 'export'; transparentUnderlay?: boolean }
+/** 预加载后的可绘制图片资源（data URL → 资源表）；由壳层 CoreHost 与 PNG 导出各自注入 */
+export interface ImageAsset {
+  naturalWidth: number
+  naturalHeight: number
+}
+export type RenderContext = {
+  mode: 'preview' | 'export'
+  transparentUnderlay?: boolean
+  /** 图片资源表（键 = data URL）；缺省时含图格走默认绘制（资源未就绪） */
+  images?: Map<string, ImageAsset>
+}
 
 export interface PngExportOptions {
   scale?: 1 | 2 | 3

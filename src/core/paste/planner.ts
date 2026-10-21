@@ -15,7 +15,10 @@ export function buildVisibleGrid(inst: TemplateInstance): VisibleRow[] {
   const gaps = new Map<number, string>()
   for (const def of inst.layout.blockSlots) {
     const m = /^after-(\d+)$/.exec(def.rowHint ?? '')
-    if (m) gaps.set(Number(m[1]), def.id)
+    if (!m) continue
+    // 与 buildVisualRows 同源（R-4）：footer 槽空置时不预留表底行
+    if (def.region === 'footer' && !inst.blocks.some((b) => b.slotId === def.id)) continue
+    gaps.set(Number(m[1]), def.id)
   }
   for (let r = 0; r < gridLen; r++) {
     rows.push({ kind: 'logical', logicalRow: r })

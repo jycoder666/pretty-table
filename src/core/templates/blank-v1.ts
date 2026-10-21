@@ -1,7 +1,9 @@
 import type { TemplateInstance } from '../types'
+import { footerSlot, leftTagSlots } from './blockSlotHelpers'
 
 /**
- * FR-C6 · Q-10：新建空白表底稿 — 5 行 × 4 列、单层表头、全部格可写槽、无区块槽。
+ * FR-C6 · Q-10：新建空白表底稿 — 5 行 × 4 列、单层表头、全部格可写槽；
+ * R-4：配 footer 注脚槽与逐正文行 leftTag 槽（空置时占位，可拖入区块）。
  * 进编辑台后行列数与表头层级照常可再改（structure intents）。
  * 槽位 id 从 u1 起按单调策略编号（§1.4.4），结构编辑续号不重用。
  */
@@ -44,7 +46,8 @@ export const BLANK_V1: TemplateInstance = {
     structuralMerges: [],
     // 兼容语义：结构编辑后合并不再受 allowedMerges 硬闸（§1.4.1），全表保留供旧读取方使用
     allowedMerges: [{ start: [0, 0], end: [4, 3] }],
-    blockSlots: [],
+    // R-4：空白表也配 footer + leftTag 槽（空白表用户的注脚/标签诉求最典型）
+    blockSlots: [footerSlot(4), ...leftTagSlots(1, 4)],
     slotGrid: blankGrid(),
   },
 }

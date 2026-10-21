@@ -1,4 +1,5 @@
 import type { TemplateInstance } from '../types'
+import { leftTagSlots } from './blockSlotHelpers'
 
 /** T1 · C-compare · 通用商务样例（U-1 §7.1）— schema 1.1 */
 export const COMPARE_ALPHA_V1: TemplateInstance = {
@@ -99,12 +100,9 @@ export const COMPARE_ALPHA_V1: TemplateInstance = {
         id: 'footer-1',
         accept: ['emphFooter'],
         region: 'footer',
+        rowHint: 'after-9',
       },
-      {
-        id: 'left-r2',
-        accept: ['leftTag'],
-        region: 'left-tag',
-      },
+      ...leftTagSlots(2, 9),
     ],
     readonlyCells: [
       [0, 0],

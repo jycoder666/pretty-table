@@ -176,3 +176,30 @@ describe('validatePaste · 数值换算与 notice（Q-011/Q-010）', () => {
     expect(v.value.notices).toHaveLength(0)
   })
 })
+
+// ── 交互升级 T02：图片格槽位 × TSV 粘贴边界（R-3：图片不走文本粘贴）──
+
+describe('validatePaste · 图片槽边界（R-3）', () => {
+  it('text 槽存 {image} 时粘贴文字 → 按文字覆盖（TSV 流程无图片语义，不报错）', () => {
+    const inst = makePasteFixture()
+    const target = inst.layout.slotGrid![0]![0]!
+    inst.slots[target] = { image: 'data:image/png;base64,AAAA' }
+    const plan = plan2x2(inst, [0, 0], '新文字\t2\n3\t4')!
+    const v = validatePaste(inst, plan)
+    expect(v.ok).toBe(true)
+    if (!v.ok) return
+    const write = v.value.writes.find((w) => w.slotId === target)
+    expect(write?.value).toEqual({ text: '新文字' })
+  })
+
+  it('data URL 文本粘进槽位 → 按普通文字写入（渲染层不会当作图片，GC-22 无注入面）', () => {
+    const inst = makePasteFixture()
+    const plan = plan2x2(inst, [0, 0], 'data:image/png;base64,AAAA\t2\n3\t4')!
+    const v = validatePaste(inst, plan)
+    expect(v.ok).toBe(true)
+    if (!v.ok) return
+    const target = inst.layout.slotGrid![0]![0]!
+    const write = v.value.writes.find((w) => w.slotId === target)
+    expect(write?.value).toEqual({ text: 'data:image/png;base64,AAAA' })
+  })
+})

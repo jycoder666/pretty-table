@@ -89,22 +89,19 @@ describe('imageGuard · validateImageDataUrl', () => {
     expect(validateImageDataUrl('hello').ok).toBe(false)
     const r = validateImageDataUrl('data:image/svg+xml;base64,PHN2Zy8+')
     expect(r.ok).toBe(false)
-    if (!r.ok) return
-    expect(r.error.code).toBe('IMAGE_FORMAT_UNSUPPORTED')
+    expect(!r.ok ? r.error.code : '').toBe('IMAGE_FORMAT_UNSUPPORTED')
   })
 
   it('魔数与 mime 不符 → IMAGE_FORMAT_UNSUPPORTED', () => {
     const r = validateImageDataUrl(bytesToDataUrl('png', [0x68, 0x65, 0x6c, 0x6c, 0x6f])) // "hello"
     expect(r.ok).toBe(false)
-    if (!r.ok) return
-    expect(r.error.code).toBe('IMAGE_FORMAT_UNSUPPORTED')
+    expect(!r.ok ? r.error.code : '').toBe('IMAGE_FORMAT_UNSUPPORTED')
   })
 
   it('解码后字节数超 2MB → IMAGE_TOO_LARGE（IA-1）', () => {
     const r = validateImageDataUrl(junkImage(2 * 1024 * 1024 + 3))
     expect(r.ok).toBe(false)
-    if (!r.ok) return
-    expect(r.error.code).toBe('IMAGE_TOO_LARGE')
+    expect(!r.ok ? r.error.code : '').toBe('IMAGE_TOO_LARGE')
   })
 
   it('恰好 2MB 边界通过', () => {
@@ -114,8 +111,7 @@ describe('imageGuard · validateImageDataUrl', () => {
   it('像素超 2400 万 → IMAGE_TOO_LARGE（IA-1 增补：宽×高）', () => {
     const r = validateImageDataUrl(pngUrl(5000, 5000)) // 2500 万
     expect(r.ok).toBe(false)
-    if (!r.ok) return
-    expect(r.error.code).toBe('IMAGE_TOO_LARGE')
+    expect(!r.ok ? r.error.code : '').toBe('IMAGE_TOO_LARGE')
   })
 
   it('恰好 2400 万像素通过（边界）', () => {
@@ -125,8 +121,7 @@ describe('imageGuard · validateImageDataUrl', () => {
   it('base64 畸形（长度非 4 倍数）→ IMAGE_DECODE_FAIL', () => {
     const r = validateImageDataUrl('data:image/png;base64,QUFBQ')
     expect(r.ok).toBe(false)
-    if (!r.ok) return
-    expect(r.error.code).toBe('IMAGE_DECODE_FAIL')
+    expect(!r.ok ? r.error.code : '').toBe('IMAGE_DECODE_FAIL')
   })
 })
 
@@ -162,15 +157,13 @@ describe('imageGuard · canSetImage（规则判定，不扩 SlotDef）', () => {
     inst.slotDefs = { u1: { locked: true } }
     const r = canSetImage(inst, 'u1')
     expect(r.ok).toBe(false)
-    if (!r.ok) return
-    expect(r.error.code).toBe('IMAGE_NOT_ALLOWED')
+    expect(!r.ok ? r.error.code : '').toBe('IMAGE_NOT_ALLOWED')
   })
 
   it('readonly 格（价目表列头）→ IMAGE_NOT_ALLOWED', () => {
     const r = canSetImage(cloneInstance(PRICING_V1), 'head.c0')
     expect(r.ok).toBe(false)
-    if (!r.ok) return
-    expect(r.error.code).toBe('IMAGE_NOT_ALLOWED')
+    expect(!r.ok ? r.error.code : '').toBe('IMAGE_NOT_ALLOWED')
   })
 
   it('不存在的槽 / 区块槽 → IMAGE_NOT_ALLOWED', () => {

@@ -1,4 +1,5 @@
 import type { TemplateInstance } from '../types'
+import { footerSlot, leftTagSlots } from './blockSlotHelpers'
 
 /** T2 · C-detail · 通用商务样例（U-1 §7.2）— schema 1.1 */
 export const DETAIL_ALPHA_V1: TemplateInstance = {
@@ -88,11 +89,8 @@ export const DETAIL_ALPHA_V1: TemplateInstance = {
         mutexGroup: 'g2',
         rowHint: 'after-5',
       },
-      {
-        id: 'footer-1',
-        accept: ['emphFooter'],
-        region: 'footer',
-      },
+      footerSlot(9),
+      ...leftTagSlots(2, 9),
     ],
     readonlyCells: [
       [1, 0],

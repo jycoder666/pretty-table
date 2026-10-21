@@ -1,4 +1,5 @@
 import type { TemplateInstance } from '../types'
+import { footerSlot, leftTagSlots } from './blockSlotHelpers'
 
 /**
  * T3 · C-matrix · 宽表矩阵（U-1 §8.2）— schema 1.1
@@ -179,6 +180,8 @@ export const MATRIX_V1: TemplateInstance = {
         mutexGroup: 'g2',
         rowHint: 'after-6',
       },
+      footerSlot(10),
+      ...leftTagSlots(2, 10),
     ],
     readonlyCells: [
       [0, 0],

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { listPresetTemplates, getPresetTemplate, PRICING_V1, MATRIX_V1, BLANK_V1 } from './index'
+import {
+  listPresetTemplates,
+  getPresetTemplate,
+  createBlankInstance,
+  PRICING_V1,
+  MATRIX_V1,
+  BLANK_V1,
+  COMPARE_ALPHA_V1,
+  DETAIL_ALPHA_V1,
+} from './index'
 import { validateInstance, cloneInstance } from '../schema/validate'
 import { migrateInstance, SCHEMA_VERSION_CURRENT } from '../schema/migrate'
 
@@ -141,11 +150,17 @@ describe('blank-v1 新建空白表底稿（FR-C6 · Q-10）', () => {
     expect(m.ok ? m.value.schemaVersion : undefined).toBe(SCHEMA_VERSION_CURRENT)
   })
 
-  it('5 行 × 4 列、单层表头、全部格可写、无区块槽', () => {
+  it('5 行 × 4 列、单层表头、全部格可写；R-4 起配 footer + leftTag 槽', () => {
     expect(BLANK_V1.layout.rowCount).toBe(5)
     expect(BLANK_V1.layout.colCount).toBe(4)
     expect(BLANK_V1.layout.headerLevels).toBe(1)
-    expect(BLANK_V1.layout.blockSlots).toEqual([])
+    expect(BLANK_V1.layout.blockSlots.map((s) => s.id)).toEqual([
+      'footer-1',
+      'left-r1',
+      'left-r2',
+      'left-r3',
+      'left-r4',
+    ])
     const grid = BLANK_V1.layout.slotGrid ?? []
     expect(grid).toHaveLength(5)
     for (const row of grid) {
@@ -162,5 +177,50 @@ describe('blank-v1 新建空白表底稿（FR-C6 · Q-10）', () => {
   it('u 序号从 1 连续编号；结构编辑可续号', () => {
     const ids = (BLANK_V1.layout.slotGrid ?? []).flat().filter(Boolean) as string[]
     expect(ids).toEqual(Array.from({ length: 20 }, (_, i) => `u${i + 1}`))
+  })
+})
+
+// ── 交互升级 T02：模板补 emphFooter / leftTag 槽（R-4）────────
+
+describe('模板补槽 · footer / leftTag（交互升级 R-4）', () => {
+  it('五张系统模板（含 blank）都配 footer 槽：accept 仅 emphFooter、rowHint=after-末行', () => {
+    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, PRICING_V1, MATRIX_V1]) {
+      const footer = tpl.layout.blockSlots.find((s) => s.region === 'footer')
+      expect(footer).toBeDefined()
+      expect(footer!.accept).toEqual(['emphFooter'])
+      const lastRow = (tpl.layout.slotGrid ?? []).length - 1
+      expect(footer!.rowHint).toBe(`after-${lastRow}`)
+    }
+  })
+
+  it('compare / detail / matrix / blank 逐正文逻辑行配 leftTag 槽（left-N）；价目不配', () => {
+    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, MATRIX_V1]) {
+      const lefts = tpl.layout.blockSlots.filter((s) => s.region === 'left-tag')
+      const bodyRows: number[] = []
+      for (let r = tpl.layout.headerLevels ?? 1; r < (tpl.layout.slotGrid ?? []).length; r++) bodyRows.push(r)
+      const hints = lefts.map((s) => s.rowHint).sort()
+      expect(hints).toEqual(bodyRows.map((r) => `left-${r}`).sort())
+      for (const s of lefts) expect(s.accept).toEqual(['leftTag'])
+    }
+    expect(PRICING_V1.layout.blockSlots.filter((s) => s.region === 'left-tag')).toHaveLength(0)
+  })
+
+  it('补槽后五张模板 validate / migrate 仍通过；blockSlots 无重复 id', () => {
+    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, PRICING_V1, MATRIX_V1]) {
+      const v = validateInstance(cloneInstance(tpl))
+      expect(v.ok).toBe(true)
+      const m = migrateInstance(cloneInstance(tpl), listPresetTemplates())
+      expect(m.ok).toBe(true)
+      const ids = tpl.layout.blockSlots.map((s) => s.id)
+      expect(new Set(ids).size).toBe(ids.length)
+    }
+  })
+
+  it('blankFactory 生成 footer + leftTag 槽（正文行逐行）', () => {
+    const inst = createBlankInstance({ rows: 6, cols: 3, headerLevels: 2 })
+    const footer = inst.layout.blockSlots.find((s) => s.region === 'footer')
+    expect(footer?.rowHint).toBe('after-5')
+    const lefts = inst.layout.blockSlots.filter((s) => s.region === 'left-tag')
+    expect(lefts.map((s) => s.rowHint).sort()).toEqual(['left-2', 'left-3', 'left-4', 'left-5'])
   })
 })

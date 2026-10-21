@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { TemplateInstance } from '../types'
 import { buildVisualRows, toOption } from './toOption'
 import { PALETTES } from '../theme/palettes'
@@ -230,5 +230,127 @@ describe('toOption · 自定义角色色（FR-C1，单点合成消费）', () =>
     expect(restored.__pt && (restored.__pt as { palette: unknown }).palette).toEqual(
       resolveTheme('T-A').palette,
     )
+  })
+})
+
+// ── 交互升级 T02：图片格渲染（R-3）+ 二期区块渲染（R-4）────────
+
+describe('toOption · 图片格（R-3）', () => {
+  const IMG = (() => {
+    const bytes = [
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52,
+      0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0,
+    ]
+    let bin = ''
+    for (const b of bytes) bin += String.fromCharCode(b)
+    return `data:image/png;base64,${btoa(bin)}`
+  })()
+
+  function imageInst(): TemplateInstance {
+    return withSlots((i) => {
+      i.slots['row.3.val.a'] = { image: IMG }
+    })
+  }
+
+  it('图片槽 → CellMeta.image 有值、text 空、无「填写内容」占位', () => {
+    const { metas } = buildVisualRows(imageInst())
+    const cell = metas[4]![1]! // 逻辑行 3 → 可视行 4（after-1 gap 行占 1 行）
+    expect(cell.image).toBe(IMG)
+    expect(cell.text).toBe('')
+    expect(cell.isPlaceholder).toBe(false)
+  })
+
+  it('含图列带 customRender；coverCrop 裁剪参数正确（资源经 ctx.images 注入）', () => {
+    const inst = imageInst()
+    const asset = { naturalWidth: 1000, naturalHeight: 500 }
+    const opt = toOption(inst, { mode: 'preview', images: new Map([[IMG, asset]]) })
+    const col = (opt.columns as { customRender?: (a: unknown) => unknown }[])[1]!
+    expect(typeof col.customRender).toBe('function')
+    const drawImage = vi.fn<(...a: unknown[]) => void>()
+    const args = {
+      row: 4,
+      col: 1,
+      rect: { left: 10, top: 20, width: 100, height: 100 },
+      ctx: { drawImage },
+    }
+    const ret = col.customRender!(args)
+    // coverCrop(1000,500,100,100) → sw=500 sh=500，居中偏移 (250, 0)
+    expect(drawImage).toHaveBeenCalledWith(asset, 250, 0, 500, 500, 10, 20, 100, 100)
+    expect(ret).toEqual({ elements: [] })
+  })
+
+  it('无图格走默认绘制（customRender 返回 undefined，文字格 style 回调并存）', () => {
+    const inst = imageInst()
+    const opt = toOption(inst, { mode: 'preview' })
+    const col = (opt.columns as { customRender?: (a: unknown) => unknown }[])[1]!
+    expect(col.customRender?.({ row: 0, col: 1, rect: { left: 0, top: 0, width: 100, height: 36 } })).toBeUndefined()
+    expect(col.customRender?.({ row: 4, col: 1, rect: { left: 0, top: 0, width: 100, height: 36 } })).toBeUndefined() // 资源未注入
+    // style 回调仍然在（列级并存）
+    expect(typeof (opt.columns as { style?: unknown }[])[1]!.style).toBe('function')
+  })
+
+  it('无图列不挂 customRender', () => {
+    const opt = toOption(cloneInstance(COMPARE_ALPHA_V1), { mode: 'preview' })
+    for (const col of opt.columns as { customRender?: unknown }[]) {
+      expect(col.customRender).toBeUndefined()
+    }
+  })
+})
+
+describe('toOption · 二期区块渲染（R-4）', () => {
+  it('leftTag：首列 role=leftTag / tag 色底 / 不插整行（metas 行数不变）', () => {
+    const inst = withSlots((i) => {
+      i.layout.blockSlots.push({ id: 'left-3', accept: ['leftTag'], region: 'left-tag', rowHint: 'left-3' })
+      i.blocks.push({ id: 'tag-1', type: 'leftTag', slotId: 'left-3', props: { text: '核心' } })
+    })
+    const before = buildVisualRows(cloneInstance(COMPARE_ALPHA_V1)).metas.length
+    const { metas } = buildVisualRows(inst)
+    expect(metas.length).toBe(before) // 不插行
+    const cell = metas[4]![0]! // 逻辑行 3 → 可视行 4
+    expect(cell.role).toBe('leftTag')
+    expect(cell.text).toBe('核心')
+    expect(cell.blockType).toBe('leftTag')
+    const opt = toOption(inst, { mode: 'preview' })
+    expect(cellStyle(opt, 4, 0).bgColor).toBe(PALETTES['T-A'].tag)
+    expect(cellStyle(opt, 4, 0).color).toBe(PALETTES['T-A'].tagText)
+  })
+
+  it('leftTag 槽无区块时首列保持原样（不显示占位、不染色）', () => {
+    const inst = withSlots((i) => {
+      i.layout.blockSlots.push({ id: 'left-3', accept: ['leftTag'], region: 'left-tag', rowHint: 'left-3' })
+    })
+    const { metas } = buildVisualRows(inst)
+    expect(metas[4]![0]!.role).toBe('label')
+    expect(metas[4]![0]!.text).toBe('响应时效')
+  })
+
+  it('emphFooter：表底 gap 行渲染注脚（纸底、小字、靠左），导出同源 tfoot 位置', () => {
+    const inst = withSlots((i) => {
+      i.blocks.push({ id: 'foot-1', type: 'emphFooter', slotId: 'footer-1', props: { text: '以上价格含税' } })
+    })
+    const { metas, rowHeights, blockRowIndexes } = buildVisualRows(inst)
+    const footerVisual = blockRowIndexes.get(metas.length - 1)
+    expect(footerVisual).toBe('footer-1') // 挂在最后一行之后的 gap 行（表底）
+    const footRow = metas[metas.length - 1]!
+    expect(footRow[0]!.text).toBe('以上价格含税')
+    expect(footRow[0]!.blockType).toBe('emphFooter')
+    const opt = toOption(inst, { mode: 'preview' })
+    const st = cellStyle(opt, metas.length - 1, 0)
+    expect(st.bgColor).toBe(PALETTES['T-A'].paper)
+    expect(st.color).toBe(PALETTES['T-A'].muted)
+    expect(st.textAlign).toBe('left')
+    expect(rowHeights[metas.length - 1]).toBe(32) // 区块行高不变
+  })
+
+  it('footer 槽空置时不预留表底行（预览/导出不多一行）', () => {
+    const inst = withSlots((i) => {
+      i.layout.blockSlots.push({ id: 'left-3', accept: ['leftTag'], region: 'left-tag', rowHint: 'left-3' })
+      i.blocks.push({ id: 'tag-x', type: 'leftTag', slotId: 'left-3', props: { text: 'x' } })
+    })
+    const { metas, blockRowIndexes } = buildVisualRows(inst)
+    // compare 默认无 footer 区块 → footer-1 槽空置：不出现 gap 行，最后一行是逻辑行 9
+    expect([...blockRowIndexes.values()]).not.toContain('footer-1')
+    expect(metas[metas.length - 1]![0]!.text).toBe('合同期限')
   })
 })

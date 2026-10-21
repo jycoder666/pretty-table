@@ -1,5 +1,6 @@
 import type {
   Align,
+  BlockType,
   Emphasis,
   ImageSlotObject,
   LayoutStyle,
@@ -18,6 +19,7 @@ import { FONT_STACK } from '../theme/font'
 import { semanticColor } from '../theme/semantic'
 import { FONT_SIZE_TIERS, PADDING_TIERS, ROW_HEIGHT_TIERS } from '../theme/layoutScales'
 import { MARK_GLYPH, RECOMMEND_BADGE_TEXT, formatNumber } from '../format/formatTokens'
+import { coverCrop } from '../image/imageGuard'
 
 const COL_WIDTH = 140
 const LABEL_WIDTH = 120
@@ -55,7 +57,7 @@ export function colWidthAt(inst: TemplateInstance, col: number): number {
 
 export type CellMeta = {
   slotId: string | null
-  role: 'header' | 'body' | 'label' | 'block' | 'readonly'
+  role: 'header' | 'body' | 'label' | 'block' | 'readonly' | 'leftTag'
   text: string
   align?: Align
   emphasize?: Emphasis[]
@@ -64,6 +66,12 @@ export type CellMeta = {
   mark?: MarkValue | null
   /** Schema 1.1: corner badge text on a header cell (e.g. 「推荐」) */
   badge?: string
+  /** R-3：图片格 data URL（经 imageGuard 白名单校验的值原样透传） */
+  image?: string
+  /** R-4：区块类型（block / leftTag 格上标注，styleForCell 按 type 分色） */
+  blockType?: BlockType
+  /** R-4：区块样式档位（emphFooter 字号 2 档 / leftTag 深浅 2 档） */
+  styleTier?: number
 }
 
 function slotParts(
@@ -136,6 +144,19 @@ export function buildVisualRows(inst: TemplateInstance): {
     const m = /^after-(\d+)$/.exec(def.rowHint ?? '')
     if (m) gapAfter.set(Number(m[1]), def.id)
   }
+  // R-4 leftTag：left-N 锚点 → 该逻辑行首列标记（不插行）
+  const leftTagAt = new Map<number, { text: string; styleTier?: number }>()
+  for (const def of inst.layout.blockSlots) {
+    const m = /^left-(\d+)$/.exec(def.rowHint ?? '')
+    if (!m) continue
+    const block = inst.blocks.find((b) => b.slotId === def.id)
+    if (block) {
+      leftTagAt.set(Number(m[1]), {
+        text: String(block.props?.text ?? ''),
+        styleTier: typeof block.props?.styleTier === 'number' ? block.props.styleTier : undefined,
+      })
+    }
+  }
 
   for (let r = 0; r < grid.length; r++) {
     const row = grid[r] ?? []
@@ -148,6 +169,7 @@ export function buildVisualRows(inst: TemplateInstance): {
       let emphasize: Emphasis[] | undefined
       let isPlaceholder = false
       let mark: MarkValue | null | undefined
+      let image: string | undefined
       let role: CellMeta['role'] = r < headerLevels ? 'header' : c === 0 ? 'label' : 'body'
 
       if (r === 0 && c === 0 && inst.meta?.templateType === 'compare') {
@@ -160,18 +182,30 @@ export function buildVisualRows(inst: TemplateInstance): {
         const parts = slotParts(inst.slots[sid], inst.slotDefs?.[sid])
         text = parts.text
         mark = parts.mark
+        image = parts.image
         // mark 默认居中、num 默认右对齐（设计增量 §4.4）
         if (parts.mark !== undefined) align = parts.align ?? 'center'
         else if (parts.num !== undefined) align = parts.align ?? 'right'
         else align = parts.align
         emphasize = parts.emphasize
-        if (text === '') {
+        // 含图格不显示占位（R-3）；空图片槽（已清）照常显示占位
+        if (text === '' && !image) {
           isPlaceholder = true
           text = '填写内容'
         }
         if (readonly) role = 'readonly'
       } else if (readonly) {
         role = 'readonly'
+      }
+
+      // R-4 leftTag：区块落位后该行首列整格让给标签（tag 色底，不插行）
+      const tag = c === 0 ? leftTagAt.get(r) : undefined
+      if (tag) {
+        role = 'leftTag'
+        text = tag.text
+        isPlaceholder = false
+        metaRow.push({ slotId: sid, role, text, isPlaceholder, blockType: 'leftTag', styleTier: tag.styleTier })
+        continue
       }
 
       metaRow.push({
@@ -182,6 +216,7 @@ export function buildVisualRows(inst: TemplateInstance): {
         emphasize,
         isPlaceholder,
         mark,
+        image,
       })
     }
     metas.push(metaRow)
@@ -189,18 +224,23 @@ export function buildVisualRows(inst: TemplateInstance): {
 
     const gapId = gapAfter.get(r)
     if (gapId) {
+      const def = inst.layout.blockSlots.find((s) => s.id === gapId)
+      const isFooter = def?.region === 'footer'
       const block = inst.blocks.find((b) => b.slotId === gapId)
-      const label =
-        block?.type === 'sectionBar'
+      // footer 槽空置时不预留表底行（预览/导出都不多一行；between-rows 空槽照旧显示占位）
+      if (isFooter && !block) continue
+      const label = block
+        ? block.type === 'sectionBar'
           ? String(block.props?.label ?? '分区')
-          : block
-            ? String(block.props?.text ?? '分组标题')
-            : '（可拖入分区色条 / 分组标题）'
+          : String(block.props?.text ?? block.props?.label ?? (isFooter ? '注脚内容' : '分组标题'))
+        : '（可拖入分区色条 / 分组标题）'
       const blockRow: CellMeta[] = Array.from({ length: colCount }, (_, c) => ({
         slotId: c === 0 ? gapId : null,
         role: block ? 'block' : 'body',
         text: c === 0 ? label : '',
         isPlaceholder: !block,
+        blockType: block?.type,
+        styleTier: typeof block?.props?.styleTier === 'number' ? block.props.styleTier : undefined,
       }))
       blockRowIndexes.set(metas.length, gapId)
       metas.push(blockRow)
@@ -266,11 +306,26 @@ function styleForCell(
     style.bgColor = palette.primary
     style.color = palette.headerText
     style.fontWeight = 'bold'
-  } else if (cell.role === 'block') {
-    style.bgColor = palette.primary
-    style.color = palette.headerText
+  } else if (cell.role === 'leftTag') {
+    // R-4 左栏标签块：tag 色底（深浅 2 档，零新增色值 GC-11）——档位常量与渲染单点在此
+    style.bgColor = cell.styleTier === 2 ? palette.zebra : palette.tag
+    style.color = palette.tagText
     style.fontWeight = 600
-    style.textAlign = 'left'
+  } else if (cell.role === 'block') {
+    if (cell.blockType === 'emphFooter') {
+      // R-4 强调注脚：纸底小字靠左（与导出 tfoot 同源）
+      style.bgColor = palette.paper
+      style.color = palette.muted
+      style.textAlign = 'left'
+      // 字号 2 档（TH-B2）：常规 / 略大
+      style.fontSize = metrics.fontSize + (cell.styleTier === 2 ? 2 : 0)
+    } else {
+      // sectionBar / groupHeader：主色整行
+      style.bgColor = palette.primary
+      style.color = palette.headerText
+      style.fontWeight = 600
+      style.textAlign = 'left'
+    }
   } else {
     const zebra = zebraOn && row % 2 === 1
     const isRecCol = recommendCol !== null && col === recommendCol
@@ -297,6 +352,52 @@ function styleForCell(
   return style
 }
 
+// ── R-3 图片格 customRender（VTable 自定义绘制，预览与 PNG 导出同源）──
+
+export interface VCellRect {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+/** VTable customRender 回调参数的最小结构面（只声明我们消费的字段） */
+export interface VCustomRenderArgs {
+  row: number
+  col: number
+  rect: VCellRect
+  ctx: {
+    drawImage: (
+      img: unknown,
+      sx: number,
+      sy: number,
+      sw: number,
+      sh: number,
+      dx: number,
+      dy: number,
+      dw: number,
+      dh: number,
+    ) => void
+  }
+}
+
+/**
+ * 图片格绘制：coverCrop 唯一实现算裁剪参数，居中裁源图铺满格子（gif 天然首帧）。
+ * 无图 / 资源未就绪 → 返回 undefined 交给 VTable 默认绘制（文字格 style 回调并存）。
+ */
+export function drawImageCell(
+  cell: CellMeta | undefined,
+  asset: { naturalWidth: number; naturalHeight: number } | undefined,
+  args: VCustomRenderArgs,
+): { elements: [] } | undefined {
+  if (!cell?.image || !asset) return undefined
+  const { sw, sh } = coverCrop(asset.naturalWidth, asset.naturalHeight, args.rect.width, args.rect.height)
+  const sx = (asset.naturalWidth - sw) / 2
+  const sy = (asset.naturalHeight - sh) / 2
+  args.ctx.drawImage(asset, sx, sy, sw, sh, args.rect.left, args.rect.top, args.rect.width, args.rect.height)
+  return { elements: [] }
+}
+
 export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<string, unknown> {
   const { palette, zebraOn } = resolveTheme(inst.themeId, inst.themeTokens)
   const effectiveZebra = inst.zebraOn === false ? false : zebraOn
@@ -314,16 +415,34 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     return rec
   })
 
-  const columns = Array.from({ length: colCount }, (_, c) => ({
-    field: `c${c}`,
-    title: ' ',
-    width: colWidthAt(inst, c),
-    style: (args: { row: number; col: number }) => {
-      const cell = metas[args.row]?.[args.col]
-      if (!cell) return {}
-      return styleForCell(cell, palette, effectiveZebra, args.row, args.col, ctx.mode, recommendCol, metrics)
-    },
-  }))
+  // R-3：含图列挂 customRender（列级）；文字格仍走 style 回调，两机制并存
+  const imageCols = new Set<number>()
+  metas.forEach((row) => {
+    row.forEach((cell, c) => {
+      if (cell.image) imageCols.add(c)
+    })
+  })
+
+  const columns = Array.from({ length: colCount }, (_, c) => {
+    const col: Record<string, unknown> = {
+      field: `c${c}`,
+      title: ' ',
+      width: colWidthAt(inst, c),
+      style: (args: { row: number; col: number }) => {
+        const cell = metas[args.row]?.[args.col]
+        if (!cell) return {}
+        return styleForCell(cell, palette, effectiveZebra, args.row, args.col, ctx.mode, recommendCol, metrics)
+      },
+    }
+    if (imageCols.has(c)) {
+      col.customRender = (args: VCustomRenderArgs) => {
+        const cell = metas[args.row]?.[args.col]
+        const asset = cell?.image ? ctx.images?.get(cell.image) : undefined
+        return drawImageCell(cell, asset, args)
+      }
+    }
+    return col
+  })
 
   const theme = toVTableTheme(palette, {
     zebraOn: effectiveZebra,
@@ -374,6 +493,7 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
       mode: ctx.mode,
       merges,
       recommendCol,
+      images: ctx.images ?? null,
     },
   }
 }

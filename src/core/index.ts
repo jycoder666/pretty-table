@@ -139,7 +139,10 @@ export {
   colWidthAt,
   rowHeightOf,
   typeMetrics,
+  drawImageCell,
   type CellMeta,
+  type VCustomRenderArgs,
+  type VCellRect,
 } from './adapter/toOption'
 
 export { mount } from './render/coreHost'

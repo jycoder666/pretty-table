@@ -1,4 +1,5 @@
 import type { TemplateInstance } from '../types'
+import { footerSlot } from './blockSlotHelpers'
 
 /**
  * T4 · C-price · 价目清单（U-1 §8.1）— schema 1.1
@@ -171,6 +172,8 @@ export const PRICING_V1: TemplateInstance = {
         mutexGroup: 'g2',
         rowHint: 'after-7',
       },
+      // 价目清单不配 leftTag（首列条目名 + 锁定合并，语义不合）
+      footerSlot(12),
     ],
     readonlyCells: [
       // R1 列头只读

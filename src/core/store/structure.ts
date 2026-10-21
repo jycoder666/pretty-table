@@ -59,11 +59,29 @@ function nextSlotSeq(inst: TemplateInstance): number {
   return max + 1
 }
 
-/** 区块槽 rowHint 'after-N' 的锚点行号 */
-function anchorOf(rowHint: string | undefined): number | null {
+/**
+ * 区块槽 rowHint 锚点解析（共享知识 §7.7：新锚点形式必须同步这里）。
+ * 支持 after-N（行间 gap / footer）与 left-N（左栏标签块）两种形式。
+ */
+type RowHintAnchor = { form: 'after' | 'left'; row: number }
+
+function parseAnchor(rowHint: string | undefined): RowHintAnchor | null {
   if (!rowHint) return null
-  const m = /^after-(\d+)$/.exec(rowHint)
-  return m ? Number(m[1]) : null
+  const after = /^after-(\d+)$/.exec(rowHint)
+  if (after) return { form: 'after', row: Number(after[1]) }
+  const left = /^left-(\d+)$/.exec(rowHint)
+  if (left) return { form: 'left', row: Number(left[1]) }
+  return null
+}
+
+function formatAnchor(form: 'after' | 'left', row: number): string {
+  return form === 'after' ? `after-${row}` : `left-${row}`
+}
+
+/** 兼容旧调用点：锚点行号（两种形式统一） */
+function anchorOf(rowHint: string | undefined): number | null {
+  const a = parseAnchor(rowHint)
+  return a ? a.row : null
 }
 
 // ── 区间 remap（axis: 0=行, 1=列）─────────────────────────────
@@ -176,8 +194,8 @@ function doAddRow(inst: TemplateInstance, afterRow: number | undefined, warnings
   next.layout.structuralMerges = remapRangesInsert(next.layout.structuralMerges ?? [], insertAt, 1, 0)
   next.layout.allowedMerges = remapRangesInsert(next.layout.allowedMerges ?? [], insertAt, 1, 0)
   next.layout.blockSlots = next.layout.blockSlots.map((s) => {
-    const n = anchorOf(s.rowHint)
-    return n !== null && n >= insertAt ? { ...s, rowHint: `after-${n + 1}` } : s
+    const a = parseAnchor(s.rowHint)
+    return a && a.row >= insertAt ? { ...s, rowHint: formatAnchor(a.form, a.row + 1) } : s
   })
   next.layout.readonlyCells = (next.layout.readonlyCells ?? []).map(
     ([r, c]) => (r >= insertAt ? [r + 1, c] : [r, c]) as CellCoord,
@@ -221,8 +239,8 @@ function doRemoveRowAt(next: TemplateInstance, row: number, warnings: CoreWarnin
     lossWarn(warnings, 'block', removedBlocks, `${removedBlocks} 个区块随该行删除`)
   }
   next.layout.blockSlots = next.layout.blockSlots.map((s) => {
-    const n = anchorOf(s.rowHint)
-    return n !== null && n > row ? { ...s, rowHint: `after-${n - 1}` } : s
+    const a = parseAnchor(s.rowHint)
+    return a && a.row > row ? { ...s, rowHint: formatAnchor(a.form, a.row - 1) } : s
   })
 
   next.layout.readonlyCells = (next.layout.readonlyCells ?? [])
@@ -331,8 +349,8 @@ function doSetHeaderLevel(inst: TemplateInstance, levels: 1 | 2 | 3, warnings: C
     next.layout.structuralMerges = remapRangesInsert(next.layout.structuralMerges ?? [], 0, delta, 0)
     next.layout.allowedMerges = remapRangesInsert(next.layout.allowedMerges ?? [], 0, delta, 0)
     next.layout.blockSlots = next.layout.blockSlots.map((s) => {
-      const n = anchorOf(s.rowHint)
-      return n !== null ? { ...s, rowHint: `after-${n + delta}` } : s
+      const a = parseAnchor(s.rowHint)
+      return a ? { ...s, rowHint: formatAnchor(a.form, a.row + delta) } : s
     })
     next.layout.readonlyCells = (next.layout.readonlyCells ?? []).map(
       ([r, c]) => [r + delta, c] as CellCoord,

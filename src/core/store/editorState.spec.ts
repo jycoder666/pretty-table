@@ -73,13 +73,15 @@ describe('editorState Fill path', () => {
     expect(blocks[0]?.type).toBe('sectionBar')
   })
 
-  it('rejects emphFooter in MVP', () => {
+  it('emphFooter 可加入 footer 槽（二期区块启用，R-4）', () => {
     const state = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
     const r = dispatch(state, {
       kind: 'addBlock',
       block: { id: 'f1', type: 'emphFooter', slotId: 'footer-1', props: { text: '注' } },
     })
-    expect(r.ok).toBe(false)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.current.blocks.some((b) => b.id === 'f1')).toBe(true)
   })
 })
 

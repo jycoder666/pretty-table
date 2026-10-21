@@ -4,6 +4,7 @@ import type {
   BlockDesc,
   EditIntent,
   Emphasis,
+  ImageSlotObject,
   MarkSlotObject,
   NumSlotObject,
   RoleColorKey,
@@ -17,6 +18,7 @@ import { applyStructuralIntent } from './structure'
 import { resolveTheme, sanitizeHex } from '../theme/palettes'
 import { clampColWidth, clampTier } from '../theme/layoutScales'
 import { MARK_LABEL } from '../format/formatTokens'
+import { canSetImage, checkImageBudget, validateImageDataUrl } from '../image/imageGuard'
 
 function slotStyle(v: SlotValue | undefined): { align?: Align; emphasize?: Emphasis[] } {
   if (typeof v === 'object' && v !== null && !('image' in v)) {
@@ -123,7 +125,19 @@ export function applyEditIntent(
       if (!(intent.slotId in next.slots) && !slotExistsInGrid(next, intent.slotId)) {
         return fail('SLOT_UNKNOWN', '未知槽位', { slotId: intent.slotId })
       }
-      next.slots[intent.slotId] = mergeSlotValue(next.slots[intent.slotId], intent.value)
+      const incoming = intent.value
+      if (typeof incoming === 'object' && incoming !== null && 'image' in incoming) {
+        // R-3：设图/换图走既有 setSlot 意图，写前三连校验（任一失败 store 不变）
+        const gate = canSetImage(next, intent.slotId)
+        if (!gate.ok) return gate
+        const fmt = validateImageDataUrl(incoming.image)
+        if (!fmt.ok) return fmt
+        const budget = checkImageBudget(next, incoming as ImageSlotObject, intent.slotId)
+        if (!budget.ok) return budget
+        next.slots[intent.slotId] = { image: incoming.image }
+        return ok(next)
+      }
+      next.slots[intent.slotId] = mergeSlotValue(next.slots[intent.slotId], incoming)
       return ok(next)
     }
     // ── FR-C1 颜色覆盖（schema 1.2）──
@@ -290,10 +304,6 @@ function applyAddBlock(
   if (!def.accept.includes(block.type)) {
     return fail('BLOCK_TYPE_REJECT', '这里不能放这个区块', { type: block.type })
   }
-  // MVP: emphFooter / leftTag visible but disabled in shell; still reject if somehow sent
-  if (block.type === 'emphFooter' || block.type === 'leftTag') {
-    return fail('BLOCK_TYPE_REJECT', '该区块本期不可用', { type: block.type })
-  }
   const occupied = next.blocks.filter((b) => b.slotId === block.slotId)
   const eff = def.occupiedPolicy ?? policy
   if (occupied.length && eff === 'reject') {
@@ -313,12 +323,20 @@ function applyAddBlock(
     ...block,
     props: {
       label: block.props?.label ?? '',
-      text: block.props?.text ?? block.props?.label ?? '分组标题',
+      text:
+        block.props?.text ?? block.props?.label ?? defaultBlockText(block.type),
       styleTier: block.props?.styleTier ?? 1,
       ...block.props,
     },
   })
   return ok(next)
+}
+
+/** 区块默认文案（二期区块启用后按类型给白话初值） */
+function defaultBlockText(type: BlockDesc['type']): string {
+  if (type === 'emphFooter') return '注脚内容'
+  if (type === 'leftTag') return '标签'
+  return '分组标题'
 }
 
 export function getSlotDisplayText(v: SlotValue | undefined, placeholder: string): string {

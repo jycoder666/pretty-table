@@ -467,3 +467,91 @@ describe('structure · compare-alpha-v1 回归（预置模板结构可编辑）'
     expect(r.value.layout.structuralMerges).toContainEqual({ start: [0, 0], end: [1, 0] })
   })
 })
+
+// ── 交互升级 T02：left-N 锚点联动 + 大矩形 remap 回归（R-2 / R-4）──
+
+function withLeftTag(): TemplateInstance {
+  const inst = custom5x4()
+  inst.layout.blockSlots = [
+    { id: 'left-1', accept: ['leftTag'], region: 'left-tag', rowHint: 'left-1' },
+    { id: 'left-2', accept: ['leftTag'], region: 'left-tag', rowHint: 'left-2' },
+    { id: 'footer-1', accept: ['emphFooter'], region: 'footer', rowHint: 'after-2' },
+  ]
+  inst.blocks = [
+    { id: 'tag-1', type: 'leftTag', slotId: 'left-1', props: { text: '标签一' } },
+    { id: 'foot-1', type: 'emphFooter', slotId: 'footer-1', props: { text: '注脚' } },
+  ]
+  return inst
+}
+
+describe('structure · left-N 锚点（R-4 leftTag 联动）', () => {
+  it('addRow：left-N（N ≥ 插入位）→ N+1，形式保持 left-；footer after-N 同步平移', () => {
+    const r = run(withLeftTag(), { kind: 'addRow', afterRow: 0 }) // insertAt=1
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const hints = Object.fromEntries(r.value.layout.blockSlots.map((s) => [s.id, s.rowHint]))
+    expect(hints['left-1']).toBe('left-2')
+    expect(hints['left-2']).toBe('left-3')
+    expect(hints['footer-1']).toBe('after-3')
+  })
+
+  it('removeRow：锚定行的 leftTag 区块连带删除 + warn STRUCT_LOSS', () => {
+    const r = run(withLeftTag(), { kind: 'removeRow', row: 1 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.blocks.some((b) => b.id === 'tag-2')).toBe(false)
+    expect(r.value.blocks.some((b) => b.id === 'tag-1')).toBe(false)
+    expect(r.value.blocks.some((b) => b.id === 'foot-1')).toBe(true)
+    expect(r.warnings?.some((w) => w.code === 'STRUCT_LOSS' && w.details && (w.details as { category?: string }).category === 'block')).toBe(true)
+  })
+
+  it('removeRow：left-N > 删行 → N−1；N < 删行不动', () => {
+    const r = run(withLeftTag(), { kind: 'removeRow', row: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const hints = Object.fromEntries(r.value.layout.blockSlots.map((s) => [s.id, s.rowHint]))
+    expect(hints['left-1']).toBe('left-1')
+    expect(hints['left-2']).toBe('left-2')
+    expect(hints['footer-1']).toBe('after-2')
+    expect(r.value.blocks.some((b) => b.id === 'tag-1')).toBe(true)
+  })
+
+  it('hasContentInRow 识别 left-N 锚定区块（删行确认语义一致）', () => {
+    expect(hasContentInRow(withLeftTag(), 2)).toBe(true) // footer after-2 锚定
+  })
+})
+
+describe('structure · 大矩形 merges 收缩回归（R-2，实现零改动证明）', () => {
+  function rectInst(): TemplateInstance {
+    const inst = custom5x4()
+    inst.layout.merges = [{ start: [1, 0], end: [2, 2] }] // 2×3 大矩形
+    return inst
+  }
+
+  it('2×3 删一行 → 1×3（沿删轴收缩）', () => {
+    const r = run(rectInst(), { kind: 'removeRow', row: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.merges).toContainEqual({ start: [1, 0], end: [1, 2] })
+  })
+
+  it('1×3 再删一列 → 1×2', () => {
+    let inst = rectInst()
+    let r = run(inst, { kind: 'removeRow', row: 2 })
+    expect(r.ok).toBe(true)
+    inst = r.ok ? r.value : inst
+    r = run(inst, { kind: 'removeCol', col: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.merges).toContainEqual({ start: [1, 0], end: [1, 1] })
+  })
+
+  it('大矩形完全在删行内 → 连带移除', () => {
+    const inst = rectInst()
+    inst.layout.merges = [{ start: [2, 0], end: [2, 2] }]
+    const r = run(inst, { kind: 'removeRow', row: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.merges).toHaveLength(0)
+  })
+})
