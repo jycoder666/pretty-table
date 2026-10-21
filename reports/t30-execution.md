@@ -17,7 +17,7 @@
 | FAIL（缺陷） | 0 | —（070、088 已修复，见 §三） |
 | 待人工（C 类） | 1 | 086（公众号后台编辑器实测） |
 
-配套回归：vitest **530/530 全绿**（含 TC-088 属性转义回归 3 条 + LibraryPage 类型筛选 4 条新增）；Playwright chromium 全量 **53 passed / 0 skipped**（fixme 已去除，含既有 13 条非验收用例）；`pnpm exec vite build` 通过；`node scripts/report-bundle.mjs` 三道体积门禁全部通过。
+配套回归：vitest **530/530 全绿**（含 TC-088 属性转义回归 3 条 + LibraryPage 类型筛选 4 条新增）；Playwright chromium 全量 **53 passed / 0 skipped**（fixme 已去除 = 验收 43 条 + 既有非验收 10 条）；`pnpm exec vite build` 通过；`node scripts/report-bundle.mjs` 三道体积门禁全部通过。
 
 ## 二、38 条总表
 
@@ -109,7 +109,7 @@
 
 ## 六、提交物
 
-- `e2e/acceptance/helpers.ts` + 7 个 spec（43 条用例：53 全通过、无 fixme 残留，含既有非验收用例）
+- `e2e/acceptance/helpers.ts` + 7 个 spec（验收 43 条；chromium 全量 53 passed = 验收 43 + 既有非验收 10，无 fixme 残留）
 - `reports/t30-execution.md`（本文件）
 - 工程修复：`122c8ef`（TC-088 属性转义）、TC-070 类型筛选修复提交（LibraryPage chips/空态/防误解小字）
 - 回归：vitest 530/530 · Playwright chromium 53 passed（全绿，含 acceptance 全套）· `vite build` 通过 · `report-bundle.mjs` 体积门禁通过

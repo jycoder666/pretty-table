@@ -432,6 +432,6 @@ h2 {
 /* FR-20 §2.2：卡片防误解小字（比描述更弱一级） */
 .hint {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--pt-muted);
 }
 </style>
