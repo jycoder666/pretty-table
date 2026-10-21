@@ -1,5 +1,7 @@
 import type { PasteErrorCode } from '../errors'
 import { cloneInstance, validateInstance } from '../schema/validate'
+import { snapshotForUndo } from '../schema/clone'
+import { pushSnapshot } from './editorState'
 import type { EditorState, TemplateInstance } from '../types'
 import type { ValidatedPastePlan } from '../paste/validator'
 
@@ -57,10 +59,12 @@ export function createStoreTxn(get: () => EditorState, set: (s: EditorState) => 
           details: { cause: e instanceof Error ? e.message : String(e) },
         }
       }
-      // 一次 commit：新状态含一条撤销快照（粘贴前），version+1（FR-19 并入 FR-11）
+      // 一次 commit：撤销栈 push 一条「粘贴前」快照 + 清 redoStack（E3：整次粘贴一步，1×1 直写同路径），
+      // version+1（FR-19 并入 FR-11）
       set({
         current: committed,
-        undoSnapshot: cloneInstance(before),
+        undoStack: pushSnapshot(state.undoStack, snapshotForUndo(before)),
+        redoStack: [],
         dirty: true,
         version: state.version + 1,
         pastePending: state.pastePending,

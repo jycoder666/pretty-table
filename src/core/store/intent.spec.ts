@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyEditIntent } from './intent'
-import { createEditorState, dispatch, undoOnce } from './editorState'
+import { createEditorState, dispatch, undo } from './editorState'
 import { COMPARE_ALPHA_V1 } from '../templates'
 import { cloneInstance } from '../schema/validate'
 import type { TemplateInstance } from '../types'
@@ -205,7 +205,7 @@ describe('setSlot · 图片分支（R-3）', () => {
     expect(r.ok).toBe(true)
     if (!r.ok) return
     expect(r.value.current.slots['row.3.val.a']).toEqual({ image: IMG })
-    const undone = undoOnce(r.value)
+    const undone = undo(r.value)
     expect(undone.current.slots['row.3.val.a']).toBe('1 个工作日')
   })
 })

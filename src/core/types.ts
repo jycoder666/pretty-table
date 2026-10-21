@@ -183,11 +183,15 @@ export type EditIntent =
   | { kind: 'removeCol'; col: number }
   | { kind: 'setHeaderLevel'; levels: 1 | 2 | 3 }
 
+/** E3 多次撤销：撤销/重做栈深上限（入栈超限裁掉最旧一条，恒定内存上界） */
+export const UNDO_LIMITS = { maxDepth: 50 } as const
+
 export interface EditorState {
   current: TemplateInstance
-  undoSnapshot: TemplateInstance | null
-  /** PX-03：二级撤销链，仅文字编辑会话边界（beginTextSession）推进；普通操作保持一步撤销 */
-  undoPrev?: TemplateInstance | null
+  /** E3：撤销快照栈（栈顶 = 最近一步操作前状态）；每次新意图 push，coalesce 会话内不 push */
+  undoStack: TemplateInstance[]
+  /** E3：重做快照栈（栈顶 = 最近一次被撤销的状态）；新操作即清空 */
+  redoStack: TemplateInstance[]
   dirty: boolean
   version: number
   /** 粘贴预览期间为 true：合并/拆分/对齐/强调/区块等编辑意图一律被拒（FR-17） */

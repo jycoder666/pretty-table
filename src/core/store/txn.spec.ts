@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createEditorState, dispatch, undoOnce } from './editorState'
+import { createEditorState, dispatch, undo, redo, canRedo } from './editorState'
 import { createStoreTxn } from './txn'
 import { cloneInstance } from '../schema/validate'
 import { COMPARE_ALPHA_V1 } from '../templates'
@@ -42,7 +42,7 @@ describe('StoreTxn（设计增量 §2.4 / FR-19）', () => {
     expect(cloneInstance(state.current)).toEqual(before)
   })
 
-  it('22. 成功 → 一次 commit、version+1、undoSnapshot=粘贴前、一次撤销回到粘贴前', () => {
+  it('22. 成功 → 一次 commit、version+1、撤销栈入粘贴前快照、一次撤销回到粘贴前', () => {
     state = createEditorState(pasteFixture())
     const before = cloneInstance(state.current)
     const txn = createStoreTxn(get, set)
@@ -61,7 +61,7 @@ describe('StoreTxn（设计增量 §2.4 / FR-19）', () => {
     expect(state.version).toBe(1)
     expect(state.current.slots['row.3.val.a']).toEqual({ text: '24 小时' })
     expect(state.current.slots['row.3.val.b']).toEqual({ text: '8 小时' })
-    const undone = undoOnce(state)
+    const undone = undo(state)
     expect(undone.current).toEqual(before)
   })
 
@@ -122,5 +122,68 @@ describe('StoreTxn（设计增量 §2.4 / FR-19）', () => {
       expect(r.ok).toBe(false)
     }
     expect(cloneInstance(state.current)).toEqual(before)
+  })
+})
+
+describe('StoreTxn · E3 多次撤销（整次粘贴一步）', () => {
+  it('粘贴 5 格：undo 一步回到粘贴前（整批一条快照）', () => {
+    state = createEditorState(pasteFixture())
+    const before = cloneInstance(state.current)
+    const txn = createStoreTxn(get, set)
+    const r = txn.applyBatch(
+      planOf(
+        [
+          { slotId: 'row.3.val.a', value: { text: '一' } },
+          { slotId: 'row.3.val.b', value: { text: '二' } },
+          { slotId: 'row.3.val.c', value: { text: '三' } },
+          { slotId: 'row.4.val.a', value: { text: '四' } },
+          { slotId: 'row.4.val.b', value: { text: '五' } },
+        ],
+        state.version,
+      ),
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(state.undoStack).toHaveLength(1)
+    const undone = undo(state)
+    expect(undone.current).toEqual(before)
+    expect(canRedo(undone)).toBe(true)
+  })
+
+  it('粘贴前已有撤销历史：粘贴 push 一条 + redoStack 清空；粘贴→undo→redo 恢复粘贴后状态', () => {
+    state = createEditorState(pasteFixture())
+    // 粘贴前先做一步普通编辑（产生撤销历史）
+    const pre = dispatch(state, { kind: 'setTheme', themeId: 'T-B' })
+    expect(pre.ok).toBe(true)
+    state = pre.ok ? pre.value : state
+    const afterTheme = cloneInstance(state.current)
+    // 再撤销一步 → redoStack 非空
+    state = undo(state)
+    expect(state.current).toEqual(cloneInstance(createEditorState(pasteFixture()).current))
+    expect(canRedo(state)).toBe(true)
+    // 回到换主题后的状态再粘贴
+    state = redo(state)
+    expect(cloneInstance(state.current)).toEqual(afterTheme)
+    const txn = createStoreTxn(get, set)
+    const r = txn.applyBatch(
+      planOf(
+        [
+          { slotId: 'row.3.val.a', value: { text: '甲' } },
+          { slotId: 'row.3.val.b', value: { text: '乙' } },
+        ],
+        state.version,
+      ),
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    // 粘贴清空 redoStack（新分支）
+    expect(state.redoStack).toHaveLength(0)
+    expect(canRedo(state)).toBe(false)
+    const afterPaste = cloneInstance(state.current)
+    // 粘贴 → undo → redo：恢复粘贴后状态
+    const undone = undo(state)
+    expect(undone.current).toEqual(afterTheme)
+    const redone = redo(undone)
+    expect(redone.current).toEqual(afterPaste)
   })
 })

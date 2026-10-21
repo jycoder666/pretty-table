@@ -50,6 +50,7 @@ export {
 } from './image/imageGuard'
 
 export { validateInstance, cloneInstance } from './schema/validate'
+export { snapshotForUndo } from './schema/clone'
 export { migrateInstance, SCHEMA_VERSION_CURRENT } from './schema/migrate'
 
 export {
@@ -122,12 +123,16 @@ export {
 export {
   createEditorState,
   dispatch,
-  undoOnce,
+  undo,
+  redo,
   markClean,
   replaceCurrent,
   canUndo,
+  canRedo,
+  pushSnapshot,
   type DispatchOptions,
 } from './store/editorState'
+export { UNDO_LIMITS } from './types'
 
 export {
   toOption,
