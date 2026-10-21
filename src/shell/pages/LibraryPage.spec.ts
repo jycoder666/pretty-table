@@ -153,6 +153,23 @@ describe('LibraryPage · 我的模板删除入口（PX-01）', () => {
   })
 })
 
+describe('LibraryPage · 模板卡缩略图（PX-06）', () => {
+  it('预设卡与我的模板卡顶部都有缩略图；空白向导卡不占缩略图', async () => {
+    listMock.mockResolvedValue([fakeMine('user-x1')])
+    const library = useLibraryStore()
+    const wrapper = await mountPage()
+    const thumbs = wrapper.findAll('[data-testid="tpl-thumb"]')
+    // 预设 + 我的，每卡一张
+    expect(thumbs).toHaveLength(library.presets.length + library.mine.length)
+    // 空白专属卡不放缩略图
+    expect(wrapper.find('[data-testid="blank-card"] [data-testid="tpl-thumb"]').exists()).toBe(
+      false,
+    )
+    // 每张缩略图带 aria-hidden（纯示意装饰）
+    for (const t of thumbs) expect(t.attributes('aria-hidden')).toBe('true')
+  })
+})
+
 describe('LibraryPage · 新建空白表专属卡与向导（FR-C6 / Q-10 / T05）', () => {
   async function openWizard() {
     const wrapper = await mountPage()

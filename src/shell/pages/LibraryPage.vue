@@ -6,6 +6,7 @@ import { createBlankInstance } from '@/core'
 import PtButton from '../ui/PtButton.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import { confirmAction } from '../ui/confirm'
+import TemplateThumb from './TemplateThumb.vue'
 import { errorCopy } from '../editor/errorCopy'
 import type { TemplateInstance } from '@/core'
 
@@ -153,6 +154,8 @@ async function removeTpl(t: TemplateInstance) {
         </article>
 
         <article v-for="t in library.presets" :key="t.templateId" class="card">
+          <!-- PX-06：模板卡缩略图（纯 CSS 骨架示意，固定宽高比） -->
+          <TemplateThumb :instance="t" />
           <span class="chip">{{ typeLabel(t) }}</span>
           <h3>{{ t.meta?.displayName }}</h3>
           <p>{{ t.meta?.description }}</p>
@@ -170,6 +173,8 @@ async function removeTpl(t: TemplateInstance) {
       <p v-else-if="!library.mine.length" class="empty">还没有我的模板。在编辑台「另存为模板」后会出现在这里。</p>
       <div v-else class="grid">
         <article v-for="t in library.mine" :key="t.templateId" class="card">
+          <!-- PX-06：我的模板卡同款缩略图 -->
+          <TemplateThumb :instance="t" />
           <span class="chip mine">我的</span>
           <h3>{{ t.meta?.displayName || '未命名模板' }}</h3>
           <p>{{ t.meta?.savedAt ? new Date(t.meta.savedAt).toLocaleString() : '' }}</p>
