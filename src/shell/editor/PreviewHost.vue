@@ -5,6 +5,7 @@ import { useEditorStore } from '../stores/editor'
 import SlotOverlay from '../dnd/SlotOverlay.vue'
 import { computeDropTargets, estimateCellRects, type DropTarget } from '../dnd/slotDnd'
 import { usePlaceSession } from '../dnd/placeSession'
+import { locateVisual } from './previewHit'
 import EditorToolbar from './EditorToolbar.vue'
 import PasteEntry from '../paste/PasteEntry.vue'
 
@@ -58,22 +59,18 @@ function onClick(ev: MouseEvent) {
   const tableEl = el.value.querySelector('canvas')
   if (!tableEl) return
   const rect = tableEl.getBoundingClientRect()
-  const x = ev.clientX - rect.left
-  const y = ev.clientY - rect.top
-  const labelW = 120
-  const colW = 140
-  const rowH = 36
-  const col = x < labelW ? 0 : 1 + Math.floor((x - labelW) / colW)
-  const row = Math.floor(y / rowH)
-  if (col < 0 || row < 0) return
-  const hit = findSlotAtVisual(editor.current, row, col)
-  if (hit.isBlockSlot && hit.slotId) {
-    const b = editor.current.blocks.find((x) => x.slotId === hit.slotId)
+  // PX-04：命中与渲染同源——生效列宽 / 行高档位 / 区块行都参与定位
+  const pos = locateVisual(editor.current, ev.clientX - rect.left, ev.clientY - rect.top)
+  if (!pos) return
+  const { row, col } = pos
+  const found = findSlotAtVisual(editor.current, row, col)
+  if (found.isBlockSlot && found.slotId) {
+    const b = editor.current.blocks.find((x) => x.slotId === found.slotId)
     editor.selectedBlockId = b?.id ?? null
     editor.selectedSlotId = null
     return
   }
-  editor.selectedSlotId = hit.slotId
+  editor.selectedSlotId = found.slotId
   editor.selectedBlockId = null
   const logical = visualToLogicalRow(editor.current, row)
   if (logical === null) {

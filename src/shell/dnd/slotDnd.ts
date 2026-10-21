@@ -1,5 +1,6 @@
 import {
   buildVisualRows,
+  colWidthAt,
   type BlockType,
   type EditIntent,
   type TemplateInstance,
@@ -11,11 +12,16 @@ export type DropTarget = {
   accept: BlockType[]
 }
 
-const COL_WIDTH = 140
-const LABEL_WIDTH = 120
 const ROW_HEIGHT = 36
 const HEADER_HEIGHT = 36
 const BLOCK_HEIGHT = 32
+
+/** 生效列宽合计（PX-04：与 toOption 渲染同源，colWidths / 默认宽都从这里走） */
+export function totalContentWidth(inst: TemplateInstance): number {
+  let sum = 0
+  for (let c = 0; c < inst.layout.colCount; c++) sum += colWidthAt(inst, c)
+  return sum
+}
 
 /** Approximate per-cell DOMRects in preview coordinates (origin = host top-left). */
 export function estimateCellRects(
@@ -31,7 +37,7 @@ export function estimateCellRects(
     const cols: DOMRect[] = []
     let x = origin.left
     for (let c = 0; c < colCount; c++) {
-      const w = c === 0 ? LABEL_WIDTH : COL_WIDTH
+      const w = colWidthAt(inst, c)
       cols.push(new DOMRect(x, y, w, h))
       x += w
     }
@@ -79,7 +85,7 @@ export function computeDropTargets(
     if (seen.has(def.id)) continue
     targets.push({
       blockSlotId: def.id,
-      rect: new DOMRect(0, bottom, LABEL_WIDTH + COL_WIDTH * Math.max(0, inst.layout.colCount - 1), BLOCK_HEIGHT),
+      rect: new DOMRect(0, bottom, totalContentWidth(inst), BLOCK_HEIGHT),
       accept: [...def.accept],
     })
     bottom += BLOCK_HEIGHT
