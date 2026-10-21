@@ -18,7 +18,7 @@ import { confirmAction } from '../ui/confirm'
 import { pointerOnlySensors, readBlockType } from '../dnd/dndKitAdapter'
 import { usePlaceSession } from '../dnd/placeSession'
 import { computeDropTargets, estimateCellRects, resolveDrop } from '../dnd/slotDnd'
-import { isUndoHotkey, shouldUndo } from '../editor/undoHotkey'
+import { shouldUndo } from '../editor/undoHotkey'
 
 const editor = useEditorStore()
 const library = useLibraryStore()
@@ -50,8 +50,8 @@ function onGlobalKey(e: KeyboardEvent) {
     return
   }
   // PX-13：Ctrl/Cmd+Z 单步撤销（绑定在编辑台层，不全局污染）；
-  // 输入框聚焦 / 粘贴预览期 / 撤销链空由 shouldUndo 拦截，与既有禁撤销状态同源
-  if (isUndoHotkey(e) && shouldUndo(e, editor, document.activeElement)) {
+  // 撤销键识别 / 输入框聚焦 / 粘贴预览期 / 撤销链空全部由 shouldUndo 收口（内含 isUndoHotkey，不重复判定）
+  if (shouldUndo(e, editor, document.activeElement)) {
     e.preventDefault()
     editor.undo()
   }

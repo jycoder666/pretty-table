@@ -647,4 +647,53 @@ describe('PropertyPanel · 主题切换 pastePending 禁用（PX-15）', () => {
       expect(btn.attributes('title')).toBeUndefined()
     }
   })
+
+  it('预览期置灰原因走 PtTooltip 文案：经外层 span 触发后断言主题/斑马纹原因（P2 验收补齐）', async () => {
+    // jsdom 无 ResizeObserver（reka PopperContent 需要）；tooltip 300ms 延时走 fake timers
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
+    vi.useFakeTimers()
+    let wrapper: ReturnType<typeof mount> | null = null
+    try {
+      // 与 PtTooltip.spec 同口径：attachTo document（reka 指针事件需要触发器在文档中）
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const editor = useEditorStore()
+      editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
+      wrapper = mount(PropertyPanel, { global: { plugins: [pinia] }, attachTo: document.body })
+      editor.selectedSlotId = 'row.3.val.a'
+      editor.pasteStart({ text: '1\t2\n3\t4' })
+      expect(editor.pastePending).toBe(true)
+      await flushPromises()
+      // PtTooltip 触发器统一包一层 span（.pt-tooltip-trigger）；主题按钮被包了 3 层
+      const themeTriggers = wrapper
+        .findAll('.pt-tooltip-trigger')
+        .filter((t) => t.find('.theme-btn').exists())
+      expect(themeTriggers.length).toBe(3)
+      // 触发第一个主题按钮的 tooltip → 锁定置灰原因文案（GC-25：人话，不露状态码）
+      await themeTriggers[0]!.trigger('pointermove')
+      await vi.advanceTimersByTimeAsync(300)
+      expect(document.body.textContent).toContain('粘贴预览期间不能切换主题，先确认或取消粘贴')
+      // 斑马纹开关同源原因文案
+      const zebraTrigger = wrapper
+        .findAll('.pt-tooltip-trigger')
+        .find((t) => t.find('.zebra input[type="checkbox"]').exists())!
+      expect(zebraTrigger).toBeDefined()
+      await zebraTrigger.trigger('pointermove')
+      await vi.advanceTimersByTimeAsync(300)
+      expect(document.body.textContent).toContain('粘贴预览期间不能切换斑马纹')
+      editor.cancelPaste()
+    } finally {
+      wrapper?.unmount()
+      vi.useRealTimers()
+      vi.unstubAllGlobals()
+      document.body.innerHTML = ''
+    }
+  })
 })

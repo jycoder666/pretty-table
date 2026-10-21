@@ -1,5 +1,7 @@
 :root {
   --pt-paper: #f7f9fc;
+  /* 弹层/卡面白底（RenameDialog / ConfirmDialog 共用；壳层一律引 token，不写裸 hex） */
+  --pt-surface: #ffffff;
   --pt-primary: #2f5b9a;
   --pt-header-text: #ffffff;
   --pt-zebra: #eef2f7;

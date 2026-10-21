@@ -64,7 +64,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
   justify-content: center;
 }
 .confirm-box {
-  background: #fff;
+  background: var(--pt-surface);
   border: 1px solid var(--pt-border);
   border-radius: 12px;
   padding: 20px;
