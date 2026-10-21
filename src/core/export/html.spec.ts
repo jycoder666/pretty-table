@@ -97,3 +97,30 @@ describe('exportHtml · 自定义格式（T03）', () => {
     expect(r.value).toContain('min-width:600px')
   })
 })
+
+// ── 交互升级 T03：导出同源（图片格 <img> 输出）──
+
+describe('exportHtml · 图片格（交互升级 T03）', () => {
+  const T03_IMG =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+
+  it('图片格输出 <img src> 白名单 data URI（object-fit:cover，src 不转义）', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.slots['row.2.val.a'] = { image: T03_IMG }
+    const r = exportHtml(inst)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toContain(`<img src="${T03_IMG}"`)
+    expect(r.value).toContain('object-fit:cover')
+  })
+
+  it('GC-22：非白名单 image 值不进 src（防御性兜底，不产生注入）', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.slots['row.2.val.a'] = { image: '"><script>alert(1)</script>' }
+    const r = exportHtml(inst)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).not.toContain('alert(1)')
+    expect(r.value).not.toContain('<script')
+  })
+})

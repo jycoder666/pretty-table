@@ -1,7 +1,9 @@
 import type { SlotValue, TemplateInstance } from '../types'
 import { resolveTheme, type Palette } from '../theme/palettes'
 import { cellInlineStyle } from '../theme/inlineStyle'
+import { FONT_STACK } from '../theme/font'
 import { MARK_LABEL } from '../format/formatTokens'
+import { isImageDataUrl } from '../image/imageGuard'
 import {
   buildVisualRows,
   remapMerges,
@@ -31,6 +33,10 @@ export interface ExportCell {
   ariaLabel?: string
   /** 表头角标文本（如「推荐」），渲染为 <span> */
   badge?: string
+  /** R-3：图片格 data URL（经 isImageDataUrl 白名单校验后透传，src 不转义，GC-22） */
+  image?: string
+  /** R-3：图片格行高 px（与预览 rowHeights 同源；rowSpan 时为跨行高之和） */
+  heightPx?: number
 }
 
 export interface ExportModel {
@@ -71,6 +77,25 @@ function inlineRole(cell: CellMeta): 'header' | 'body' | 'label' | 'block' {
   return 'body'
 }
 
+/** R-4 强调注脚（emphFooter）导出样式：纸底次要灰靠左小字，与预览 styleForCell 同源（零新增色值 GC-11） */
+function emphFooterStyle(palette: Palette, metrics: TypeMetrics, tier?: number): string {
+  return [
+    `font-family:${FONT_STACK}`,
+    `font-size:${metrics.fontSize + (tier === 2 ? 2 : 0)}px`,
+    `padding:${metrics.padV}px ${metrics.padH}px`,
+    `border:1px solid ${palette.border}`,
+    `background:${palette.paper}`,
+    `color:${palette.muted}`,
+    'text-align:left',
+    'font-weight:400',
+  ].join(';')
+}
+
+/** footer 槽判定：footer 区块的整行固定进 tfoot（与预览表底位置强绑定，共享知识 §7.8） */
+function isFooterSlot(inst: TemplateInstance, slotId: string): boolean {
+  return inst.layout.blockSlots.find((s) => s.id === slotId)?.region === 'footer'
+}
+
 function cellStyle(
   cell: CellMeta,
   palette: Palette,
@@ -92,6 +117,12 @@ function cellStyle(
       metrics,
     ),
   ]
+  // R-4 左栏标签：tag 底色（深浅 2 档），与预览 styleForCell 同源（追加在后覆盖 body 底色）
+  if (cell.role === 'leftTag') {
+    parts.push(`background:${cell.styleTier === 2 ? palette.zebra : palette.tag}`)
+    parts.push(`color:${palette.tagText}`)
+    parts.push('font-weight:600')
+  }
   // 推荐列内联描边（FR-23）：列内单元格加粗主色描边
   if (recommendCol !== null && ci === recommendCol) {
     parts.push(`border:2px solid ${palette.primary}`)
@@ -116,7 +147,12 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
     const headerLevels = inst.layout.headerLevels ?? 1
     const recommendCol = inst.highlight?.recommendCol ?? null
     const metrics = typeMetrics(inst.layout.style)
-    const { metas, blockRowIndexes } = buildVisualRows(inst)
+    const headRows: ExportCell[][] = []
+    const bodyRows: ExportCell[][] = []
+    const footRows: ExportCell[][] = []
+    const emittedBlockSlots = new Set<string>()
+
+    const { metas, rowHeights, blockRowIndexes } = buildVisualRows(inst)
     const merges = remapMerges(inst, blockRowIndexes)
 
     const span = new Map<string, { rs: number; cs: number }>()
@@ -134,21 +170,24 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
       }
     }
 
-    const headRows: ExportCell[][] = []
-    const bodyRows: ExportCell[][] = []
-
     metas.forEach((row, ri) => {
       if (blockRowIndexes.has(ri)) {
         // 区块行：整行一条（预览占位空槽导出为空串）
         const head = row[0]
-        bodyRows.push([
-          {
-            text: head?.isPlaceholder ? '' : (head?.text ?? ''),
-            tag: 'th',
-            colSpan: colCount,
-            style: cellInlineStyle(palette, { role: 'block' }, metrics),
-          },
-        ])
+        const slotId = blockRowIndexes.get(ri) ?? ''
+        emittedBlockSlots.add(slotId)
+        const cell: ExportCell = {
+          text: head?.isPlaceholder ? '' : (head?.text ?? ''),
+          tag: 'th',
+          colSpan: colCount,
+          style:
+            head?.blockType === 'emphFooter'
+              ? emphFooterStyle(palette, metrics, head?.styleTier)
+              : cellInlineStyle(palette, { role: 'block' }, metrics),
+        }
+        // R-4：footer 区块行固定进 tfoot（与预览表底一致），不再双输出到 bodyRows
+        if (isFooterSlot(inst, slotId)) footRows.push([cell])
+        else bodyRows.push([cell])
         return
       }
       const inHeader = ri < headerLevels
@@ -157,34 +196,47 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
         if (skip.has(`${ri},${ci}`)) return
         const sp = span.get(`${ri},${ci}`)
         const firstCol = ci === 0
-        const rowHeader = firstCol && (cell.role === 'label' || cell.role === 'readonly')
+        const rowHeader =
+          firstCol && (cell.role === 'label' || cell.role === 'readonly' || cell.role === 'leftTag')
         const tag: 'th' | 'td' = inHeader || rowHeader ? 'th' : 'td'
+        // R-3：图片格只透传白名单内 data URL（GC-22，防御性兜底）；行高与预览 rowHeights 同源
+        const image =
+          !inHeader && cell.image !== undefined && isImageDataUrl(cell.image) ? cell.image : undefined
+        const rs = sp && sp.rs > 1 ? sp.rs : 1
+        const heightPx = image
+          ? rowHeights.slice(ri, ri + rs).reduce((a, b) => a + b, 0)
+          : undefined
+        const style = cellStyle(cell, palette, effectiveZebra, ri, ci, recommendCol, metrics)
         cells.push({
           text: cell.isPlaceholder ? '' : cell.text,
           tag,
           scope: inHeader ? 'col' : tag === 'th' && !inHeader ? 'row' : undefined,
           rowSpan: sp && sp.rs > 1 ? sp.rs : undefined,
           colSpan: sp && sp.cs > 1 ? sp.cs : undefined,
-          style: cellStyle(cell, palette, effectiveZebra, ri, ci, recommendCol, metrics),
+          style: heightPx !== undefined ? `${style};height:${heightPx}px` : style,
           ariaLabel: cell.mark ? MARK_LABEL[cell.mark] : undefined,
           badge: cell.badge,
+          image,
+          heightPx,
         })
       })
       if (inHeader) headRows.push(cells)
       else bodyRows.push(cells)
     })
 
-    // tfoot：emphFooter 区块（预览表体不含注脚，导出补足语义）
-    const footRows: ExportCell[][] = inst.blocks
-      .filter((b) => b.type === 'emphFooter')
-      .map((b) => [
-        {
-          text: String(b.props?.text ?? ''),
-          tag: 'th',
-          colSpan: colCount,
-          style: cellInlineStyle(palette, { role: 'block' }, metrics),
-        },
-      ])
+    // tfoot：footer 区块行已由 metas 路由进来；兜底收集无 rowHint 的遗留 emphFooter（口径收窄前的旧数据）
+    for (const b of inst.blocks) {
+      if (b.type === 'emphFooter' && !emittedBlockSlots.has(b.slotId)) {
+        footRows.push([
+          {
+            text: String(b.props?.text ?? ''),
+            tag: 'th',
+            colSpan: colCount,
+            style: emphFooterStyle(palette, metrics, typeof b.props?.styleTier === 'number' ? b.props.styleTier : undefined),
+          },
+        ])
+      }
+    }
 
     // min-width 按 colWidths 求和（自定义格式 §1.8）；未设列宽沿用窄屏默认（首列 96、其余 120）
     const minWidthPx = Array.from({ length: colCount }, (_, c) => {
@@ -214,7 +266,12 @@ export function renderExportHtml(model: ExportModel): string {
     if (cell.colSpan !== undefined) attrs.push(`colspan="${cell.colSpan}"`)
     if (cell.ariaLabel) attrs.push(`aria-label="${escapeHtml(cell.ariaLabel)}"`)
     const badge = cell.badge ? `<span style="font-size:11px">${escapeHtml(cell.badge)}</span>` : ''
-    return `<${cell.tag} ${attrs.join(' ')}>${escapeHtml(cell.text)}${badge}</${cell.tag}>`
+    // GC-22：src 只可能来自 isImageDataUrl 白名单校验通过的值（buildExportModel 已闸），
+    // 白名单正则保证无引号/无标签注入，data URI 本身不转义
+    const inner = cell.image
+      ? `<img src="${cell.image}" alt="" style="display:block;width:100%;height:100%;object-fit:cover">`
+      : `${escapeHtml(cell.text)}${badge}`
+    return `<${cell.tag} ${attrs.join(' ')}>${inner}</${cell.tag}>`
   }
   const rowHtml = (row: ExportCell[]): string => `<tr>${row.map(cellHtml).join('')}</tr>`
   const thead = model.headRows.length ? `<thead>${model.headRows.map(rowHtml).join('')}</thead>` : ''

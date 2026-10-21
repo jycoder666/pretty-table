@@ -246,3 +246,128 @@ describe('buildExportModel · 结构编辑后任意行列数（T03 回归红线�
     expect(m.value.headRows[0]!.some((c) => c.colSpan === 3 && c.text === '大类')).toBe(true)
   })
 })
+
+// ── 交互升级 T03：导出同源（图片格 <img> / emphFooter tfoot 收窄 / leftTag 标签格）──
+
+import { vi } from 'vitest'
+import { buildVisualRows, colWidthAt, drawImageCell, toOption } from '../adapter/toOption'
+import { coverCrop } from '../image/imageGuard'
+
+const T03_IMG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+
+describe('buildExportModel · 导出同源（交互升级 T03）', () => {
+  it('图片格 → ExportCell.image 白名单透传，heightPx 与预览行高同源', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.slots['row.2.val.a'] = { image: T03_IMG }
+    const m = buildExportModel(inst)
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    const cell = m.value.bodyRows.flat().find((c) => c.image === T03_IMG)
+    expect(cell).toBeDefined()
+    expect(cell?.text).toBe('')
+    expect(cell?.tag).toBe('td')
+    // td 行高 px 与预览 rowHeights 同一数据源（逻辑行 3 → 可视行 4，after-1 gap 占 1 行）
+    const { rowHeights } = buildVisualRows(inst)
+    expect(cell?.heightPx).toBe(rowHeights[4])
+  })
+
+  it('GC-22：非白名单 image 值按空格处理，不进导出模型', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.slots['row.2.val.a'] = { image: '"><script>alert(1)</script>' }
+    const m = buildExportModel(inst)
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    expect(m.value.bodyRows.flat().every((c) => c.image === undefined)).toBe(true)
+    expect(m.value.bodyRows.flat().every((c) => !c.text.includes('script'))).toBe(true)
+  })
+
+  it('emphFooter 只进 tfoot（footer 槽行不再双输出到 bodyRows）', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.blocks.push({
+      id: 'foot-1',
+      type: 'emphFooter',
+      slotId: 'footer-1',
+      props: { text: '以上价格含税' },
+    })
+    const m = buildExportModel(inst)
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    expect(m.value.footRows).toHaveLength(1)
+    expect(m.value.footRows[0]![0]!.text).toBe('以上价格含税')
+    expect(m.value.footRows[0]![0]!.tag).toBe('th')
+    expect(m.value.footRows[0]![0]!.colSpan).toBe(inst.layout.colCount)
+    // 修双输出：注脚行不出现在 bodyRows
+    expect(m.value.bodyRows.flat().some((c) => c.text === '以上价格含税')).toBe(false)
+    // 注脚样式与预览同源：纸底 + 次要灰 + 靠左小字（零新增色值 GC-11）
+    const pa = PALETTES['T-A']
+    expect(m.value.footRows[0]![0]!.style).toContain(`background:${pa.paper}`)
+    expect(m.value.footRows[0]![0]!.style).toContain(`color:${pa.muted}`)
+    expect(m.value.footRows[0]![0]!.style).toContain('text-align:left')
+  })
+
+  it('emphFooter styleTier=2 → 注脚字号略大（与预览档位同源，13+2）', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.blocks.push({
+      id: 'foot-1',
+      type: 'emphFooter',
+      slotId: 'footer-1',
+      props: { text: '注脚', styleTier: 2 },
+    })
+    const m = buildExportModel(inst)
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    expect(m.value.footRows[0]![0]!.style).toContain('font-size:15px')
+  })
+
+  it('leftTag → th scope=row + tag 底色（与预览 styleForCell 同源）', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.blocks.push({ id: 'tag-1', type: 'leftTag', slotId: 'left-r2', props: { text: '推荐' } })
+    const m = buildExportModel(inst)
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    const cell = m.value.bodyRows.flat().find((c) => c.text === '推荐')
+    expect(cell?.tag).toBe('th')
+    expect(cell?.scope).toBe('row')
+    const pa = PALETTES['T-A']
+    expect(cell?.style).toContain(`background:${pa.tag}`)
+    expect(cell?.style).toContain(`color:${pa.tagText}`)
+  })
+
+  it('三处一致：预览 customRender / drawImageCell（PNG 同源）/ 导出模型 cover 参数', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.slots['row.3.val.a'] = { image: T03_IMG }
+    const asset = { naturalWidth: 1000, naturalHeight: 500 }
+    const images = new Map([[T03_IMG, asset]])
+    const { metas, rowHeights } = buildVisualRows(inst)
+    const rect = { left: 10, top: 20, width: colWidthAt(inst, 1), height: rowHeights[4]! }
+    // ① 预览：toOption customRender 捕获 drawImage 参数
+    const drawImage = vi.fn<(...a: unknown[]) => void>()
+    const opt = toOption(inst, { mode: 'export', images })
+    const col = (opt.columns as { customRender?: (a: unknown) => unknown }[])[1]!
+    col.customRender?.({ row: 4, col: 1, rect, ctx: { drawImage } })
+    expect(drawImage).toHaveBeenCalledTimes(1)
+    // ② PNG 同源：png.ts 注入 images 后走同一 customRender 闭包 → drawImageCell 直调结果一致
+    const drawImage2 = vi.fn<(...a: unknown[]) => void>()
+    drawImageCell(metas[4]![1], asset, { row: 4, col: 1, rect, ctx: { drawImage: drawImage2 } })
+    expect(drawImage2.mock.calls[0]).toEqual(drawImage.mock.calls[0])
+    // ③ 导出：img 格 heightPx 与 rect.height 一致；coverCrop 单点复算与绘制参数一致
+    const m = buildExportModel(inst)
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    const cell = m.value.bodyRows.flat().find((c) => c.image === T03_IMG)
+    expect(cell?.heightPx).toBe(rect.height)
+    const { sw, sh } = coverCrop(asset.naturalWidth, asset.naturalHeight, rect.width, rect.height)
+    expect(drawImage.mock.calls[0]).toEqual([
+      asset,
+      (asset.naturalWidth - sw) / 2,
+      (asset.naturalHeight - sh) / 2,
+      sw,
+      sh,
+      rect.left,
+      rect.top,
+      rect.width,
+      rect.height,
+    ])
+  })
+})

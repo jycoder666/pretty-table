@@ -3,6 +3,7 @@ import type { PngExportOptions, TemplateInstance } from '../types'
 import { fail, ok, type Result } from '../errors'
 import { toOption, measureContentSize } from '../adapter/toOption'
 import { resolveTheme } from '../theme/palettes'
+import { isImageDataUrl } from '../image/imageGuard'
 
 /** 输出像素上限（T19 门槛实测回写值：约 4096×4096，Safari 画布面积保守值） */
 export const PNG_MAX_PIXELS_DEFAULT = 16_777_216
@@ -69,10 +70,13 @@ export async function exportPng(
   let table: ListTable | null = null
   try {
     const { palette } = resolveTheme(inst.themeId, inst.themeTokens)
-    const option = toOption(inst, { mode: 'export', transparentUnderlay: transparent }) as Record<
-      string,
-      unknown
-    >
+    // R-3 导出同源：预加载图片资源注入 RenderContext.images，customRender 闭包经 drawImageCell 绘制（coverCrop 同源）
+    const images = await preloadImages(collectImageUrls(inst))
+    const option = toOption(inst, {
+      mode: 'export',
+      transparentUnderlay: transparent,
+      images: images.size > 0 ? images : undefined,
+    }) as Record<string, unknown>
     option.canvasWidth = 'auto'
     option.canvasHeight = 'auto'
     option.pixelRatio = 1
@@ -129,6 +133,30 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error('图片加载失败'))
     img.src = src
   })
+}
+
+/**
+ * R-3 导出同源：从槽值收集图片 data URL（只收白名单内值，GC-22 单点透传）。
+ */
+export function collectImageUrls(inst: TemplateInstance): string[] {
+  const urls = new Set<string>()
+  for (const v of Object.values(inst.slots)) {
+    if (v && typeof v === 'object' && 'image' in v && isImageDataUrl(v.image)) urls.add(v.image)
+  }
+  return [...urls]
+}
+
+/**
+ * R-3 导出同源：离屏预加载全部图片资源，注入 RenderContext.images。
+ * 单张加载失败只跳过该图（对应格回退默认绘制，画空格不炸），不中断整体导出。
+ */
+export async function preloadImages(urls: string[]): Promise<Map<string, HTMLImageElement>> {
+  const results = await Promise.allSettled(urls.map((u) => loadImage(u)))
+  const map = new Map<string, HTMLImageElement>()
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') map.set(urls[i]!, r.value)
+  })
+  return map
 }
 
 export function measurePng(inst: TemplateInstance, scale: 1 | 2 | 3 = 2) {
