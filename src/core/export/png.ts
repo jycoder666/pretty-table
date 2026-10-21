@@ -1,6 +1,6 @@
-// T34：VTable 深入口（ListTable-simple，仅注册文本格基础能力），避免连带
-// index 全量入口（PivotChart / 图表格注册 → vrender-components 图表依赖进包）。
-import { ListTableSimple as ListTable } from '@visactor/vtable/es/ListTable-simple'
+// T34：VTable 经 vtableLite 深入口（plain ListTable + 构造期必需注册），与 coreHost 同口径，
+// 避免 index 全量入口连带 PivotTable/PivotChart → vrender-components 图表依赖进包。
+import { ListTable } from '../render/vtableLite'
 import type { PngExportOptions, TemplateInstance } from '../types'
 import { fail, ok, type Result } from '../errors'
 import { toOption, measureContentSize } from '../adapter/toOption'

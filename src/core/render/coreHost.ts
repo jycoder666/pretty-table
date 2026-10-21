@@ -1,5 +1,5 @@
-// T34：VTable 深入口（ListTable-simple），与 png.ts 同口径，避免 index 全量入口连带图表依赖
-import { ListTableSimple as ListTable } from '@visactor/vtable/es/ListTable-simple'
+// T34：VTable 经 vtableLite 深入口（plain ListTable + 构造期必需注册），避免 index 全量入口连带图表依赖
+import { ListTable } from './vtableLite'
 import type {
   BlockDesc,
   CoreHandle,
