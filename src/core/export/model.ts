@@ -2,7 +2,13 @@ import type { SlotValue, TemplateInstance } from '../types'
 import { resolveTheme, type Palette } from '../theme/palettes'
 import { cellInlineStyle } from '../theme/inlineStyle'
 import { MARK_LABEL } from '../format/formatTokens'
-import { buildVisualRows, remapMerges, type CellMeta } from '../adapter/toOption'
+import {
+  buildVisualRows,
+  remapMerges,
+  typeMetrics,
+  type CellMeta,
+  type TypeMetrics,
+} from '../adapter/toOption'
 import { fail, ok, type Result } from '../errors'
 
 /**
@@ -72,14 +78,19 @@ function cellStyle(
   ri: number,
   ci: number,
   recommendCol: number | null,
+  metrics: TypeMetrics,
 ): string {
   const parts: string[] = [
-    cellInlineStyle(palette, {
-      role: inlineRole(cell),
-      zebraRow: zebraOn && ri % 2 === 1,
-      align: cell.align,
-      emphasize: cell.emphasize,
-    }),
+    cellInlineStyle(
+      palette,
+      {
+        role: inlineRole(cell),
+        zebraRow: zebraOn && ri % 2 === 1,
+        align: cell.align,
+        emphasize: cell.emphasize,
+      },
+      metrics,
+    ),
   ]
   // 推荐列内联描边（FR-23）：列内单元格加粗主色描边
   if (recommendCol !== null && ci === recommendCol) {
@@ -104,6 +115,7 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
     const colCount = inst.layout.colCount
     const headerLevels = inst.layout.headerLevels ?? 1
     const recommendCol = inst.highlight?.recommendCol ?? null
+    const metrics = typeMetrics(inst.layout.style)
     const { metas, blockRowIndexes } = buildVisualRows(inst)
     const merges = remapMerges(inst, blockRowIndexes)
 
@@ -134,7 +146,7 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
             text: head?.isPlaceholder ? '' : (head?.text ?? ''),
             tag: 'th',
             colSpan: colCount,
-            style: cellInlineStyle(palette, { role: 'block' }),
+            style: cellInlineStyle(palette, { role: 'block' }, metrics),
           },
         ])
         return
@@ -153,7 +165,7 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
           scope: inHeader ? 'col' : tag === 'th' && !inHeader ? 'row' : undefined,
           rowSpan: sp && sp.rs > 1 ? sp.rs : undefined,
           colSpan: sp && sp.cs > 1 ? sp.cs : undefined,
-          style: cellStyle(cell, palette, effectiveZebra, ri, ci, recommendCol),
+          style: cellStyle(cell, palette, effectiveZebra, ri, ci, recommendCol, metrics),
           ariaLabel: cell.mark ? MARK_LABEL[cell.mark] : undefined,
           badge: cell.badge,
         })
@@ -170,9 +182,15 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
           text: String(b.props?.text ?? ''),
           tag: 'th',
           colSpan: colCount,
-          style: cellInlineStyle(palette, { role: 'block' }),
+          style: cellInlineStyle(palette, { role: 'block' }, metrics),
         },
       ])
+
+    // min-width 按 colWidths 求和（自定义格式 §1.8）；未设列宽沿用窄屏默认（首列 96、其余 120）
+    const minWidthPx = Array.from({ length: colCount }, (_, c) => {
+      const w = inst.layout.style?.colWidths?.[c]
+      return typeof w === 'number' ? w : c === 0 ? MIN_FIRST_COL_WIDTH : MIN_COL_WIDTH
+    }).reduce((a, b) => a + b, 0)
 
     return ok({
       caption: captionText(inst),
@@ -180,7 +198,7 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
       bodyRows,
       footRows,
       frozenColCount: inst.layout.frozenColCount ?? 0,
-      minWidthPx: MIN_FIRST_COL_WIDTH + Math.max(0, colCount - 1) * MIN_COL_WIDTH,
+      minWidthPx,
     })
   } catch (e) {
     return fail('EXPORT_HTML_FAIL', e instanceof Error ? e.message : '导出模型构建失败')

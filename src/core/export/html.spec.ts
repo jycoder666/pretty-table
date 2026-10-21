@@ -71,3 +71,29 @@ describe('exportHtml（T28 · 语义化 + 窄屏）', () => {
     expect(r.value).toContain('min-width:696px')
   })
 })
+
+// ── 自定义格式 T03：自定义色 / 档位 / colWidths 进最终 HTML（FR-C1/C2/C8）──
+
+describe('exportHtml · 自定义格式（T03）', () => {
+  it('自定义角色色进内联样式；转义与无 script/外链红线不回归', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.themeTokens = { primary: '#112233', emphasis: '#445566' }
+    inst.slots['obj.name.a'] = '<b>加粗</b>'
+    const r = exportHtml(inst)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toContain('background:#112233')
+    expect(r.value).not.toMatch(/<script/i)
+    expect(r.value).not.toMatch(/https?:\/\//)
+    expect(r.value).toContain('&lt;b&gt;加粗&lt;/b&gt;')
+  })
+
+  it('colWidths 求和进 table min-width', () => {
+    const inst = cloneInstance(PRICING_V1)
+    inst.layout.style = { colWidths: [100, 100, 100, 100, 100, 100] }
+    const r = exportHtml(inst)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toContain('min-width:600px')
+  })
+})

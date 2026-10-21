@@ -1,6 +1,7 @@
 import type { Align, Emphasis } from '../types'
 import type { Palette } from './palettes'
 import { FONT_STACK } from './font'
+import type { TypeMetrics } from '../adapter/toOption'
 
 export function cellInlineStyle(
   palette: Palette,
@@ -10,11 +11,15 @@ export function cellInlineStyle(
     align?: Align
     emphasize?: Emphasis[]
   },
+  metrics?: TypeMetrics,
 ): string {
+  const fs = metrics?.fontSize ?? 13
+  const pv = metrics?.padV ?? 8
+  const ph = metrics?.padH ?? 10
   const parts: string[] = [
     `font-family:${FONT_STACK}`,
-    'font-size:13px',
-    'padding:8px 10px',
+    `font-size:${fs}px`,
+    `padding:${pv}px ${ph}px`,
     `border:1px solid ${palette.border}`,
   ]
 

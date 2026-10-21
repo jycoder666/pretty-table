@@ -1,6 +1,7 @@
 import type {
   Align,
   Emphasis,
+  LayoutStyle,
   MarkSlotObject,
   MarkValue,
   MergeRange,
@@ -14,6 +15,7 @@ import { resolveTheme, type Palette } from '../theme/palettes'
 import { toVTableTheme } from '../theme/vtableTheme'
 import { FONT_STACK } from '../theme/font'
 import { semanticColor } from '../theme/semantic'
+import { FONT_SIZE_TIERS, PADDING_TIERS, ROW_HEIGHT_TIERS } from '../theme/layoutScales'
 import { MARK_GLYPH, RECOMMEND_BADGE_TEXT, formatNumber } from '../format/formatTokens'
 
 const COL_WIDTH = 140
@@ -21,6 +23,34 @@ const LABEL_WIDTH = 120
 const ROW_HEIGHT = 36
 const HEADER_HEIGHT = 36
 const BLOCK_HEIGHT = 32
+
+/** 字号/内边距档位消费指标（自定义格式 §1.3）：同一常量表，toOption / model 两处消费 */
+export interface TypeMetrics {
+  fontSize: number
+  padV: number
+  padH: number
+}
+
+/** 无 style（或档位缺省）→ 既有默认值；设了档位 → 档位 px（内边距四边统一） */
+export function typeMetrics(style: LayoutStyle | undefined): TypeMetrics {
+  return {
+    fontSize: style?.fontSizeTier !== undefined ? FONT_SIZE_TIERS[style.fontSizeTier - 1]! : 13,
+    padV: style?.paddingTier !== undefined ? PADDING_TIERS[style.paddingTier - 1]! : 8,
+    padH: style?.paddingTier !== undefined ? PADDING_TIERS[style.paddingTier - 1]! : 10,
+  }
+}
+
+/** 行高档位：缺省 = 既有 36；设了档位 → 档位 px（表头与表体同档，区块行仍 32） */
+export function rowHeightOf(style: LayoutStyle | undefined, isHeader: boolean): number {
+  if (style?.rowHeightTier === undefined) return isHeader ? HEADER_HEIGHT : ROW_HEIGHT
+  return ROW_HEIGHT_TIERS[style.rowHeightTier - 1]!
+}
+
+/** 生效列宽：colWidths 数值优先，null/缺位回默认（首列 120、其余 140） */
+export function colWidthAt(inst: TemplateInstance, col: number): number {
+  const w = inst.layout.style?.colWidths?.[col]
+  return typeof w === 'number' ? w : col === 0 ? LABEL_WIDTH : COL_WIDTH
+}
 
 export type CellMeta = {
   slotId: string | null
@@ -145,7 +175,7 @@ export function buildVisualRows(inst: TemplateInstance): {
       })
     }
     metas.push(metaRow)
-    rowHeights.push(r < headerLevels ? HEADER_HEIGHT : ROW_HEIGHT)
+    rowHeights.push(rowHeightOf(inst.layout.style, r < headerLevels))
 
     const gapId = gapAfter.get(r)
     if (gapId) {
@@ -213,13 +243,14 @@ function styleForCell(
   col: number,
   mode: RenderContext['mode'],
   recommendCol: number | null,
+  metrics: TypeMetrics,
 ): Record<string, unknown> {
   const style: Record<string, unknown> = {
     fontFamily: FONT_STACK,
-    fontSize: 13,
+    fontSize: metrics.fontSize,
     borderColor: palette.border,
     borderLineWidth: 1,
-    padding: [8, 10, 8, 10],
+    padding: [metrics.padV, metrics.padH, metrics.padV, metrics.padH],
   }
   if (cell.role === 'header') {
     style.bgColor = palette.primary
@@ -263,6 +294,7 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
   const merges = remapMerges(inst, blockRowIndexes)
   const colCount = inst.layout.colCount
   const recommendCol = inst.highlight?.recommendCol ?? null
+  const metrics = typeMetrics(inst.layout.style)
 
   const records = metas.map((row) => {
     const rec: Record<string, string> = {}
@@ -275,17 +307,18 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
   const columns = Array.from({ length: colCount }, (_, c) => ({
     field: `c${c}`,
     title: ' ',
-    width: c === 0 ? LABEL_WIDTH : COL_WIDTH,
+    width: colWidthAt(inst, c),
     style: (args: { row: number; col: number }) => {
       const cell = metas[args.row]?.[args.col]
       if (!cell) return {}
-      return styleForCell(cell, palette, effectiveZebra, args.row, args.col, ctx.mode, recommendCol)
+      return styleForCell(cell, palette, effectiveZebra, args.row, args.col, ctx.mode, recommendCol, metrics)
     },
   }))
 
   const theme = toVTableTheme(palette, {
     zebraOn: effectiveZebra,
     transparentUnderlay: ctx.transparentUnderlay,
+    metrics,
   })
 
   const customMergeCell = (col: number, row: number) => {
@@ -309,7 +342,7 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     columns,
     widthMode: 'standard',
     heightMode: 'standard',
-    defaultRowHeight: ROW_HEIGHT,
+    defaultRowHeight: rowHeightOf(inst.layout.style, false),
     defaultHeaderRowHeight: 0,
     showHeader: false,
     frozenColCount: inst.layout.frozenColCount ?? 0,
@@ -323,7 +356,10 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
       blockRowIndexes: Object.fromEntries(blockRowIndexes),
       palette,
       font: FONT_STACK,
-      contentWidth: LABEL_WIDTH + COL_WIDTH * Math.max(0, colCount - 1),
+      contentWidth: Array.from({ length: colCount }, (_, c) => colWidthAt(inst, c)).reduce(
+        (a, b) => a + b,
+        0,
+      ),
       contentHeight: rowHeights.reduce((a, b) => a + b, 0),
       mode: ctx.mode,
       merges,

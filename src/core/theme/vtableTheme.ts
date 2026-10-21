@@ -1,20 +1,24 @@
 import type { Palette } from './palettes'
 import { FONT_STACK } from './font'
+import type { TypeMetrics } from '../adapter/toOption'
 
 export function toVTableTheme(
   palette: Palette,
-  opts: { zebraOn: boolean; transparentUnderlay?: boolean },
+  opts: { zebraOn: boolean; transparentUnderlay?: boolean; metrics?: TypeMetrics },
 ): Record<string, unknown> {
   const underlay = opts.transparentUnderlay ? 'transparent' : palette.paper
+  const fs = opts.metrics?.fontSize ?? 13
+  const pv = opts.metrics?.padV ?? 8
+  const ph = opts.metrics?.padH ?? 10
   return {
     underlayBackgroundColor: underlay,
     defaultStyle: {
       color: '#1a1a1a',
       bgColor: palette.paper,
       borderColor: palette.border,
-      fontSize: 13,
+      fontSize: fs,
       fontFamily: FONT_STACK,
-      padding: [8, 10, 8, 10],
+      padding: [pv, ph, pv, ph],
     },
     headerStyle: {
       color: palette.headerText,
