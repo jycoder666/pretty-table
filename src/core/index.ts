@@ -143,6 +143,7 @@ export { exportPng, measurePng, PNG_MAX_PIXELS_DEFAULT } from './export/png'
 export {
   listPresetTemplates,
   getPresetTemplate,
+  createBlankInstance,
   BLANK_V1,
   COMPARE_ALPHA_V1,
   DETAIL_ALPHA_V1,

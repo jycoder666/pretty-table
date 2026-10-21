@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useLibraryStore } from '../stores/library'
 import { useEditorStore } from '../stores/editor'
+import { createBlankInstance } from '@/core'
 import PtButton from '../ui/PtButton.vue'
 import { errorCopy } from '../editor/errorCopy'
 import type { TemplateInstance } from '@/core'
@@ -12,6 +13,27 @@ const editor = useEditorStore()
 onMounted(() => {
   void library.refreshMine()
 })
+
+// ── 新建空白表（FR-C6 / Q-10 / T05）：专属卡 + 最小向导，默认 5×4 / 1 层 ──
+const blankOpen = ref(false)
+const blankRows = ref(5)
+const blankCols = ref(4)
+const blankLevels = ref(1)
+
+function createBlank() {
+  // 与换模板同一口径：有未另存改动先确认（FR-10）
+  if (editor.dirty && editor.current) {
+    if (!confirm('换一张模板会替换当前的表格，未另存的修改会丢失。确定继续？')) return
+  }
+  editor.openTemplate(
+    createBlankInstance({
+      rows: blankRows.value,
+      cols: blankCols.value,
+      headerLevels: blankLevels.value,
+    }),
+  )
+  blankOpen.value = false
+}
 
 const typeLabel = (t: TemplateInstance) => {
   const m: Record<string, string> = {
@@ -51,6 +73,57 @@ async function removeTpl(t: TemplateInstance) {
     <section>
       <h2>系统预设</h2>
       <div class="grid">
+        <!-- 新建空白表专属卡（FR-C6 / Q-10）：区别于普通预设卡，带最小向导 -->
+        <article class="card blank-card" data-testid="blank-card">
+          <span class="chip">空白</span>
+          <h3>新建空白表</h3>
+          <p>不套模板，从一张空表开始填。</p>
+          <PtButton
+            v-if="!blankOpen"
+            type="button"
+            data-testid="blank-open"
+            @click.stop="blankOpen = true"
+          >
+            配置并新建
+          </PtButton>
+          <div v-else class="wiz" data-testid="blank-wizard">
+            <label class="wiz-row">
+              行数
+              <input
+                v-model.number="blankRows"
+                type="number"
+                min="1"
+                max="20"
+                data-testid="blank-rows"
+              />
+            </label>
+            <label class="wiz-row">
+              列数
+              <input
+                v-model.number="blankCols"
+                type="number"
+                min="1"
+                max="12"
+                data-testid="blank-cols"
+              />
+            </label>
+            <label class="wiz-row">
+              表头层级
+              <select v-model.number="blankLevels" data-testid="blank-levels">
+                <option :value="1">1 层</option>
+                <option :value="2">2 层</option>
+                <option :value="3">3 层</option>
+              </select>
+            </label>
+            <div class="actions">
+              <PtButton type="button" data-testid="blank-create" @click.stop="createBlank">
+                创建
+              </PtButton>
+              <PtButton variant="ghost" type="button" @click.stop="blankOpen = false">取消</PtButton>
+            </div>
+          </div>
+        </article>
+
         <article v-for="t in library.presets" :key="t.templateId" class="card">
           <span class="chip">{{ typeLabel(t) }}</span>
           <h3>{{ t.meta?.displayName }}</h3>
@@ -134,6 +207,29 @@ h2 {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.blank-card {
+  border-style: dashed;
+}
+.wiz {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wiz-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.wiz-row input,
+.wiz-row select {
+  width: 72px;
+  border: 1px solid var(--pt-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font: inherit;
 }
 .chip {
   align-self: flex-start;

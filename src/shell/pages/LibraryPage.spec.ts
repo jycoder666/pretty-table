@@ -141,3 +141,75 @@ describe('LibraryPage · 我的模板删除入口（PX-01）', () => {
     expect(editor.toast).not.toContain('TEMPLATE_DELETE_FAIL')
   })
 })
+
+describe('LibraryPage · 新建空白表专属卡与向导（FR-C6 / Q-10 / T05）', () => {
+  async function openWizard() {
+    const wrapper = await mountPage()
+    await wrapper.find('[data-testid="blank-open"]').trigger('click')
+    return wrapper
+  }
+
+  it('空白表卡常驻预设区首位，含一句引导文案；普通预设卡仍可识别', async () => {
+    const wrapper = await mountPage()
+    const card = wrapper.find('[data-testid="blank-card"]')
+    expect(card.exists()).toBe(true)
+    expect(card.text()).toContain('不套模板，从一张空表开始填')
+    // 空白卡不提供「使用此模板」按钮，不影响既有预设卡的选取
+    expect(card.findAll('button').some((b) => b.text().includes('使用此模板'))).toBe(false)
+    expect(useBtnAt(wrapper, 0).exists()).toBe(true)
+  })
+
+  it('默认 5 行 × 4 列、1 层表头，创建后直接进编辑台', async () => {
+    const editor = useEditorStore()
+    const wrapper = await openWizard()
+    await wrapper.find('[data-testid="blank-create"]').trigger('click')
+    expect(editor.page).toBe('editor')
+    expect(editor.current?.layout.rowCount).toBe(5)
+    expect(editor.current?.layout.colCount).toBe(4)
+    expect(editor.current?.layout.headerLevels).toBe(1)
+    expect(editor.current?.meta?.templateType).toBe('blank')
+  })
+
+  it('向导改 6 行 3 列 2 层：实例按参数生成', async () => {
+    const editor = useEditorStore()
+    const wrapper = await openWizard()
+    const rows = wrapper.find('[data-testid="blank-rows"]')
+    ;(rows.element as HTMLInputElement).value = '6'
+    await rows.trigger('input')
+    const cols = wrapper.find('[data-testid="blank-cols"]')
+    ;(cols.element as HTMLInputElement).value = '3'
+    await cols.trigger('input')
+    const levels = wrapper.find('[data-testid="blank-levels"]')
+    ;(levels.element as HTMLSelectElement).value = '2'
+    await levels.trigger('change') // select 的 v-model 监听 change
+    await wrapper.find('[data-testid="blank-create"]').trigger('click')
+    expect(editor.current?.layout.rowCount).toBe(6)
+    expect(editor.current?.layout.colCount).toBe(3)
+    expect(editor.current?.layout.headerLevels).toBe(2)
+    expect(editor.current?.layout.slotGrid).toHaveLength(6)
+  })
+
+  it('超界输入在源头钳制：99 行 → 20 行', async () => {
+    const editor = useEditorStore()
+    const wrapper = await openWizard()
+    const rows = wrapper.find('[data-testid="blank-rows"]')
+    ;(rows.element as HTMLInputElement).value = '99'
+    await rows.trigger('input')
+    await wrapper.find('[data-testid="blank-create"]').trigger('click')
+    expect(editor.current?.layout.rowCount).toBe(20)
+  })
+
+  it('有未另存改动时创建：先弹替换确认，取消则不动', async () => {
+    const editor = useEditorStore()
+    editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
+    editor.setSlotText('obj.name.a', '未保存')
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const wrapper = await openWizard()
+    await wrapper.find('[data-testid="blank-create"]').trigger('click')
+    expect(confirmSpy).toHaveBeenCalledOnce()
+    expect(editor.current?.templateId).toBe(COMPARE_ALPHA_V1.templateId)
+    confirmSpy.mockReturnValue(true)
+    await wrapper.find('[data-testid="blank-create"]').trigger('click')
+    expect(editor.current?.meta?.templateType).toBe('blank')
+  })
+})

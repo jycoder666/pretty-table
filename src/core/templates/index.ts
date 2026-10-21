@@ -19,3 +19,4 @@ export function getPresetTemplate(templateId: string): TemplateInstance | null {
 }
 
 export { BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, PRICING_V1, MATRIX_V1 }
+export { createBlankInstance, type BlankOptions } from './blankFactory'
