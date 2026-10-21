@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COMPARE_ALPHA_V1 } from '../templates'
+import { COMPARE_ALPHA_V1, BLANK_V1 } from '../templates'
 import { createEditorState, dispatch, undoOnce, canUndo } from './editorState'
 import { cloneInstance } from '../schema/validate'
 
@@ -22,14 +22,16 @@ describe('editorState Fill path', () => {
     expect(r.value.current.themeId).toBe('T-B')
   })
 
-  it('merge only in allowed zone', () => {
+  it('merge 闸放宽后：与现有合并区部分重叠仍拒（MERGE_CONFLICT），不重叠区域可合并', () => {
     const state = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    // 与既有合并区 [0,1]-[0,2] 部分重叠
     const bad = dispatch(state, {
       kind: 'merge',
-      range: { start: [2, 1], end: [2, 2] },
+      range: { start: [0, 2], end: [0, 3] },
     })
     expect(bad.ok).toBe(false)
-    // 预置模板 [0,1]-[0,2] 已是合并区：先拆（失败则原状态），再合 [0,1]-[0,3]
+    expect(!bad.ok ? bad.error.code : '').toBe('MERGE_CONFLICT')
+    // 预置模板 [0,1]-[0,2] 已是合并区：先拆，再合 [0,1]-[0,3]
     const pre = dispatch(state, {
       kind: 'split',
       range: { start: [0, 1], end: [0, 2] },
@@ -141,5 +143,56 @@ describe('editorState · 文字编辑会话合并撤销（PX-03）', () => {
     if (!r2.ok) return
     const u = undoOnce(r2.value)
     expect(u.current.slots['row.4.val.a']).toEqual({ text: 'x' })
+  })
+})
+
+describe('editorState · 自定义格式新意图（pastePending 互斥 + 一步撤销）', () => {
+  const VALID_INTENTS: import('../types').EditIntent[] = [
+    { kind: 'setThemeToken', token: 'primary', value: '#336699' },
+    { kind: 'resetThemeTokens' },
+    { kind: 'setColWidth', col: 1, width: 200 },
+    { kind: 'setRowHeightTier', tier: 3 },
+    { kind: 'setFontSizeTier', tier: 1 },
+    { kind: 'setPaddingTier', tier: 2 },
+    { kind: 'addRow' },
+    { kind: 'addCol' },
+    { kind: 'setHeaderLevel', levels: 2 },
+  ]
+
+  function blankState() {
+    return createEditorState(cloneInstance(BLANK_V1))
+  }
+
+  it('pastePending 期间：全部新意图被拒（SLOT_DROP_BLOCKED），store 不变', () => {
+    for (const intent of VALID_INTENTS) {
+      const s = blankState()
+      s.pastePending = true
+      const r = dispatch(s, intent)
+      expect(r.ok).toBe(false)
+      expect(!r.ok ? r.error.code : '').toBe('SLOT_DROP_BLOCKED')
+    }
+    // removeRow / removeCol 同样被拒
+    const s = blankState()
+    s.pastePending = true
+    expect(dispatch(s, { kind: 'removeRow', row: 2 }).ok).toBe(false)
+    expect(dispatch(s, { kind: 'removeCol', col: 1 }).ok).toBe(false)
+  })
+
+  it('每个新意图 undo 一步复原（FR-C7）', () => {
+    for (const intent of VALID_INTENTS) {
+      const s = blankState()
+      const r = dispatch(s, intent)
+      expect(r.ok).toBe(true)
+      if (!r.ok) continue
+      const u = undoOnce(r.value)
+      expect(u.current).toEqual(s.current)
+      expect(canUndo(u)).toBe(false)
+    }
+  })
+
+  it('结构操作 warn（STRUCT_LOSS）经 dispatch 透传', () => {
+    const s = blankState()
+    // 表头行不可删 → 失败不透传
+    expect(dispatch(s, { kind: 'removeRow', row: 0 }).ok).toBe(false)
   })
 })

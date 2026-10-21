@@ -13,7 +13,7 @@ export function createEditorState(inst: TemplateInstance): EditorState {
   }
 }
 
-/** 粘贴预览期间被拒绝的编辑意图（设计增量 §2.1 步 7 / FR-17） */
+/** 粘贴预览期间被拒绝的编辑意图（FR-17；自定义格式 §1.7 扩容为全部意图 kind） */
 const PASTE_BLOCKED_INTENTS: ReadonlySet<EditIntent['kind']> = new Set([
   'merge',
   'split',
@@ -22,6 +22,18 @@ const PASTE_BLOCKED_INTENTS: ReadonlySet<EditIntent['kind']> = new Set([
   'addBlock',
   'updateBlock',
   'removeBlock',
+  // 自定义格式新增（颜色 / 排版 / 结构），pastePending 期间一律互斥
+  'setThemeToken',
+  'resetThemeTokens',
+  'setColWidth',
+  'setRowHeightTier',
+  'setFontSizeTier',
+  'setPaddingTier',
+  'addRow',
+  'removeRow',
+  'addCol',
+  'removeCol',
+  'setHeaderLevel',
 ])
 
 /**
@@ -49,18 +61,22 @@ export function dispatch(
   const snapshot = cloneInstance(state.current)
   const result = applyEditIntent(state.current, intent)
   if (!result.ok) return result
-  return ok({
-    current: result.value,
-    undoSnapshot: coalesce ? state.undoSnapshot : snapshot,
-    undoPrev: coalesce
-      ? (state.undoPrev ?? null)
-      : opts.beginTextSession === true
-        ? (state.undoSnapshot ?? null)
-        : null,
-    dirty: true,
-    version: state.version + 1,
-    pastePending: state.pastePending,
-  })
+  return ok(
+    {
+      current: result.value,
+      undoSnapshot: coalesce ? state.undoSnapshot : snapshot,
+      undoPrev: coalesce
+        ? (state.undoPrev ?? null)
+        : opts.beginTextSession === true
+          ? (state.undoSnapshot ?? null)
+          : null,
+      dirty: true,
+      version: state.version + 1,
+      pastePending: state.pastePending,
+    },
+    // warn（STRUCT_LOSS / TOKEN_INVALID 等）透传给壳层聚合 toast
+    result.warnings,
+  )
 }
 
 export function undoOnce(state: EditorState): EditorState {

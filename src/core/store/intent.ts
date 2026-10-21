@@ -6,11 +6,16 @@ import type {
   Emphasis,
   MarkSlotObject,
   NumSlotObject,
+  RoleColorKey,
   SlotValue,
   TemplateInstance,
   TextSlotObject,
+  ThemeTokens,
 } from '../types'
 import { canMerge, canSplit } from './mergeGuard'
+import { applyStructuralIntent } from './structure'
+import { resolveTheme, sanitizeHex } from '../theme/palettes'
+import { clampColWidth, clampTier } from '../theme/layoutScales'
 import { MARK_LABEL } from '../format/formatTokens'
 
 function slotStyle(v: SlotValue | undefined): { align?: Align; emphasize?: Emphasis[] } {
@@ -116,6 +121,83 @@ export function applyEditIntent(
       next.slots[intent.slotId] = mergeSlotValue(next.slots[intent.slotId], intent.value)
       return ok(next)
     }
+    // ── FR-C1 颜色覆盖（schema 1.2）──
+    case 'setThemeToken': {
+      const token = intent.token as RoleColorKey
+      let value: string | null = null
+      if (intent.value !== null) {
+        const hex = sanitizeHex(intent.value)
+        // 输入钳制：非法 hex 不写入（壳层应在发意图前用 sanitizeHex 预检并回退输入框）
+        if (!hex) return fail('TEMPLATE_INVALID', '颜色格式不对，请重新选择')
+        value = hex
+      }
+      const tokens: Record<string, unknown> = { ...next.themeTokens }
+      if (value === null) {
+        delete tokens[token]
+      } else {
+        tokens[token] = value
+      }
+      // 裁剪：与预设主题相同的值不算覆盖（删掉覆盖即逐像素回到预设，§1.2）
+      const pal = resolveTheme(next.themeId).palette
+      const defaults: Record<string, string> = {
+        primary: pal.primary,
+        headerText: pal.headerText,
+        zebra: pal.zebra,
+        emphasis: pal.emphasis,
+        border: pal.border,
+        background: pal.paper,
+        tag: pal.tag,
+      }
+      for (const k of Object.keys(tokens)) {
+        const v = tokens[k]
+        const d = defaults[k]
+        if (typeof v === 'string' && typeof d === 'string' && v.toLowerCase() === d.toLowerCase()) {
+          delete tokens[k]
+        }
+      }
+      if (Object.keys(tokens).length === 0) {
+        delete next.themeTokens
+      } else {
+        next.themeTokens = tokens as unknown as ThemeTokens
+      }
+      return ok(next)
+    }
+    case 'resetThemeTokens': {
+      delete next.themeTokens
+      return ok(next)
+    }
+    // ── FR-C2 排版档位（全局档位 + 逐列列宽，超界收口不报错崩）──
+    case 'setColWidth': {
+      if (!Number.isInteger(intent.col) || intent.col < 0 || intent.col >= next.layout.colCount) {
+        return fail('SLOT_UNKNOWN', '这一列不存在', { col: intent.col })
+      }
+      const style = { ...next.layout.style }
+      const widths = [...(style.colWidths ?? [])]
+      while (widths.length < next.layout.colCount) widths.push(null)
+      widths[intent.col] = intent.width === null ? null : clampColWidth(intent.width)
+      style.colWidths = widths
+      next.layout.style = style
+      return ok(next)
+    }
+    case 'setRowHeightTier': {
+      next.layout.style = { ...next.layout.style, rowHeightTier: clampTier(intent.tier) }
+      return ok(next)
+    }
+    case 'setFontSizeTier': {
+      next.layout.style = { ...next.layout.style, fontSizeTier: clampTier(intent.tier) }
+      return ok(next)
+    }
+    case 'setPaddingTier': {
+      next.layout.style = { ...next.layout.style, paddingTier: clampTier(intent.tier) }
+      return ok(next)
+    }
+    // ── FR-C3 结构编辑：转发结构核（一次意图 = 一套 remap = 一张撤销快照）──
+    case 'addRow':
+    case 'removeRow':
+    case 'addCol':
+    case 'removeCol':
+    case 'setHeaderLevel':
+      return applyStructuralIntent(inst, intent)
     case 'setTheme': {
       next.themeId = intent.themeId
       return ok(next)

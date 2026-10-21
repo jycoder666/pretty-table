@@ -39,18 +39,15 @@ export function canMerge(layout: LayoutSpec, range: MergeRange): Result<void> {
   if (range.start[0] !== range.end[0] && range.start[1] !== range.end[1]) {
     return fail('MERGE_NOT_ALLOWED', '只支持同行或同列相邻合并')
   }
-  const allowed = layout.allowedMerges ?? []
-  const inAllowed = allowed.some((a) => containedIn(range, a))
-  if (!inAllowed) {
-    return fail('MERGE_NOT_ALLOWED', '此处不能合并，请在模板允许区内选择')
-  }
+  // 自定义格式设计增量 §1.4.1：合并闸放宽——allowedMerges 降级为兼容字段，不再硬闸；
+  // 硬闸收窄为「不碰锁定合并 + 不与现有合并区部分重叠」。
   const structural = layout.structuralMerges ?? []
   if (structural.some((s) => overlaps(range, s) && !sameRange(range, s))) {
     return fail('MERGE_STRUCTURAL', '不能覆盖锁定合并区')
   }
   const existing = layout.merges ?? []
   if (existing.some((m) => overlaps(range, m) && !sameRange(range, m))) {
-    return fail('MERGE_NOT_ALLOWED', '选区与已有合并重叠，请先拆分')
+    return fail('MERGE_CONFLICT', '和已有的合并区叠不上，请先拆开再合并')
   }
   return ok(undefined)
 }

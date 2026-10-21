@@ -15,6 +15,8 @@ export type {
   TextSlotObject,
   SlotDef,
   ThemeTokens,
+  RoleColorKey,
+  LayoutStyle,
   BlockDesc,
   BlockSlotDef,
   LayoutSpec,
@@ -54,8 +56,20 @@ export {
   DEFAULT_THEME_ID,
   resolveTheme,
   isThemeId,
+  sanitizeHex,
   type Palette,
 } from './theme/palettes'
+export {
+  LIMITS,
+  COL_WIDTH_RANGE,
+  ROW_HEIGHT_TIERS,
+  FONT_SIZE_TIERS,
+  PADDING_TIERS,
+  clampColWidth,
+  clampTier,
+  visibleRowCount,
+} from './theme/layoutScales'
+export { ROLE_SWATCHES } from './theme/swatch'
 export { FONT_STACK } from './theme/font'
 export { toCssVars } from './theme/cssVars'
 export { toVTableTheme } from './theme/vtableTheme'
@@ -63,6 +77,14 @@ export { cellInlineStyle } from './theme/inlineStyle'
 export { semanticColor, type SemanticColorKind } from './theme/semantic'
 
 export { applyEditIntent, isEmphasizable, getSlotDisplayText } from './store/intent'
+export {
+  applyStructuralIntent,
+  hasContentInRow,
+  hasContentInCol,
+  canAddRow,
+  canAddCol,
+  type StructuralIntent,
+} from './store/structure'
 export { canMerge, canSplit, findMergeAt } from './store/mergeGuard'
 export { createStoreTxn, type StoreTxn, type StoreTxnResult } from './store/txn'
 export { parsePaste, type PasteCell, type PasteGrid } from './paste/parser'
@@ -111,6 +133,7 @@ export { exportPng, measurePng, PNG_MAX_PIXELS_DEFAULT } from './export/png'
 export {
   listPresetTemplates,
   getPresetTemplate,
+  BLANK_V1,
   COMPARE_ALPHA_V1,
   DETAIL_ALPHA_V1,
   PRICING_V1,

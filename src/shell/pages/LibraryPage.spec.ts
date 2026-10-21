@@ -59,8 +59,8 @@ describe('LibraryPage · 换模板替换确认（PX-02 / FR-10）', () => {
     editor.setSlotText('obj.name.a', '未保存的方案')
     expect(editor.dirty).toBe(true)
     const wrapper = await mountPage()
-    // 点第 2 张预设，避免与当前打开的 compare-alpha-v1 同模板
-    await useBtnAt(wrapper, 1).trigger('click')
+    // blank 居首后：点第 3 张预设，避免与当前打开的 compare-alpha-v1 同模板
+    await useBtnAt(wrapper, 2).trigger('click')
     await flushPromises()
     expect(confirmSpy).toHaveBeenCalledTimes(1)
     expect(confirmSpy.mock.calls[0]?.[0]).toContain('未另存的修改会丢失')
@@ -73,7 +73,7 @@ describe('LibraryPage · 换模板替换确认（PX-02 / FR-10）', () => {
     editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
     editor.setSlotText('obj.name.a', '未保存的方案')
     const wrapper = await mountPage()
-    await useBtnAt(wrapper, 1).trigger('click')
+    await useBtnAt(wrapper, 2).trigger('click')
     await flushPromises()
     expect(editor.current?.templateId).toBe(COMPARE_ALPHA_V1.templateId)
   })
@@ -84,7 +84,7 @@ describe('LibraryPage · 换模板替换确认（PX-02 / FR-10）', () => {
     editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
     editor.markSaved()
     const wrapper = await mountPage()
-    await useBtnAt(wrapper, 1).trigger('click')
+    await useBtnAt(wrapper, 2).trigger('click')
     await flushPromises()
     expect(confirmSpy).not.toHaveBeenCalled()
     expect(editor.current?.templateId).not.toBe(COMPARE_ALPHA_V1.templateId)

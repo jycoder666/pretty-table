@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { listPresetTemplates, getPresetTemplate, PRICING_V1, MATRIX_V1 } from './index'
+import { listPresetTemplates, getPresetTemplate, PRICING_V1, MATRIX_V1, BLANK_V1 } from './index'
 import { validateInstance, cloneInstance } from '../schema/validate'
 import { migrateInstance, SCHEMA_VERSION_CURRENT } from '../schema/migrate'
 
@@ -98,11 +98,12 @@ describe('价目 / 矩阵系统模板（T26 · U-1 §8）', () => {
     expect(MATRIX_V1.layout.allowedMerges).toContainEqual({ start: [0, 1], end: [0, 5] })
   })
 
-  it('登记后可从模板库取用，共 4 张系统预设', () => {
+  it('登记后可从模板库取用，共 5 张系统预设（blank 居首，FR-C6）', () => {
     expect(getPresetTemplate('pricing-v1')?.meta?.templateType).toBe('pricing')
     expect(getPresetTemplate('matrix-v1')?.meta?.templateType).toBe('matrix')
     expect(getPresetTemplate('pricing-v1')).not.toBeNull()
     expect(listPresetTemplates().map((t) => t.templateId)).toEqual([
+      'blank-v1',
       'compare-alpha-v1',
       'detail-alpha-v1',
       'pricing-v1',
@@ -125,5 +126,41 @@ describe('价目 / 矩阵系统模板（T26 · U-1 §8）', () => {
     expect(m.ok ? Object.keys(m.value.slotDefs ?? {}).length : 0).toBeGreaterThan(0)
     expect(m.ok ? m.value.layout.slotGrid?.length : 0).toBe(13)
     expect(m.ok ? (m.value.layout.slotGrid?.[0] ?? [])[0] : undefined).toBe('price.title')
+  })
+})
+
+describe('blank-v1 新建空白表底稿（FR-C6 · Q-10）', () => {
+  it('validate / migrate 通过，schemaVersion 1.2，templateType blank', () => {
+    expect(BLANK_V1.templateId).toBe('blank-v1')
+    const v = validateInstance(cloneInstance(BLANK_V1))
+    expect(v.ok).toBe(true)
+    expect(v.ok ? v.value.schemaVersion : undefined).toBe('1.2')
+    expect(v.ok ? v.value.meta?.templateType : undefined).toBe('blank')
+    const m = migrateInstance(cloneInstance(BLANK_V1), listPresetTemplates())
+    expect(m.ok).toBe(true)
+    expect(m.ok ? m.value.schemaVersion : undefined).toBe(SCHEMA_VERSION_CURRENT)
+  })
+
+  it('5 行 × 4 列、单层表头、全部格可写、无区块槽', () => {
+    expect(BLANK_V1.layout.rowCount).toBe(5)
+    expect(BLANK_V1.layout.colCount).toBe(4)
+    expect(BLANK_V1.layout.headerLevels).toBe(1)
+    expect(BLANK_V1.layout.blockSlots).toEqual([])
+    const grid = BLANK_V1.layout.slotGrid ?? []
+    expect(grid).toHaveLength(5)
+    for (const row of grid) {
+      expect(row).toHaveLength(4)
+      const ids = row.filter((x): x is string => !!x)
+      expect(ids).toHaveLength(4)
+      for (const id of ids) {
+        expect(id).toMatch(/^u\d+$/)
+        expect(BLANK_V1.slots[id]).toBe('')
+      }
+    }
+  })
+
+  it('u 序号从 1 连续编号；结构编辑可续号', () => {
+    const ids = (BLANK_V1.layout.slotGrid ?? []).flat().filter(Boolean) as string[]
+    expect(ids).toEqual(Array.from({ length: 20 }, (_, i) => `u${i + 1}`))
   })
 })
