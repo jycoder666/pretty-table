@@ -245,12 +245,14 @@ const blockHeadline = computed<string>(() => {
   const b = editor.current.blocks.find((x) => x.id === bid)
   const text = summarizeText(String(b?.props?.label ?? b?.props?.text ?? ''))
   if (text) return `当前内容：${text}`
-  // 空区块 → 人话位置：优先查 slotGrid，再退回区块槽 rowHint（after-N = 第 N+1 行）
+  // 空区块 → 人话位置：优先查 slotGrid，再退回区块槽 rowHint（QA Low 修复：
+  // after-N 的 N 是 0 基锚点行，区块行插在该行之后 → 1 基展示为第 N+2 行，
+  // 与 core/adapter/toOption.ts buildVisualRows 的可视行插入位置同源）
   const pos = b ? slotPosOf(b.slotId) : null
   if (pos) return `区块 · 第 ${pos[0] + 1} 行`
   const hint = editor.current.layout.blockSlots.find((s) => s.id === b?.slotId)?.rowHint
   const m = typeof hint === 'string' ? /^after-(\d+)$/.exec(hint) : null
-  return m ? `区块 · 第 ${Number(m[1]) + 1} 行` : '区块'
+  return m ? `区块 · 第 ${Number(m[1]) + 2} 行` : '区块'
 })
 
 const slotText = computed({

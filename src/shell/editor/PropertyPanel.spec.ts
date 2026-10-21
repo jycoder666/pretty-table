@@ -343,6 +343,16 @@ describe('PropertyPanel · 槽位标题改人话（PX-07）', () => {
     expect(headline.text()).toBe('当前内容：分组一')
     expect(headline.text()).not.toContain('gap-g1')
   })
+
+  it('空区块回退位置：rowHint after-1 的 gap 区块显示「区块 · 第 3 行」（0 基锚点 → 1 基 N+2）', async () => {
+    const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    editor.selectedBlockId = 'preset-g1'
+    // 清空区块文字 → headline 走位置回退；preset-g1 挂在 gap-g1（rowHint after-1）
+    editor.updateBlockText('')
+    await wrapper.vm.$nextTick()
+    // after-1 = 插在 1 基第 2 行之后 → 显示第 3 行（与 buildVisualRows 可视行插入位置同源）
+    expect(wrapper.find('[data-testid="block-headline"]').text()).toBe('区块 · 第 3 行')
+  })
 })
 
 describe('PropertyPanel · 合并/拆分按钮随选区置灰（PX-08）', () => {
