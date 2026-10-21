@@ -367,6 +367,41 @@ const blockText = computed({
   },
 })
 
+// ── R-4 区块样式档位（QA Bug #2 收尾）：leftTag 深浅 2 档 / emphFooter 字号 2 档 ──
+// 档位语义与渲染单点对齐：toOption.styleForCell（1=tag 深底或常规字号，2=zebra 浅底或 +2px），
+// 导出 model.ts emphFooterStyle 消费同一档位；写入走既有 updateBlock 意图（一意图一张撤销快照）。
+const selectedBlock = computed(() => {
+  const bid = editor.selectedBlockId
+  return bid && editor.current ? (editor.current.blocks.find((x) => x.id === bid) ?? null) : null
+})
+
+const blockTierVisible = computed(() => {
+  const b = selectedBlock.value
+  return b !== null && (b.type === 'leftTag' || b.type === 'emphFooter')
+})
+
+const blockTierOptions = computed<{ value: number; label: string }[]>(() => {
+  const b = selectedBlock.value
+  if (!b) return []
+  return b.type === 'leftTag'
+    ? [
+        { value: 1, label: '深色底' },
+        { value: 2, label: '浅色底' },
+      ]
+    : [
+        { value: 1, label: '常规' },
+        { value: 2, label: '略大' },
+      ]
+})
+
+const blockTier = computed(() => (selectedBlock.value?.props?.styleTier === 2 ? 2 : 1))
+
+function setBlockTier(v: number) {
+  const b = selectedBlock.value
+  if (!b || v === blockTier.value) return
+  editor.apply({ kind: 'updateBlock', blockId: b.id, props: { styleTier: v as 1 | 2 } })
+}
+
 const canEmphasize = computed(() => {
   if (!editor.current || !editor.selectedSlotId) return false
   return isEmphasizable(editor.current, editor.selectedSlotId)
@@ -518,6 +553,19 @@ async function removeBlock() {
           <!-- PX-07：区块同理显示文字摘要或「区块 · 第 X 行」 -->
           <p class="headline" data-testid="block-headline">{{ blockHeadline }}</p>
           <textarea v-model="blockText" rows="2" @blur="editor.endTextSession()" />
+          <!-- R-4 区块样式档位（QA Bug #2 收尾，T04 偏差③ tooltip 随之挂上）：
+               leftTag 深浅 2 档 / emphFooter 字号 2 档；档位常量与渲染单点在 toOption.styleForCell -->
+          <div v-if="blockTierVisible" class="field" data-testid="block-tier">
+            <span>样式档位</span>
+            <PtTooltip text="切换区块样式档位">
+              <PtSegmented
+                :options="blockTierOptions"
+                :model-value="blockTier"
+                :disabled="editor.pastePending"
+                @update:model-value="setBlockTier"
+              />
+            </PtTooltip>
+          </div>
         </div>
       </div>
     </section>

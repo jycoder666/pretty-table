@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { mount } from '@vue/test-utils'
 import PtTooltip from './PtTooltip.vue'
 
@@ -80,5 +82,11 @@ describe('PtTooltip（R-5）', () => {
     await vi.advanceTimersByTimeAsync(300)
     expect(document.body.textContent).toContain('先选一块矩形区域')
     wrapper.unmount()
+  })
+
+  it('GC-11：组件样式无 hex 色值字面量（一律走 CSS 变量，零 fallback hex）', () => {
+    // jsdom 环境下 import.meta.url 非 file:// → 用 cwd 拼路径（vitest cwd = 项目根）
+    const source = readFileSync(resolve(process.cwd(), 'src/shell/ui/PtTooltip.vue'), 'utf8')
+    expect(/#[0-9a-fA-F]{3,8}\b/.test(source)).toBe(false)
   })
 })

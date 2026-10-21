@@ -4,6 +4,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import {
   BLANK_V1,
   COMPARE_ALPHA_V1,
+  DETAIL_ALPHA_V1,
   cloneInstance,
   effectivePalette,
   isRoleOverridden,
@@ -561,5 +562,47 @@ describe('PropertyPanel · 图片区（R-3 / 交互升级 T04）', () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="merge-btn"]').attributes('title')).toBeUndefined()
     expect(wrapper.find('[data-testid="split-btn"]').attributes('title')).toBeUndefined()
+  })
+})
+
+// ── R-4 区块样式档位控件（QA Bug #2 收尾）──
+
+describe('PropertyPanel · 区块样式档位（R-4 / QA Bug #2）', () => {
+  it('选中 leftTag 区块显示「样式档位」两档（深色底/浅色底）；切档写 styleTier 且可撤销', async () => {
+    const { editor, wrapper } = await setup(DETAIL_ALPHA_V1)
+    editor.addBlock('leftTag', 'left-r2')
+    const blk = editor.current!.blocks.find((b) => b.type === 'leftTag')!
+    editor.selectedBlockId = blk.id
+    await wrapper.vm.$nextTick()
+    const seg = wrapper.find('[data-testid="block-tier"]')
+    expect(seg.exists()).toBe(true)
+    const buttons = seg.findAll('button')
+    expect(buttons).toHaveLength(2)
+    expect(buttons[0]!.text()).toBe('深色底')
+    expect(buttons[1]!.text()).toBe('浅色底')
+    // 缺省显示 1 档；切 2 档 → updateBlock 写 styleTier=2
+    expect(buttons[0]!.classes()).toContain('on')
+    await buttons[1]!.trigger('click')
+    expect(editor.current!.blocks.find((b) => b.id === blk.id)!.props!.styleTier).toBe(2)
+    editor.undo()
+    // addBlock 时核内 applyAddBlock 已把 styleTier 归一化为缺省 1 档 → 撤销回到 1（非 undefined）
+    expect(editor.current!.blocks.find((b) => b.id === blk.id)!.props!.styleTier).toBe(1)
+  })
+
+  it('选中 emphFooter 区块显示字号档（常规/略大）；普通文字区块不显示档位控件', async () => {
+    const { editor, wrapper } = await setup(DETAIL_ALPHA_V1)
+    // sectionBar / groupHeader 是既有文字区块 → 无档位控件
+    editor.selectedBlockId = editor.current!.blocks[0]!.id
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="block-tier"]').exists()).toBe(false)
+    // emphFooter → 字号两档
+    editor.addBlock('emphFooter', 'footer-1')
+    const blk = editor.current!.blocks.find((b) => b.type === 'emphFooter')!
+    editor.selectedBlockId = blk.id
+    await wrapper.vm.$nextTick()
+    const buttons = wrapper.find('[data-testid="block-tier"]').findAll('button')
+    expect(buttons.map((b) => b.text())).toEqual(['常规', '略大'])
+    await buttons[1]!.trigger('click')
+    expect(editor.current!.blocks.find((b) => b.id === blk.id)!.props!.styleTier).toBe(2)
   })
 })

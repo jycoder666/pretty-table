@@ -2,7 +2,6 @@ import type {
   Align,
   BlockType,
   Emphasis,
-  ImageSlotObject,
   LayoutStyle,
   MarkSlotObject,
   MarkValue,
@@ -107,10 +106,6 @@ function slotParts(
         num: n,
         ...style,
       }
-    }
-    // 图片槽（R-3）：text 置空，data URL 透传给 CellMeta 消费方（T02 渲染）
-    if ('image' in v) {
-      return { text: '', image: (v as ImageSlotObject).image, ...style }
     }
     return { text: String(v.text ?? ''), ...style }
   }

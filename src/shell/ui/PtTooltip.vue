@@ -43,14 +43,14 @@ const delay = () => props.delayDuration ?? 300
   max-width: 240px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: var(--pt-muted, #6b7280);
-  color: #fff;
+  background: var(--pt-muted);
+  color: var(--pt-header-text);
   font-size: 12px;
   line-height: 1.5;
   box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
 }
 .pt-tooltip-arrow {
-  fill: var(--pt-muted, #6b7280);
+  fill: var(--pt-muted);
   width: 10px;
   height: 5px;
 }
