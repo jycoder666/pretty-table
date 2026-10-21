@@ -13,6 +13,8 @@ import {
   roleColorOf,
   canAddRow,
   canAddCol,
+  canMerge,
+  canSplit,
   clampColWidth,
   colWidthAt,
   hasContentInRow,
@@ -161,6 +163,37 @@ async function removeCol() {
 function setHeaderLevels(v: number) {
   applyStruct({ kind: 'setHeaderLevel', levels: v as 1 | 2 | 3 })
 }
+
+// ── PX-08：合并 / 拆分按钮随选区实时置灰（核内 mergeGuard 同源判定） ──
+interface MergeGate {
+  ok: boolean
+  /** 不可用时的一句白话原因（挂按钮 title） */
+  reason: string
+}
+
+const mergeGate = computed<MergeGate>(() => {
+  const inst = editor.current
+  if (!inst || editor.pastePending) {
+    return { ok: false, reason: editor.pastePending ? '粘贴预览期间不可操作' : '先打开一张表格' }
+  }
+  if (!editor.selectionRange) {
+    return { ok: false, reason: '先在预览里选中格子：需同行或同列相邻两格才能合并' }
+  }
+  const r = canMerge(inst.layout, editor.selectionRange)
+  return r.ok ? { ok: true, reason: '' } : { ok: false, reason: r.error.message }
+})
+
+const splitGate = computed<MergeGate>(() => {
+  const inst = editor.current
+  if (!inst || editor.pastePending) {
+    return { ok: false, reason: editor.pastePending ? '粘贴预览期间不可操作' : '先打开一张表格' }
+  }
+  if (!editor.selectionRange) {
+    return { ok: false, reason: '先在预览里选中一个已合并的格子再拆分' }
+  }
+  const r = canSplit(inst.layout, editor.selectionRange)
+  return r.ok ? { ok: true, reason: '' } : { ok: false, reason: r.error.message }
+})
 
 const marks: Record<MarkValue, string> = { ...MARK_LABEL }
 const glyphs: Record<MarkValue, string> = { ...MARK_GLYPH }
@@ -561,8 +594,24 @@ async function removeBlock() {
       <h4>合并 / 拆分</h4>
       <p class="hint">仅在模板允许区内操作；锁定合并不可拆。</p>
       <div class="row">
-        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.mergeSelection()">合并选区</PtButton>
-        <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.splitSelection()">拆分</PtButton>
+        <PtButton
+          variant="ghost"
+          :disabled="!mergeGate.ok"
+          :title="mergeGate.reason || '合并选区'"
+          data-testid="merge-btn"
+          @click="editor.mergeSelection()"
+        >
+          合并选区
+        </PtButton>
+        <PtButton
+          variant="ghost"
+          :disabled="!splitGate.ok"
+          :title="splitGate.reason || '拆分'"
+          data-testid="split-btn"
+          @click="editor.splitSelection()"
+        >
+          拆分
+        </PtButton>
       </div>
     </div>
 
