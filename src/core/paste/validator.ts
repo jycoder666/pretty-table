@@ -43,7 +43,7 @@ function rangeIntersectsRect(
 }
 
 function prevStyle(v: SlotValue | undefined): { align?: Align; emphasize?: Emphasis[] } {
-  if (typeof v === 'object' && v !== null) {
+  if (typeof v === 'object' && v !== null && !('image' in v)) {
     const em = v.emphasize
     return {
       align: v.align,

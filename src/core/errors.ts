@@ -34,6 +34,12 @@ export type ErrorCode =
   | 'DRAFT_RESTORE_FAIL'
   | 'DRAFT_SAVE_FAIL'
   | 'EXPORT_PNG_TOO_LARGE'
+  // 交互升级 R-3：图片填充（错误码表见设计增量 §3；用户只见白话，code 不外露 GC-25）
+  | 'IMAGE_TOO_LARGE'
+  | 'IMAGE_BUDGET_EXCEEDED'
+  | 'IMAGE_FORMAT_UNSUPPORTED'
+  | 'IMAGE_NOT_ALLOWED'
+  | 'IMAGE_DECODE_FAIL'
   | PasteErrorCode
 
 export type WarnCode =
@@ -46,6 +52,8 @@ export type WarnCode =
   | 'PASTE_NOTICE_AS_TEXT'
   | 'TOKEN_INVALID'
   | 'STRUCT_LOSS'
+  // 交互升级 R-3：存档数据里图片内容损坏（读时清洗，清除该图）
+  | 'IMAGE_INVALID'
 
 export interface CoreError {
   code: ErrorCode

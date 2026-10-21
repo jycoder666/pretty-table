@@ -214,3 +214,50 @@ describe('migrateInstance · schema 1.2（自定义格式）', () => {
     expect(r.ok && r.value.themeTokens).toEqual({ primary: '#2f5b9a', zebra: false })
   })
 })
+
+// ── R-3 图片槽值清洗（交互升级 T01）───────────────────────────
+
+describe('migrate · 图片槽值清洗（schema 维持 1.2）', () => {
+  /** 最小合法 PNG data URL（1×1 魔数齐全） */
+  const validPng = (() => {
+    const bytes = [
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52,
+      0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0,
+    ]
+    let bin = ''
+    for (const b of bytes) bin += String.fromCharCode(b)
+    return `data:image/png;base64,${btoa(bin)}`
+  })()
+
+  function instWith(slotValue: unknown) {
+    return {
+      schemaVersion: '1.2',
+      templateId: 'img-x',
+      themeId: 'T-A',
+      slots: { a: slotValue, b: '文字' },
+      blocks: [],
+      layout: { rowCount: 1, colCount: 2, blockSlots: [], slotGrid: [['a', 'b']] },
+    }
+  }
+
+  it('{image} 非白名单 data URL → 删除该槽值（退回空文字槽）+ warn IMAGE_INVALID', () => {
+    for (const bad of ['javascript:alert(1)', { image: 1 }, 'data:image/svg+xml;base64,AAAA']) {
+      const r = migrateInstance(instWith({ image: bad }), PRESETS)
+      expect(r.ok).toBe(true)
+      if (!r.ok) return
+      expect(r.value.slots['a']).toBeUndefined()
+      expect(r.value.slots['b']).toBe('文字')
+      expect(r.warnings?.some((w) => w.code === 'IMAGE_INVALID')).toBe(true)
+    }
+  })
+
+  it('{image} 合法白名单 data URL → 原样保留，schemaVersion 维持 1.2', () => {
+    const r = migrateInstance(instWith({ image: validPng }), PRESETS)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.slots['a']).toEqual({ image: validPng })
+    expect(r.value.schemaVersion).toBe(SCHEMA_VERSION_CURRENT)
+    expect(r.warnings?.some((w) => w.code === 'IMAGE_INVALID')).toBeFalsy()
+  })
+})

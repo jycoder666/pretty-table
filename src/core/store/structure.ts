@@ -20,23 +20,25 @@ export type StructuralIntent =
 
 type SlotRecord = TemplateInstance['slots']
 
-/** 槽位是否为空（空字符串 / 空文本 / null mark / null num / 缺省） */
+/** 槽位是否为空（空字符串 / 空文本 / null mark / null num / 缺省；图片槽不算空） */
 export function isSlotEmpty(v: SlotRecord[string] | undefined): boolean {
   if (v === undefined || v === null || v === '') return true
   if (typeof v === 'object') {
     if ('mark' in v) return v.mark === null || v.mark === undefined
     if ('num' in v) return v.num === null || v.num === undefined
+    if ('image' in v) return false
     return String(v.text ?? '') === ''
   }
   return String(v) === ''
 }
 
-/** 槽位显示文字（表头下调并入用；mark/num 按显示文字转纯文本） */
+/** 槽位显示文字（表头下调并入用；mark/num 按显示文字转纯文本，图片槽按空文字并入） */
 function slotDisplayText(v: SlotRecord[string] | undefined): string {
   if (v === undefined || v === null || v === '') return ''
   if (typeof v === 'object') {
     if ('mark' in v) return v.mark ? MARK_LABEL[v.mark] : ''
     if ('num' in v) return v.num === null || v.num === undefined ? '' : String(v.num)
+    if ('image' in v) return ''
     return String(v.text ?? '')
   }
   return String(v)

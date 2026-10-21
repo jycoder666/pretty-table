@@ -366,7 +366,7 @@ describe('PropertyPanel · 合并/拆分按钮随选区置灰（PX-08）', () =>
   it('无选区：合并/拆分都置灰，title 给白话原因', async () => {
     const { wrapper } = await setup(COMPARE_ALPHA_V1)
     expect(mergeBtn(wrapper).attributes('disabled')).toBeDefined()
-    expect(mergeBtn(wrapper).attributes('title')).toContain('相邻两格才能合并')
+    expect(mergeBtn(wrapper).attributes('title')).toContain('矩形区域')
     expect(splitBtn(wrapper).attributes('disabled')).toBeDefined()
     expect(splitBtn(wrapper).attributes('title')).toContain('选中一个已合并的格子')
   })
@@ -390,15 +390,12 @@ describe('PropertyPanel · 合并/拆分按钮随选区置灰（PX-08）', () =>
     expect(splitBtn(wrapper).attributes('disabled')).toBeUndefined()
   })
 
-  it('二维选区（既不同行也不同列）：合并置灰并提示只支持同行或同列', async () => {
+  it('二维矩形选区（既不同行也不同列）：合并可用（R-2 任意矩形合并）', async () => {
     const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
-    editor.selectionRange = { start: [0, 1], end: [1, 1] }
-    await wrapper.vm.$nextTick()
-    // 该选区与 [0,1]-[0,2] 部分重叠 → 核内判冲突；换成纯二维无重叠区域验证「同行或同列」
+    // 2×2 纯矩形（不碰锁定合并 / 现有合并 / readonly）→ 闸门放行
     editor.selectionRange = { start: [3, 1], end: [4, 2] }
     await wrapper.vm.$nextTick()
-    expect(mergeBtn(wrapper).attributes('disabled')).toBeDefined()
-    expect(mergeBtn(wrapper).attributes('title')).toContain('同行或同列')
+    expect(mergeBtn(wrapper).attributes('disabled')).toBeUndefined()
   })
 
   it('拆分随选区命中合并区置灰联动：普通格拆分置灰，合并格可拆', async () => {

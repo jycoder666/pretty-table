@@ -12,6 +12,7 @@ export type {
   MarkValue,
   MarkSlotObject,
   NumSlotObject,
+  ImageSlotObject,
   TextSlotObject,
   SlotDef,
   ThemeTokens,
@@ -36,6 +37,17 @@ export type {
 
 export type { ErrorCode, WarnCode, CoreError, CoreWarning, Result, PasteErrorCode } from './errors'
 export { ok, fail } from './errors'
+
+export {
+  IMAGE_LIMITS,
+  canSetImage,
+  checkImageBudget,
+  validateImageDataUrl,
+  isImageDataUrl,
+  dataUrlBytes,
+  coverCrop,
+  type ImageFormat,
+} from './image/imageGuard'
 
 export { validateInstance, cloneInstance } from './schema/validate'
 export { migrateInstance, SCHEMA_VERSION_CURRENT } from './schema/migrate'

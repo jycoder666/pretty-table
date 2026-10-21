@@ -60,3 +60,34 @@ describe('validateInstance · schema 1.2 新可选字段（自定义格式）', 
     expect(r.ok && r.value.themeTokens).toEqual({ primary: '#aabbcc' })
   })
 })
+
+// ── R-3 图片槽值形态校验（宽容未知，畸形清洗）─────────────────
+
+describe('validateInstance · 图片槽值清洗（交互升级 T01）', () => {
+  function baseWithSlots(slots: Record<string, unknown>) {
+    return {
+      schemaVersion: '1.2',
+      templateId: 'x',
+      themeId: 'T-A',
+      slots,
+      blocks: [],
+      layout: { rowCount: 1, colCount: 2, blockSlots: [], slotGrid: [['a', 'b']] },
+    }
+  }
+
+  it('{image} 畸形值 → 删除该槽值 + warn IMAGE_INVALID；其余槽不动', () => {
+    const r = validateInstance(baseWithSlots({ a: { image: '<script>' }, b: '文字' }))
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.slots['a']).toBeUndefined()
+    expect(r.value.slots['b']).toBe('文字')
+    expect(r.warnings?.some((w) => w.code === 'IMAGE_INVALID')).toBe(true)
+  })
+
+  it('{image} 合法白名单 data URL → 原样保留，无 warn', () => {
+    const url = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
+    const r = validateInstance(baseWithSlots({ a: { image: url } }))
+    expect(r.ok && r.value.slots['a']).toEqual({ image: url })
+    expect(r.ok && r.warnings?.some((w) => w.code === 'IMAGE_INVALID')).toBeFalsy()
+  })
+})

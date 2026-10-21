@@ -34,7 +34,12 @@ export interface NumSlotObject {
   emphasize?: Emphasis | Emphasis[]
 }
 
-export type SlotObject = TextSlotObject | MarkSlotObject | NumSlotObject
+/** Schema 1.2：图片槽值。image 必须是通过 imageGuard.isImageDataUrl 白名单校验的 data URL */
+export interface ImageSlotObject {
+  image: string
+}
+
+export type SlotObject = TextSlotObject | MarkSlotObject | NumSlotObject | ImageSlotObject
 
 export type SlotValue = string | number | SlotObject
 

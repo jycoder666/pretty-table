@@ -178,7 +178,7 @@ const mergeGate = computed<MergeGate>(() => {
     return { ok: false, reason: editor.pastePending ? '粘贴预览期间不可操作' : '先打开一张表格' }
   }
   if (!editor.selectionRange) {
-    return { ok: false, reason: '先在预览里选中格子：需同行或同列相邻两格才能合并' }
+    return { ok: false, reason: '先在预览里选中格子：点起点格后按住 Shift 点终点格，选一块矩形区域' }
   }
   const r = canMerge(inst.layout, editor.selectionRange)
   return r.ok ? { ok: true, reason: '' } : { ok: false, reason: r.error.message }
@@ -204,6 +204,7 @@ function slotDisplay(v: SlotValue | undefined): string {
   if (typeof v === 'object') {
     if ('mark' in v) return v.mark ? MARK_LABEL[v.mark] : ''
     if ('num' in v) return v.num === null || v.num === undefined ? '' : String(v.num)
+    if ('image' in v) return ''
     return String(v.text ?? '')
   }
   return String(v)

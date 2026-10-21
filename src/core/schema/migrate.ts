@@ -1,6 +1,7 @@
 import { fail, ok, type CoreWarning, type Result } from '../errors'
 import type { SlotDef, TemplateDefinition, TemplateInstance, TemplateType } from '../types'
 import { sanitizeHex } from '../theme/palettes'
+import { isImageDataUrl } from '../image/imageGuard'
 
 /**
  * Schema migration (增强期 §3.3/§3.4 + 自定义格式设计增量 §1.5):
@@ -150,6 +151,17 @@ export function migrateInstance(
       }
     } else if ('num' in obj && typeof obj.num !== 'number' && obj.num !== null) {
       inst.slots[id] = { ...obj, num: null }
+    } else if ('image' in obj) {
+      // 交互升级 R-3：{image} 槽值不匹配白名单 → 删除该键（退回空文字槽）+ warn IMAGE_INVALID
+      const img = (obj as { image: unknown }).image
+      if (typeof img !== 'string' || !isImageDataUrl(img)) {
+        delete inst.slots[id]
+        warnings.push({
+          code: 'IMAGE_INVALID',
+          message: '有一张图片读不出来，已清空该格',
+          details: { slotId: id },
+        })
+      }
     }
   }
 

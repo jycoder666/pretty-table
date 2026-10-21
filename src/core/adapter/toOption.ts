@@ -1,6 +1,7 @@
 import type {
   Align,
   Emphasis,
+  ImageSlotObject,
   LayoutStyle,
   MarkSlotObject,
   MarkValue,
@@ -74,9 +75,14 @@ function slotParts(
   emphasize?: Emphasis[]
   mark?: MarkValue | null
   num?: number | null
+  image?: string
 } {
   if (v === undefined || v === null) return { text: '' }
   if (typeof v === 'object') {
+    if ('image' in v) {
+      // 图片槽（R-3）：text 置空，data URL 透传给 CellMeta 消费方
+      return { text: '', image: v.image }
+    }
     const em = v.emphasize
     const style = {
       align: v.align,
@@ -93,6 +99,10 @@ function slotParts(
         num: n,
         ...style,
       }
+    }
+    // 图片槽（R-3）：text 置空，data URL 透传给 CellMeta 消费方（T02 渲染）
+    if ('image' in v) {
+      return { text: '', image: (v as ImageSlotObject).image, ...style }
     }
     return { text: String(v.text ?? ''), ...style }
   }

@@ -19,7 +19,7 @@ import { clampColWidth, clampTier } from '../theme/layoutScales'
 import { MARK_LABEL } from '../format/formatTokens'
 
 function slotStyle(v: SlotValue | undefined): { align?: Align; emphasize?: Emphasis[] } {
-  if (typeof v === 'object' && v !== null) {
+  if (typeof v === 'object' && v !== null && !('image' in v)) {
     const em = v.emphasize
     return {
       align: v.align,
@@ -41,24 +41,28 @@ function mergeSlotValue(prev: SlotValue | undefined, incoming: SlotValue): SlotV
   if (typeof incoming === 'object' && incoming !== null && 'num' in incoming) {
     return { num: incoming.num, align, emphasize } satisfies NumSlotObject
   }
-  const text = typeof incoming === 'object' ? String(incoming.text ?? '') : String(incoming)
+  const text = typeof incoming === 'object' && 'text' in incoming ? String(incoming.text ?? '') : String(incoming)
   return { text, align, emphasize } satisfies TextSlotObject
 }
 
-/** Keep the value's kind (text / mark / num), only patch align. */
+/** Keep the value's kind (text / mark / num / image), only patch align. */
 function withAlign(v: SlotValue | undefined, align: Align): SlotValue {
   if (typeof v === 'object' && v !== null && ('mark' in v || 'num' in v)) {
     return { ...v, align }
   }
+  // 图片槽无对齐语义：原样保留
+  if (typeof v === 'object' && v !== null && 'image' in v) return v
   const text = typeof v === 'object' && v !== null ? String(v.text ?? '') : v === undefined ? '' : String(v)
   return { text, align }
 }
 
-/** Keep the value's kind (text / mark / num), only patch emphasize. */
+/** Keep the value's kind (text / mark / num / image), only patch emphasize. */
 function withEmphasis(v: SlotValue | undefined, emphasize: Emphasis[]): SlotValue {
   if (typeof v === 'object' && v !== null && ('mark' in v || 'num' in v)) {
     return { ...v, emphasize }
   }
+  // 图片槽无强调语义：原样保留
+  if (typeof v === 'object' && v !== null && 'image' in v) return v
   const text = typeof v === 'object' && v !== null ? String(v.text ?? '') : v === undefined ? '' : String(v)
   return { text, emphasize }
 }
@@ -68,6 +72,7 @@ function slotText(v: SlotValue | undefined): string {
   if (typeof v === 'object') {
     if ('mark' in v) return v.mark ? MARK_LABEL[v.mark] : ''
     if ('num' in v) return v.num === null || v.num === undefined ? '' : String(v.num)
+    if ('image' in v) return ''
     return String(v.text ?? '')
   }
   return String(v)

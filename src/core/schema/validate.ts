@@ -2,6 +2,7 @@ import { fail, ok, type CoreWarning, type Result } from '../errors'
 import type { LayoutStyle, TemplateInstance } from '../types'
 import { clampColWidth, clampTier } from '../theme/layoutScales'
 import { sanitizeHex } from '../theme/palettes'
+import { isImageDataUrl } from '../image/imageGuard'
 
 /** themeTokens 里的角色色键（schema 1.2），hex 值需要清洗 */
 const TOKEN_COLOR_KEYS: readonly string[] = [
@@ -99,6 +100,28 @@ export function validateInstance(json: unknown): Result<TemplateInstance> {
         code: 'TOKEN_INVALID',
         message: `${badHex} 处颜色设置读不出来，已恢复预设`,
         details: { count: badHex },
+      })
+    }
+  }
+
+  // 交互升级 R-3：图片槽值形态校验（宽容未知，畸形清洗）——{image} 非白名单 data URL → 删除 + warn
+  if (inst.slots && typeof inst.slots === 'object') {
+    const slots = inst.slots as unknown as Record<string, unknown>
+    let badImages = 0
+    for (const [id, v] of Object.entries(slots)) {
+      if (!v || typeof v !== 'object' || Array.isArray(v)) continue
+      const obj = v as Record<string, unknown>
+      if (!('image' in obj)) continue
+      if (typeof obj.image !== 'string' || !isImageDataUrl(obj.image)) {
+        delete slots[id]
+        badImages++
+      }
+    }
+    if (badImages > 0) {
+      warnings.push({
+        code: 'IMAGE_INVALID',
+        message: '有一张图片读不出来，已清空该格',
+        details: { count: badImages },
       })
     }
   }
