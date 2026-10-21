@@ -12,7 +12,7 @@ import type {
 } from '../types'
 import { toOption } from '../adapter/toOption'
 import { exportHtml } from '../export/html'
-import { exportPng } from '../export/png'
+import { collectImageUrls, exportPng, preloadImages } from '../export/png'
 import { cloneInstance } from '../schema/validate'
 import { isThemeId, DEFAULT_THEME_ID } from '../theme/palettes'
 
@@ -20,25 +20,46 @@ export function mount(el: HTMLElement, options?: CoreOptions): CoreHandle {
   let instance = options?.initial ? cloneInstance(options.initial) : null
   let table: ListTable | null = null
   let renderState: RenderState = 'loading'
+  // 预览图片资源缓存（键 = data URL）：跨 paint 复用、增量补载；随 paint 剪枝到
+  // 当前实例引用的资源，避免换图累积。加载失败的图不入缓存（格回退默认绘制）。
+  const imageAssets = new Map<string, HTMLImageElement>()
+  // paint 世代号：preloadImages 异步窗口内的过期 paint 直接丢弃，旧结果不覆盖新表
+  let paintSeq = 0
   const setState = (s: RenderState) => {
     renderState = s
     options?.onRenderState?.(s)
   }
 
-  const paint = () => {
+  const paint = async () => {
     if (!instance) return
     setState('loading')
+    const seq = ++paintSeq
     try {
-      const option = toOption(instance, { mode: 'preview' }) as ConstructorParameters<
+      // 预览同源注入（types.ts RenderContext 口径）：collectImageUrls / preloadImages
+      // 与 PNG 导出共用（同 chunk），customLayout 闭包经 drawImageCell 画出图片格
+      const urls = collectImageUrls(instance)
+      const missing = urls.filter((u) => !imageAssets.has(u))
+      if (missing.length > 0) {
+        const loaded = await preloadImages(missing)
+        if (seq !== paintSeq) return // 期间已有更新的 paint，过期资源不再落地
+        for (const [k, v] of loaded) imageAssets.set(k, v)
+      }
+      for (const k of [...imageAssets.keys()]) {
+        if (!urls.includes(k)) imageAssets.delete(k)
+      }
+      const images = urls.length > 0 ? imageAssets : undefined
+      const option = toOption(instance, { mode: 'preview', images }) as ConstructorParameters<
         typeof ListTable
       >[1]
+      if (seq !== paintSeq) return
       if (!table) {
         table = new ListTable(el, option)
       } else {
         table.updateOption(option)
       }
-      setState('ready')
+      if (seq === paintSeq) setState('ready')
     } catch (e) {
+      if (seq !== paintSeq) return
       setState('error')
       options?.onError?.({
         code: 'RENDER_FAIL',
