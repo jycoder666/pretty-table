@@ -43,6 +43,22 @@ export const useLibraryStore = defineStore('library', () => {
     return saved
   }
 
+  /** PX-10：重命名「我的模板」（改 meta.displayName 后经 repo.save 原键覆盖持久化）。
+   * 返回是否成功，提示文案由页面层决定。 */
+  async function renameTemplate(templateId: string, displayName: string): Promise<boolean> {
+    const t = mine.value.find((x) => x.templateId === templateId)
+    if (!t) return false
+    const next = cloneInstance(t)
+    next.meta = { ...next.meta, displayName }
+    try {
+      await repo.save(next)
+      await refreshMine()
+      return true
+    } catch {
+      return false
+    }
+  }
+
   /** PX-01：删除「我的模板」（IndexedDB 键 tpl:<templateId>），成功后刷新列表。
    * 返回是否成功，提示文案由页面层决定。 */
   async function removeTemplate(templateId: string): Promise<boolean> {
@@ -55,5 +71,14 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
-  return { presets, mine, listError, loading, refreshMine, saveAsTemplate, removeTemplate }
+  return {
+    presets,
+    mine,
+    listError,
+    loading,
+    refreshMine,
+    saveAsTemplate,
+    renameTemplate,
+    removeTemplate,
+  }
 })

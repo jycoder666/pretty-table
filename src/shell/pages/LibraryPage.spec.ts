@@ -6,17 +6,18 @@ import { useLibraryStore } from '../stores/library'
 import { useEditorStore } from '../stores/editor'
 import LibraryPage from './LibraryPage.vue'
 
-/** repo 层 mock（PX-01）：不依赖 IndexedDB，删除走可控的 remove mock */
-const { removeMock, listMock } = vi.hoisted(() => ({
+/** repo 层 mock（PX-01 / PX-10）：不依赖 IndexedDB，删除/保存走可控 mock */
+const { removeMock, listMock, saveMock } = vi.hoisted(() => ({
   removeMock: vi.fn<(templateId: string) => Promise<void>>(),
   listMock: vi.fn<() => Promise<TemplateInstance[]>>(),
+  saveMock: vi.fn<(inst: TemplateInstance) => Promise<void>>(),
 }))
 
 vi.mock('../repo/idbTemplateRepo', () => ({
   createIdbTemplateRepo: () => ({
     list: listMock,
     get: vi.fn<() => Promise<null>>(async () => null),
-    save: vi.fn<() => Promise<void>>(async () => {}),
+    save: saveMock,
     remove: removeMock,
   }),
 }))
@@ -44,6 +45,7 @@ beforeEach(() => {
   vi.restoreAllMocks()
   listMock.mockReset().mockResolvedValue([])
   removeMock.mockReset().mockResolvedValue(undefined)
+  saveMock.mockReset().mockResolvedValue(undefined)
 })
 
 /** 取第 n 张「使用此模板」按钮（库页含系统预设与我的模板两个分区） */
@@ -242,5 +244,82 @@ describe('LibraryPage · 新建空白表专属卡与向导（FR-C6 / Q-10 / T05�
     await flushPromises()
     await answerConfirm(wrapper, true)
     expect(editor.current?.meta?.templateType).toBe('blank')
+  })
+})
+
+describe('LibraryPage · 我的模板卡类型标识与重命名（PX-10）', () => {
+  it('我的模板卡显示类型 chip（复用系统模板 typeLabel），预设卡不受影响', async () => {
+    listMock.mockResolvedValue([fakeMine('user-cmp')])
+    const wrapper = await mountPage()
+    // 我的模板卡有「我的」+ 类型两个 chip
+    const card = wrapper
+      .findAll('article')
+      .find((a) => a.find('[data-testid="rename-btn"]').exists())!
+    const chips = card.findAll('.chip')
+    expect(chips.map((c) => c.text())).toEqual(['我的', '对比'])
+    // 预设卡仍是单类型 chip，无「我的」、无重命名入口
+    const presetSection = wrapper.findAll('section')[0]!
+    expect(presetSection.text()).not.toContain('我的')
+    expect(presetSection.text()).not.toContain('重命名')
+  })
+
+  it('点「重命名」弹小弹层并回填原名；保存后经 repo 原键覆盖持久化 + toast', async () => {
+    listMock.mockResolvedValue([fakeMine('user-rn')])
+    const library = useLibraryStore()
+    const editor = useEditorStore()
+    const wrapper = await mountPage()
+    await wrapper.find('[data-testid="rename-btn"]').trigger('click')
+    const dialog = wrapper.find('[data-testid="rename-dialog"]')
+    expect(dialog.exists()).toBe(true)
+    expect((wrapper.find('[data-testid="rename-input"]').element as HTMLInputElement).value).toBe(
+      '我的模板 user-rn',
+    )
+    const input = wrapper.find('[data-testid="rename-input"]')
+    ;(input.element as HTMLInputElement).value = '体检对比·终版'
+    await input.trigger('input')
+    await wrapper.find('[data-testid="rename-ok"]').trigger('click')
+    await flushPromises()
+    // repo.save 以同 templateId 覆盖写入改名后的实例（原键覆盖，不新增卡）
+    expect(saveMock).toHaveBeenCalledTimes(1)
+    const saved = saveMock.mock.calls[0]![0] as TemplateInstance
+    expect(saved.templateId).toBe('user-rn')
+    expect(saved.meta?.displayName).toBe('体检对比·终版')
+    expect(saved.meta?.origin).toBe('user')
+    expect(editor.toast).toBe('已重命名')
+    // 弹层收起
+    expect(wrapper.find('[data-testid="rename-dialog"]').exists()).toBe(false)
+    void library
+  })
+
+  it('取消 / 空名不写 repo', async () => {
+    listMock.mockResolvedValue([fakeMine('user-keep')])
+    const wrapper = await mountPage()
+    await wrapper.find('[data-testid="rename-btn"]').trigger('click')
+    // 空名：保存置灰
+    const input = wrapper.find('[data-testid="rename-input"]')
+    ;(input.element as HTMLInputElement).value = '   '
+    await input.trigger('input')
+    expect((wrapper.find('[data-testid="rename-ok"]').element as HTMLButtonElement).disabled).toBe(
+      true,
+    )
+    // 取消
+    await wrapper.find('[data-testid="rename-cancel"]').trigger('click')
+    expect(wrapper.find('[data-testid="rename-dialog"]').exists()).toBe(false)
+    expect(saveMock).not.toHaveBeenCalled()
+  })
+
+  it('保存失败：toast 白话文案，不露错误码，弹层收起', async () => {
+    saveMock.mockRejectedValue({ code: 'TEMPLATE_SAVE_FAIL', message: 'save fail' })
+    listMock.mockResolvedValue([fakeMine('user-err')])
+    const editor = useEditorStore()
+    const wrapper = await mountPage()
+    await wrapper.find('[data-testid="rename-btn"]').trigger('click')
+    const input = wrapper.find('[data-testid="rename-input"]')
+    ;(input.element as HTMLInputElement).value = '新名字'
+    await input.trigger('input')
+    await wrapper.find('[data-testid="rename-ok"]').trigger('click')
+    await flushPromises()
+    expect(editor.toast).toBe('重命名失败，请重试')
+    expect(editor.toast).not.toContain('TEMPLATE_SAVE_FAIL')
   })
 })

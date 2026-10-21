@@ -70,6 +70,26 @@ describe('idbTemplateRepo · 读时迁移（FR-C4 闭环）', () => {
     expect(list[0]!.schemaVersion).toBe('1.2')
   })
 
+  it('重命名 round-trip（PX-10）：同名键覆盖 save 后 get/list 读回新名字，其余字段保真', async () => {
+    const repo = createIdbTemplateRepo()
+    await repo.save(legacyUserTemplate('user-rn', '1.2'))
+    // 重命名 = 原实例改 meta.displayName 后原键覆盖 save
+    const cur = (await repo.get('user-rn'))!
+    const renamed = JSON.parse(JSON.stringify(cur)) as TemplateInstance
+    renamed.meta = { ...renamed.meta, displayName: '体检对比·终版' }
+    await repo.save(renamed)
+    // list 读回：新名字生效，仍只有一张卡，内容未丢
+    const list = await repo.list()
+    expect(list).toHaveLength(1)
+    expect(list[0]!.templateId).toBe('user-rn')
+    expect(list[0]!.meta?.displayName).toBe('体检对比·终版')
+    expect(list[0]!.slots['obj.name.a']).toBe('方案 A')
+    // get 读回：同样生效
+    const got = await repo.get('user-rn')
+    expect(got!.meta?.displayName).toBe('体检对比·终版')
+    expect(got!.schemaVersion).toBe('1.2')
+  })
+
   it('list 跳过校验不过的坏数据，不抛错不中断其他条目', async () => {
     const repo = createIdbTemplateRepo()
     await repo.save(legacyUserTemplate('user-ok', '1.1'))

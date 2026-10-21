@@ -7,6 +7,7 @@ import PtButton from '../ui/PtButton.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import { confirmAction } from '../ui/confirm'
 import TemplateThumb from './TemplateThumb.vue'
+import RenameDialog from '../ui/RenameDialog.vue'
 import { errorCopy } from '../editor/errorCopy'
 import type { TemplateInstance } from '@/core'
 
@@ -57,8 +58,26 @@ const typeLabel = (t: TemplateInstance) => {
     detail: '明细',
     pricing: '价目',
     matrix: '矩阵',
+    blank: '空白',
   }
   return m[t.meta?.templateType ?? ''] ?? '模板'
+}
+
+/** PX-10：重命名「我的模板」（小弹层，改名后经 repo 原键覆盖持久化） */
+const renameOpen = ref(false)
+const renameTarget = ref<TemplateInstance | null>(null)
+
+function openRename(t: TemplateInstance) {
+  renameTarget.value = t
+  renameOpen.value = true
+}
+
+async function onRename(name: string) {
+  const t = renameTarget.value
+  if (!t) return
+  const ok = await library.renameTemplate(t.templateId, name)
+  editor.showToast(ok ? '已重命名' : '重命名失败，请重试')
+  renameTarget.value = null
 }
 
 async function useTpl(t: TemplateInstance) {
@@ -175,11 +194,19 @@ async function removeTpl(t: TemplateInstance) {
         <article v-for="t in library.mine" :key="t.templateId" class="card">
           <!-- PX-06：我的模板卡同款缩略图 -->
           <TemplateThumb :instance="t" />
-          <span class="chip mine">我的</span>
+          <!-- PX-10：类型标识（复用系统模板 typeLabel）+「我的」标识 -->
+          <div class="chips">
+            <span class="chip mine">我的</span>
+            <span class="chip" data-testid="tpl-type-chip">{{ typeLabel(t) }}</span>
+          </div>
           <h3>{{ t.meta?.displayName || '未命名模板' }}</h3>
           <p>{{ t.meta?.savedAt ? new Date(t.meta.savedAt).toLocaleString() : '' }}</p>
           <div class="actions">
             <PtButton type="button" @click.stop="() => useTpl(t)">使用此模板</PtButton>
+            <!-- PX-10：重命名入口 -->
+            <PtButton variant="ghost" type="button" data-testid="rename-btn" @click.stop="openRename(t)">
+              重命名
+            </PtButton>
             <PtButton variant="ghost" type="button" @click.stop="() => removeTpl(t)">删除</PtButton>
           </div>
         </article>
@@ -188,6 +215,13 @@ async function removeTpl(t: TemplateInstance) {
 
     <!-- PX-05：统一确认弹窗（删除模板 / 换模板替换） -->
     <ConfirmDialog />
+    <!-- PX-10：重命名小弹层（ConfirmDialog 同风格） -->
+    <RenameDialog
+      v-model:open="renameOpen"
+      heading="重命名模板"
+      :initial-name="renameTarget?.meta?.displayName ?? ''"
+      @confirm="onRename"
+    />
   </div>
 </template>
 
@@ -278,6 +312,15 @@ h2 {
 .chip.mine {
   background: var(--pt-emphasis-soft);
   color: var(--pt-emphasis);
+}
+/* PX-10：我的模板卡双 chip（我的 + 类型）同行排布 */
+.chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chips .chip {
+  align-self: auto;
 }
 .empty,
 .err {
