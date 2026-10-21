@@ -34,6 +34,8 @@ export type ErrorCode =
   | 'DRAFT_RESTORE_FAIL'
   | 'DRAFT_SAVE_FAIL'
   | 'EXPORT_PNG_TOO_LARGE'
+  // P1（缺陷 2）：导出期图片资源预加载失败 → 显式报错不静默（用户只见白话，GC-25）
+  | 'EXPORT_PNG_IMAGE_MISSING'
   // 交互升级 R-3：图片填充（错误码表见设计增量 §3；用户只见白话，code 不外露 GC-25）
   | 'IMAGE_TOO_LARGE'
   | 'IMAGE_BUDGET_EXCEEDED'

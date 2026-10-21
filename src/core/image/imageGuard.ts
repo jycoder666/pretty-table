@@ -260,7 +260,7 @@ export function checkImageBudget(
 }
 
 /**
- * cover 铺满裁剪参数（唯一实现，预览 customRender 与 PNG 离屏重绘共用，共享知识 §7.3）：
+ * cover 铺满裁剪参数（唯一实现，预览/PNG customLayout 自持裁剪与 HTML object-fit:cover 共用，共享知识 §7.3）：
  * 以格子宽高比为准居中裁源图。返回源图上的裁剪宽高。
  */
 export function coverCrop(nw: number, nh: number, cw: number, ch: number): { sw: number; sh: number } {

@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { TemplateInstance } from '../types'
-import { buildVisualRows, toOption } from './toOption'
+import {
+  buildVisualRows,
+  clearCropCanvasCache,
+  cropCanvasFor,
+  registerCellGroupFactory,
+  toOption,
+} from './toOption'
 import { PALETTES } from '../theme/palettes'
 import { COMPARE_ALPHA_V1 } from '../templates'
 import { cloneInstance } from '../schema/validate'
@@ -9,6 +15,27 @@ function withSlots(patch: (inst: TemplateInstance) => void): TemplateInstance {
   const inst = cloneInstance(COMPARE_ALPHA_V1)
   patch(inst)
   return inst
+}
+
+/** 记录型画布 stub：createElement('canvas') 返回录参 2d ctx（jsdom 无 canvas 实现） */
+function stubRecordingCanvas(): {
+  calls: unknown[][]
+  restore: () => void
+} {
+  const calls: unknown[][] = []
+  const fakeCtx = { drawImage: (...a: unknown[]) => void calls.push(a) }
+  const orig = document.createElement.bind(document)
+  const spy = vi.spyOn(document, 'createElement').mockImplementation(((tag: string) => {
+    if (tag === 'canvas') {
+      return {
+        width: 0,
+        height: 0,
+        getContext: () => fakeCtx,
+      } as unknown as HTMLCanvasElement
+    }
+    return orig(tag) as HTMLElement
+  }) as typeof document.createElement)
+  return { calls, restore: () => spy.mockRestore() }
 }
 
 function cellStyle(opt: Record<string, unknown>, row: number, col: number): Record<string, unknown> {
@@ -261,39 +288,76 @@ describe('toOption · 图片格（R-3）', () => {
     expect(cell.isPlaceholder).toBe(false)
   })
 
-  it('含图列带 customRender；coverCrop 裁剪参数正确（资源经 ctx.images 注入）', () => {
+  it('P1：含图列挂 customLayout；coverCrop 裁剪参数正确；不依赖 args.ctx', () => {
     const inst = imageInst()
     const asset = { naturalWidth: 1000, naturalHeight: 500 }
-    const opt = toOption(inst, { mode: 'preview', images: new Map([[IMG, asset]]) })
-    const col = (opt.columns as { customRender?: (a: unknown) => unknown }[])[1]!
-    expect(typeof col.customRender).toBe('function')
-    const drawImage = vi.fn<(...a: unknown[]) => void>()
-    const args = {
-      row: 4,
-      col: 1,
-      rect: { left: 10, top: 20, width: 100, height: 100 },
-      ctx: { drawImage },
+    clearCropCanvasCache()
+    const { calls, restore } = stubRecordingCanvas()
+    const groups: unknown[][] = []
+    registerCellGroupFactory((img, w, h) => {
+      groups.push([img, w, h])
+      return { marker: 'group', idx: groups.length - 1 }
+    })
+    try {
+      const opt = toOption(inst, { mode: 'export', images: new Map([[IMG, asset]]) })
+      const col = (opt.columns as { customLayout?: (a: unknown) => unknown }[])[1]!
+      expect(typeof col.customLayout).toBe('function')
+      // 参数最小面：无 ctx 字段（vtable 1.26.8 CustomRenderFunctionArg 无此字段，回归锁）
+      const args = { row: 4, col: 1, rect: { left: 0, top: 0, width: 100, height: 100 } }
+      expect('ctx' in args).toBe(false)
+      const ret = col.customLayout!(args) as {
+        rootContainer: { marker: string }
+        expectedWidth: number
+        expectedHeight: number
+        renderDefault: boolean
+      }
+      // coverCrop(1000,500,100,100) → sw=500 sh=500，居中偏移 (250, 0)；裁剪铺满离屏画布
+      expect(calls[0]).toEqual([asset, 250, 0, 500, 500, 0, 0, 100, 100])
+      expect(ret.renderDefault).toBe(false)
+      expect(ret.expectedWidth).toBe(100)
+      expect(ret.expectedHeight).toBe(100)
+      expect(ret.rootContainer).toEqual({ marker: 'group', idx: 0 })
+      expect(groups[0]).toHaveLength(3)
+    } finally {
+      restore()
+      registerCellGroupFactory(null)
     }
-    const ret = col.customRender!(args)
-    // coverCrop(1000,500,100,100) → sw=500 sh=500，居中偏移 (250, 0)
-    expect(drawImage).toHaveBeenCalledWith(asset, 250, 0, 500, 500, 10, 20, 100, 100)
-    expect(ret).toEqual({ elements: [] })
   })
 
-  it('无图格走默认绘制（customRender 返回 undefined，文字格 style 回调并存）', () => {
+  it('无图格 / 资源未注入 / 通道未注册 → undefined（默认绘制回退，文字格 style 回调并存）', () => {
     const inst = imageInst()
     const opt = toOption(inst, { mode: 'preview' })
-    const col = (opt.columns as { customRender?: (a: unknown) => unknown }[])[1]!
-    expect(col.customRender?.({ row: 0, col: 1, rect: { left: 0, top: 0, width: 100, height: 36 } })).toBeUndefined()
-    expect(col.customRender?.({ row: 4, col: 1, rect: { left: 0, top: 0, width: 100, height: 36 } })).toBeUndefined() // 资源未注入
+    const col = (opt.columns as { customLayout?: (a: unknown) => unknown }[])[1]!
+    expect(col.customLayout?.({ row: 0, col: 1, rect: { left: 0, top: 0, width: 100, height: 36 } })).toBeUndefined()
+    expect(col.customLayout?.({ row: 4, col: 1, rect: { left: 0, top: 0, width: 100, height: 36 } })).toBeUndefined() // 资源未注入
     // style 回调仍然在（列级并存）
     expect(typeof (opt.columns as { style?: unknown }[])[1]!.style).toBe('function')
+    // 资源注入但通道未注册（预览核装载前）→ 仍回退默认绘制，不崩
+    const opt2 = toOption(inst, { mode: 'export', images: new Map([[IMG, { naturalWidth: 8, naturalHeight: 8 }]]) })
+    const col2 = (opt2.columns as { customLayout?: (a: unknown) => unknown }[])[1]!
+    expect(col2.customLayout?.({ row: 4, col: 1, rect: { left: 0, top: 0, width: 100, height: 36 } })).toBeUndefined()
   })
 
-  it('无图列不挂 customRender', () => {
+  it('cropCanvasFor：同图同尺寸命中缓存复用同一画布；尺寸非法返回 undefined', () => {
+    clearCropCanvasCache()
+    const { restore } = stubRecordingCanvas()
+    try {
+      const asset = { naturalWidth: 8, naturalHeight: 8 }
+      const a = cropCanvasFor(IMG, asset, 140, 36)
+      const b = cropCanvasFor(IMG, asset, 140, 36)
+      expect(b).toBe(a)
+      expect(cropCanvasFor(IMG, asset, 0, 36)).toBeUndefined()
+      expect(cropCanvasFor(IMG, asset, 140, 0)).toBeUndefined()
+    } finally {
+      restore()
+      clearCropCanvasCache()
+    }
+  })
+
+  it('无图列不挂 customLayout', () => {
     const opt = toOption(cloneInstance(COMPARE_ALPHA_V1), { mode: 'preview' })
-    for (const col of opt.columns as { customRender?: unknown }[]) {
-      expect(col.customRender).toBeUndefined()
+    for (const col of opt.columns as { customLayout?: unknown }[]) {
+      expect(col.customLayout).toBeUndefined()
     }
   })
 })

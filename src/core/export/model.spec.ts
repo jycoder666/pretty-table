@@ -250,8 +250,36 @@ describe('buildExportModel · 结构编辑后任意行列数（T03 回归红线�
 // ── 交互升级 T03：导出同源（图片格 <img> / emphFooter tfoot 收窄 / leftTag 标签格）──
 
 import { vi } from 'vitest'
-import { buildVisualRows, colWidthAt, drawImageCell, toOption } from '../adapter/toOption'
+import {
+  buildVisualRows,
+  clearCropCanvasCache,
+  colWidthAt,
+  drawImageCell,
+  registerCellGroupFactory,
+  toOption,
+} from '../adapter/toOption'
 import { coverCrop } from '../image/imageGuard'
+
+/** 记录型画布 stub：createElement('canvas') 返回录参 2d ctx（jsdom 无 canvas 实现） */
+function stubRecordingCanvas(): {
+  calls: unknown[][]
+  restore: () => void
+} {
+  const calls: unknown[][] = []
+  const fakeCtx = { drawImage: (...a: unknown[]) => void calls.push(a) }
+  const orig = document.createElement.bind(document)
+  const spy = vi.spyOn(document, 'createElement').mockImplementation(((tag: string) => {
+    if (tag === 'canvas') {
+      return {
+        width: 0,
+        height: 0,
+        getContext: () => fakeCtx,
+      } as unknown as HTMLCanvasElement
+    }
+    return orig(tag) as HTMLElement
+  }) as typeof document.createElement)
+  return { calls, restore: () => spy.mockRestore() }
+}
 
 const T03_IMG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
@@ -334,40 +362,49 @@ describe('buildExportModel · 导出同源（交互升级 T03）', () => {
     expect(cell?.style).toContain(`color:${pa.tagText}`)
   })
 
-  it('三处一致：预览 customRender / drawImageCell（PNG 同源）/ 导出模型 cover 参数', () => {
+  it('三处一致：预览 customLayout / drawImageCell（PNG 同源）/ 导出模型 cover 参数', () => {
     const inst = cloneInstance(COMPARE_ALPHA_V1)
     inst.slots['row.3.val.a'] = { image: T03_IMG }
     const asset = { naturalWidth: 1000, naturalHeight: 500 }
     const images = new Map([[T03_IMG, asset]])
     const { metas, rowHeights } = buildVisualRows(inst)
-    const rect = { left: 10, top: 20, width: colWidthAt(inst, 1), height: rowHeights[4]! }
-    // ① 预览：toOption customRender 捕获 drawImage 参数
-    const drawImage = vi.fn<(...a: unknown[]) => void>()
-    const opt = toOption(inst, { mode: 'export', images })
-    const col = (opt.columns as { customRender?: (a: unknown) => unknown }[])[1]!
-    col.customRender?.({ row: 4, col: 1, rect, ctx: { drawImage } })
-    expect(drawImage).toHaveBeenCalledTimes(1)
-    // ② PNG 同源：png.ts 注入 images 后走同一 customRender 闭包 → drawImageCell 直调结果一致
-    const drawImage2 = vi.fn<(...a: unknown[]) => void>()
-    drawImageCell(metas[4]![1], asset, { row: 4, col: 1, rect, ctx: { drawImage: drawImage2 } })
-    expect(drawImage2.mock.calls[0]).toEqual(drawImage.mock.calls[0])
-    // ③ 导出：img 格 heightPx 与 rect.height 一致；coverCrop 单点复算与绘制参数一致
-    const m = buildExportModel(inst)
-    expect(m.ok).toBe(true)
-    if (!m.ok) return
-    const cell = m.value.bodyRows.flat().find((c) => c.image === T03_IMG)
-    expect(cell?.heightPx).toBe(rect.height)
-    const { sw, sh } = coverCrop(asset.naturalWidth, asset.naturalHeight, rect.width, rect.height)
-    expect(drawImage.mock.calls[0]).toEqual([
-      asset,
-      (asset.naturalWidth - sw) / 2,
-      (asset.naturalHeight - sh) / 2,
-      sw,
-      sh,
-      rect.left,
-      rect.top,
-      rect.width,
-      rect.height,
-    ])
+    const rect = { left: 0, top: 0, width: colWidthAt(inst, 1), height: rowHeights[4]! }
+    clearCropCanvasCache()
+    const { calls, restore } = stubRecordingCanvas()
+    registerCellGroupFactory((img, w, h) => ({ marker: 'group', img, w, h }))
+    try {
+      // ① 预览：toOption customLayout 闭包 → drawImageCell → 离屏裁剪（录参）
+      const opt = toOption(inst, { mode: 'export', images })
+      const col = (opt.columns as { customLayout?: (a: unknown) => unknown }[])[1]!
+      const ret1 = col.customLayout?.({ row: 4, col: 1, rect })
+      expect(ret1).toBeDefined()
+      expect(calls).toHaveLength(1)
+      // ② PNG 同源：png.ts 注入 images 后走同一 customLayout 闭包 → drawImageCell 直调结果一致
+      const ret2 = drawImageCell(metas[4]![1], asset, { row: 4, col: 1, rect })
+      expect(ret2).toEqual(ret1)
+      expect(calls).toHaveLength(1) // 同图同尺寸命中裁剪缓存，不重复裁
+      // ③ 导出：img 格 heightPx 与 rect.height 一致；coverCrop 单点复算与绘制参数一致
+      const m = buildExportModel(inst)
+      expect(m.ok).toBe(true)
+      if (!m.ok) return
+      const cell = m.value.bodyRows.flat().find((c) => c.image === T03_IMG)
+      expect(cell?.heightPx).toBe(rect.height)
+      const { sw, sh } = coverCrop(asset.naturalWidth, asset.naturalHeight, rect.width, rect.height)
+      expect(calls[0]).toEqual([
+        asset,
+        (asset.naturalWidth - sw) / 2,
+        (asset.naturalHeight - sh) / 2,
+        sw,
+        sh,
+        0,
+        0,
+        rect.width,
+        rect.height,
+      ])
+    } finally {
+      restore()
+      registerCellGroupFactory(null)
+      clearCropCanvasCache()
+    }
   })
 })

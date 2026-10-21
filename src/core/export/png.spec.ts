@@ -79,4 +79,30 @@ describe('PNG 图片预加载（交互升级 T03）', () => {
       vi.unstubAllGlobals()
     }
   })
+
+  it('P1 缺陷2：图片预加载失败 → EXPORT_PNG_IMAGE_MISSING 显式失败（不静默画空图）', async () => {
+    const BAD = 'data:image/png;base64,QUFB'
+    const failOn = new Set([BAD])
+    class FakeImage {
+      onload?: () => void
+      onerror?: () => void
+      naturalWidth = 8
+      naturalHeight = 8
+      set src(v: string) {
+        queueMicrotask(() => (failOn.has(v) ? this.onerror?.() : this.onload?.()))
+      }
+    }
+    vi.stubGlobal('Image', FakeImage as unknown as typeof Image)
+    try {
+      const inst = cloneInstance(COMPARE_ALPHA_V1)
+      inst.slots['row.2.val.a'] = { image: BAD }
+      const r = await exportPng(inst, { scale: 2 })
+      expect(r.ok).toBe(false)
+      expect(r.ok ? undefined : r.error.code).toBe('EXPORT_PNG_IMAGE_MISSING')
+      // GC-25：message 为人话口径，壳层 errorCopy 同文案（码不外露）
+      expect(r.ok ? undefined : r.error.message).toBe('图片资源未能加载，请重新上传后再导出')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })

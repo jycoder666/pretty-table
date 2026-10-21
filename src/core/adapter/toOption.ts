@@ -347,7 +347,16 @@ function styleForCell(
   return style
 }
 
-// ── R-3 图片格 customRender（VTable 自定义绘制，预览与 PNG 导出同源）──
+// ── R-3 图片格绘制通道（VTable 自定义绘制，预览与 PNG 导出同源）──
+//
+// 通道选型（P1 修复）：vtable 1.26.8 的 customRender 回调参数（CustomRenderFunctionArg）
+// 实查（node_modules/@visactor/vtable/cjs/ts-types/customElement.d.ts）只有
+// row / col / table / value / dataValue / rect 字段，**没有 ctx**——旧实现的
+// args.ctx.drawImage 在图片资源命中时必然 undefined（真浏览器必崩，单测 mock ctx 掩盖）。
+// 本模块改走 customLayout 函数通道（dealWithCustom 对 rootContainer instanceof VGroup
+// 原样采用）：裁剪产物（自持离屏 canvas）直接作为 vrender Image graphic 的 image 属性
+// （HTMLCanvasElement → loadImage 同步 success，graphic.js loadImage isObject 分支），
+// 首帧同步画出、无异步竞态，导出 exportImg 不可能漏图。
 
 export interface VCellRect {
   left: number
@@ -356,41 +365,104 @@ export interface VCellRect {
   height: number
 }
 
-/** VTable customRender 回调参数的最小结构面（只声明我们消费的字段） */
+/** customLayout / customRender 回调参数的最小结构面（只声明我们消费的字段） */
 export interface VCustomRenderArgs {
   row: number
   col: number
   rect: VCellRect
-  ctx: {
-    drawImage: (
-      img: unknown,
-      sx: number,
-      sy: number,
-      sw: number,
-      sh: number,
-      dx: number,
-      dy: number,
-      dw: number,
-      dh: number,
-    ) => void
-  }
+}
+
+/** customLayout 函数通道允许的返回结构（ICustomLayoutObj 的最小面） */
+export interface VCustomRenderResult {
+  rootContainer: unknown
+  expectedWidth: number
+  expectedHeight: number
+  renderDefault: false
 }
 
 /**
- * 图片格绘制：coverCrop 唯一实现算裁剪参数，居中裁源图铺满格子（gif 天然首帧）。
- * 无图 / 资源未就绪 → 返回 undefined 交给 VTable 默认绘制（文字格 style 回调并存）。
+ * 格内容组构建器：由渲染通道注入（vrender 依赖必须留在 VTable chunk，见
+ * imageDrawVRender.ts / vtableLite.ts）。入参为裁剪好的离屏 canvas 与格宽高。
+ */
+export type CellGroupFactory = (
+  image: HTMLCanvasElement,
+  width: number,
+  height: number,
+) => unknown
+
+let cellGroupFactory: CellGroupFactory | null = null
+
+/** 渲染通道注册（vtableLite 装载时调用一次；传 null 撤销，图片格回退默认绘制） */
+export function registerCellGroupFactory(fn: CellGroupFactory | null): void {
+  cellGroupFactory = fn
+}
+
+/** 离屏裁剪缓存：键 = 尺寸 + 源 data URL（同一图同一格尺寸复用同一画布） */
+const cropCanvasCache = new Map<string, HTMLCanvasElement>()
+
+/**
+ * cover 裁剪落canvas（coverCrop 唯一实现算裁剪参数，预览 / HTML / PNG 三处同源）：
+ * 以格子宽高比为准居中裁源图，画到自持离屏 canvas（宽高 = 格子），返回该画布。
+ * 无 DOM（测试环境）/格子尺寸非法 → undefined，调用方回退默认绘制。
+ */
+export function cropCanvasFor(
+  src: string,
+  asset: { naturalWidth: number; naturalHeight: number },
+  cw: number,
+  ch: number,
+): HTMLCanvasElement | undefined {
+  if (cw <= 0 || ch <= 0) return undefined
+  const key = `${cw}x${ch}|${src}`
+  const hit = cropCanvasCache.get(key)
+  if (hit) return hit
+  const canvas = document.createElement('canvas')
+  canvas.width = cw
+  canvas.height = ch
+  const c2d = canvas.getContext('2d')
+  if (!c2d) return undefined
+  const { sw, sh } = coverCrop(asset.naturalWidth, asset.naturalHeight, cw, ch)
+  c2d.drawImage(
+    asset as CanvasImageSource,
+    (asset.naturalWidth - sw) / 2,
+    (asset.naturalHeight - sh) / 2,
+    sw,
+    sh,
+    0,
+    0,
+    cw,
+    ch,
+  )
+  cropCanvasCache.set(key, canvas)
+  return canvas
+}
+
+/** 清空离屏裁剪缓存（单测逐用例重建画布 stub 用；生产无调用方） */
+export function clearCropCanvasCache(): void {
+  cropCanvasCache.clear()
+}
+
+/**
+ * 图片格绘制：coverCrop 唯一实现算裁剪参数，自持离屏 canvas 裁剪后经
+ * 注入的组构建器产出 customLayout rootContainer（同步绘制，无 args.ctx 依赖）。
+ * 无图 / 资源未就绪 / 通道未注册 → 返回 undefined 交给 VTable 默认绘制
+ * （文字格 style 回调并存）。
  */
 export function drawImageCell(
   cell: CellMeta | undefined,
   asset: { naturalWidth: number; naturalHeight: number } | undefined,
   args: VCustomRenderArgs,
-): { elements: [] } | undefined {
+): VCustomRenderResult | undefined {
   if (!cell?.image || !asset) return undefined
-  const { sw, sh } = coverCrop(asset.naturalWidth, asset.naturalHeight, args.rect.width, args.rect.height)
-  const sx = (asset.naturalWidth - sw) / 2
-  const sy = (asset.naturalHeight - sh) / 2
-  args.ctx.drawImage(asset, sx, sy, sw, sh, args.rect.left, args.rect.top, args.rect.width, args.rect.height)
-  return { elements: [] }
+  const { width, height } = args.rect
+  if (!cellGroupFactory) return undefined
+  const canvas = cropCanvasFor(cell.image, asset, width, height)
+  if (!canvas) return undefined
+  return {
+    rootContainer: cellGroupFactory(canvas, width, height),
+    expectedWidth: width,
+    expectedHeight: height,
+    renderDefault: false,
+  }
 }
 
 export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<string, unknown> {
@@ -410,7 +482,7 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     return rec
   })
 
-  // R-3：含图列挂 customRender（列级）；文字格仍走 style 回调，两机制并存
+  // R-3：含图列挂 customLayout（列级，图片格绘制通道）；文字格仍走 style 回调，两机制并存
   const imageCols = new Set<number>()
   metas.forEach((row) => {
     row.forEach((cell, c) => {
@@ -430,7 +502,9 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
       },
     }
     if (imageCols.has(c)) {
-      col.customRender = (args: VCustomRenderArgs) => {
+      // P1 修复：customLayout 函数通道（rootContainer 直接采用，见文件头选型说明）；
+      // vtable 1.26.8 customRender 参数无 ctx，旧 args.ctx.drawImage 必崩
+      col.customLayout = (args: VCustomRenderArgs) => {
         const cell = metas[args.row]?.[args.col]
         const asset = cell?.image ? ctx.images?.get(cell.image) : undefined
         return drawImageCell(cell, asset, args)

@@ -72,8 +72,18 @@ export async function exportPng(
   let table: ListTable | null = null
   try {
     const { palette } = resolveTheme(inst.themeId, inst.themeTokens)
-    // R-3 导出同源：预加载图片资源注入 RenderContext.images，customRender 闭包经 drawImageCell 绘制（coverCrop 同源）
-    const images = await preloadImages(collectImageUrls(inst))
+    // R-3 导出同源：预加载图片资源注入 RenderContext.images，customLayout 闭包经
+    // drawImageCell（自持离屏裁剪 + vrender 同步绘制，coverCrop 同源）
+    // P1（缺陷 2）降级口径：资源缺失不得静默——导出前显式失败，
+    // 壳层转人话 toast（errorCopy：EXPORT_PNG_IMAGE_MISSING），绝不画空图了事
+    const urls = collectImageUrls(inst)
+    const images = await preloadImages(urls)
+    const missing = urls.filter((u) => !images.has(u))
+    if (missing.length > 0) {
+      return fail('EXPORT_PNG_IMAGE_MISSING', '图片资源未能加载，请重新上传后再导出', {
+        missing: missing.length,
+      })
+    }
     const option = toOption(inst, {
       mode: 'export',
       transparentUnderlay: transparent,
@@ -150,7 +160,8 @@ export function collectImageUrls(inst: TemplateInstance): string[] {
 
 /**
  * R-3 导出同源：离屏预加载全部图片资源，注入 RenderContext.images。
- * 单张加载失败只跳过该图（对应格回退默认绘制，画空格不炸），不中断整体导出。
+ * 单张加载失败只跳过该图（不中断整体预加载）；缺失交由 exportPng 显式报错
+ * （EXPORT_PNG_IMAGE_MISSING，P1 修复：不再静默画空格）。
  */
 export async function preloadImages(urls: string[]): Promise<Map<string, HTMLImageElement>> {
   const results = await Promise.allSettled(urls.map((u) => loadImage(u)))

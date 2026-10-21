@@ -143,11 +143,11 @@ describe('T05 · 含图实例全链路（新建 → 传图 → 换图 → 撤销
     const content = measureContentSize(editor.current!)
     expect(m.outWidth).toBe((content.width + 32) * 2)
     expect(m.outHeight).toBe((content.height + 32) * 2)
-    // PNG 渲染路径与预览共用 toOption：含图列挂 customRender、images 可注入
+    // PNG 渲染路径与预览共用 toOption：含图列挂 customLayout（P1 自持裁剪通道）、images 可注入
     const images = new Map([[IMG_A, { naturalWidth: 8, naturalHeight: 8 }]])
     const opt = toOption(editor.current!, { mode: 'export', images })
-    const cols = opt.columns as { customRender?: unknown }[]
-    expect(cols.some((c) => typeof c.customRender === 'function')).toBe(true)
+    const cols = opt.columns as { customLayout?: unknown }[]
+    expect(cols.some((c) => typeof c.customLayout === 'function')).toBe(true)
 
     // 9. 另存为我的模板 → 读回（migrate 1.2 路径）→ 图片还在、合并区还在
     const saved = await library.saveAsTemplate(editor.current!, 'T05 含图表')
