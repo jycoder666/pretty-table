@@ -64,10 +64,12 @@ chromium 实测：注入后点「导出 PNG」→ 直接出人话提示「当前
 | 边界减一（2× 拒 / 1× 过） | ✓ | 环境性失败¹ | 环境性失败¹ |
 | 兜底演练 ?pt-fault | ✓ | 环境性失败¹ | 环境性失败¹ |
 
-> ¹ **环境性失败（非代码问题）**：本沙箱 Windows 宿主缺系统组件 `api-ms-win-core-apiquery-l2-1-0.dll`，
-> Playwright 启动 firefox / webkit 进程即报 `browserType.launch: Host system is missing dependencies`
-> （`playwright install firefox webkit` 阶段 host 校验已给出同款警告，浏览器二进制本身已下载完成）。
-> 5 条用例全部在 launch 阶段失败，未执行到任何断言。**待真机（含 macOS Safari / Windows Firefox / iOS WebKit）手动复测后回填本表**；补测口径与断言可直接复用 `e2e/png-threshold.spec.ts`（用例本身不依赖 chromium 特性）。
+> ¹ **环境性失败（非代码问题）**：本沙箱 Windows 宿主缺系统组件 `api-ms-win-core-apiquery-l2-1-0.dll`。
+> 两浏览器失败阶段不同（QA 真机实测更正）：
+> **firefox** —— Playwright 启动进程即报 `browserType.launch: Host system is missing dependencies`，
+> launch 阶段失败，未执行到任何断言（`playwright install firefox webkit` 阶段 host 校验已给出同款警告，浏览器二进制本身已下载完成）；
+> **webkit** —— launch 成功，但页面资源加载期所有模块请求被 cancel，页面未真正加载，未执行到任何断言（非 launch 阶段失败）。
+> **待真机（含 macOS Safari / Windows Firefox / iOS WebKit）手动复测后回填本表**；补测口径与断言可直接复用 `e2e/png-threshold.spec.ts`（用例本身不依赖 chromium 特性）。
 
 ## 6. 与门槛相关的备注（T34 交联）
 
