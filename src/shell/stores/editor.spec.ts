@@ -1,7 +1,14 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { BLANK_V1, COMPARE_ALPHA_V1, cloneInstance } from '@/core'
 import { useEditorStore } from './editor'
+
+// 组件/ store 测试不碰真实 IndexedDB：草稿读写 mock 为空操作（恢复草稿用例按需覆写 loadDraft）
+vi.mock('../repo/draftRepo', () => ({
+  saveDraft: vi.fn<() => Promise<void>>(async () => {}),
+  loadDraft: vi.fn<() => Promise<null>>(async () => null),
+  clearDraft: vi.fn<() => Promise<void>>(async () => {}),
+}))
 
 /**
  * 撤销会话两处边角（QA 观察）：
@@ -35,6 +42,25 @@ describe('editor store · 粘贴预览与撤销会话边角（QA 观察）', () 
     expect(store.pastePreview).not.toBeNull()
   })
 
+  it('粘贴预览中 redo() 同样被禁：state 不变、pastePreview 保留（E3）', async () => {
+    const store = await setup()
+    // 先制造可重做状态：编辑 → 撤销
+    store.setSlotText('row.4.val.a', '预演')
+    store.undo()
+    expect(store.redoEnabled).toBe(true)
+    // 进入粘贴预览 → redo 被锁
+    store.selectedSlotId = 'row.4.val.a'
+    const started = store.pasteStart({ text: '甲\t乙' })
+    expect(started).toBe(true)
+    const before = JSON.stringify(store.state?.current)
+    const versionBefore = store.state?.version
+    store.redo()
+    expect(JSON.stringify(store.state?.current)).toBe(before)
+    expect(store.state?.version).toBe(versionBefore)
+    expect(store.pastePreview).not.toBeNull()
+    store.cancelPaste()
+  })
+
   it('cancelPaste 重置文字会话：取消预览后继续输入，撤销一步回到取消前', async () => {
     const store = await setup()
     store.selectedSlotId = 'row.4.val.a'
@@ -51,6 +77,68 @@ describe('editor store · 粘贴预览与撤销会话边角（QA 观察）', () 
     expect(store.current?.slots['row.4.val.a']).toMatchObject({ text: '第一段' })
     store.undo()
     expect(store.current?.slots['row.4.val.a']).toBe('全国') // 回到输入前整句
+  })
+})
+
+describe('editor store · E3 多次撤销与重做', () => {
+  it('undoEnabled/redoEnabled 随操作翻转；多次撤销逐级回退、redo 对称恢复', () => {
+    const store = useEditorStore()
+    store.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
+    expect(store.undoEnabled).toBe(false)
+    expect(store.redoEnabled).toBe(false)
+    // 三步：文字 → 换主题 → 加行
+    store.setSlotText('row.4.val.a', 'E3内容')
+    expect(store.undoEnabled).toBe(true)
+    store.setTheme('T-B')
+    store.apply({ kind: 'addRow' })
+    const rows = store.current!.layout.slotGrid!.length
+    expect(rows).toBe(11)
+    // undo ×3 逐级回退
+    store.undo()
+    expect(store.current!.layout.slotGrid!.length).toBe(10)
+    expect(store.undoEnabled).toBe(true)
+    store.undo()
+    expect(store.current!.themeId).toBe('T-A')
+    store.undo()
+    expect(store.current?.slots['row.4.val.a']).toBe('全国')
+    expect(store.undoEnabled).toBe(false)
+    // redo ×3 对称恢复
+    expect(store.redoEnabled).toBe(true)
+    store.redo()
+    expect(store.current?.slots['row.4.val.a']).toMatchObject({ text: 'E3内容' })
+    store.redo()
+    expect(store.current!.themeId).toBe('T-B')
+    store.redo()
+    expect(store.current!.layout.slotGrid!.length).toBe(11)
+    expect(store.redoEnabled).toBe(false)
+  })
+
+  it('undo 后新操作断开重做链；多次撤销栈深随操作推进', () => {
+    const store = useEditorStore()
+    store.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
+    store.setTheme('T-C')
+    store.undo()
+    expect(store.redoEnabled).toBe(true)
+    // 新操作 → 不可重做
+    store.setSlotText('row.4.val.a', '分叉')
+    expect(store.redoEnabled).toBe(false)
+    expect(store.undoEnabled).toBe(true)
+  })
+
+  it('恢复草稿后撤销/重做双栈为空（FR-10 语义保留）', async () => {
+    const { loadDraft } = await import('../repo/draftRepo')
+    ;(loadDraft as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      instance: cloneInstance(COMPARE_ALPHA_V1),
+      savedAt: '2026-01-01T00:00:00.000Z',
+    })
+    const store = useEditorStore()
+    const r = await store.tryRestoreDraft()
+    expect(r).toBe('restored')
+    // createEditorState 空栈 → 撤销/重做都不可用；dirty 标记保留（FR-10）
+    expect(store.undoEnabled).toBe(false)
+    expect(store.redoEnabled).toBe(false)
+    expect(store.dirty).toBe(true)
+    expect(store.restorePrompt).toBe(true)
   })
 })
 

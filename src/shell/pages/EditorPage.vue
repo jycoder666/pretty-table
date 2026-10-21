@@ -18,7 +18,7 @@ import { confirmAction } from '../ui/confirm'
 import { pointerOnlySensors, readBlockType } from '../dnd/dndKitAdapter'
 import { usePlaceSession } from '../dnd/placeSession'
 import { computeDropTargets, estimateCellRects, resolveDrop } from '../dnd/slotDnd'
-import { shouldUndo } from '../editor/undoHotkey'
+import { shouldRedo, shouldUndo } from '../editor/undoHotkey'
 
 const editor = useEditorStore()
 const library = useLibraryStore()
@@ -49,11 +49,16 @@ function onGlobalKey(e: KeyboardEvent) {
     session.cancelPlace()
     return
   }
-  // PX-13：Ctrl/Cmd+Z 单步撤销（绑定在编辑台层，不全局污染）；
-  // 撤销键识别 / 输入框聚焦 / 粘贴预览期 / 撤销链空全部由 shouldUndo 收口（内含 isUndoHotkey，不重复判定）
+  // PX-13 / E3：Ctrl/Cmd+Z 撤销；Ctrl+Y / Ctrl/Cmd+Shift+Z 重做（绑定在编辑台层，不全局污染）。
+  // 键识别 / 输入框聚焦 / 粘贴预览期 / 链空由 shouldUndo / shouldRedo 收口（内含键判定，不重复判定）
   if (shouldUndo(e, editor, document.activeElement)) {
     e.preventDefault()
     editor.undo()
+    return
+  }
+  if (shouldRedo(e, editor, document.activeElement)) {
+    e.preventDefault()
+    editor.redo()
   }
 }
 
@@ -165,8 +170,22 @@ function onDragEnd(event: {
         <div class="right">
           <!-- PX-09：粘贴入口并入顶部工具条，预览区不再被悬浮按钮遮挡 -->
           <EditorToolbar />
+          <!-- E3：撤销/重做按钮随 canUndo/canRedo 置灰；粘贴预览期双双禁用（FR-17） -->
           <PtTooltip text="撤销上一步操作">
-            <PtButton variant="ghost" :disabled="!editor.undoEnabled" @click="editor.undo()">撤销</PtButton>
+            <PtButton
+              variant="ghost"
+              :disabled="!editor.undoEnabled || editor.pastePending"
+              @click="editor.undo()"
+              >撤销</PtButton
+            >
+          </PtTooltip>
+          <PtTooltip text="重做被撤销的操作">
+            <PtButton
+              variant="ghost"
+              :disabled="!editor.redoEnabled || editor.pastePending"
+              @click="editor.redo()"
+              >重做</PtButton
+            >
           </PtTooltip>
           <PtTooltip text="把当前表格另存为我的模板（图片一起保存）">
             <PtButton variant="ghost" :disabled="editor.pastePending" @click="saveOpen = true">另存为模板</PtButton>

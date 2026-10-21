@@ -10,10 +10,12 @@ import {
   createEditorState,
   createStoreTxn,
   dispatch,
-  undoOnce,
+  undo as undoState,
+  redo as redoState,
   markClean,
   replaceCurrent,
   canUndo,
+  canRedo,
   cloneInstance,
   parsePaste,
   planPaste,
@@ -50,7 +52,9 @@ export const useEditorStore = defineStore('editor', () => {
 
   const current = computed(() => state.value?.current ?? null)
   const dirty = computed(() => state.value?.dirty ?? false)
+  // E3：撤销/重做可用性直接由核内双栈派生
   const undoEnabled = computed(() => (state.value ? canUndo(state.value) : false))
+  const redoEnabled = computed(() => (state.value ? canRedo(state.value) : false))
 
   // ── 粘贴预览（FR-16～19）──
   const pastePreview = ref<{ plan: ValidatedPastePlan; emptyCount: number } | null>(null)
@@ -174,10 +178,9 @@ export const useEditorStore = defineStore('editor', () => {
       if (!d) return 'none'
       state.value = createEditorState(d.instance)
       textSessionKey = null
-      // restore clears undo (FR-10)
+      // restore clears undo/redo（FR-10）：createEditorState 双栈为空，这里只需标脏
       state.value = {
         ...state.value,
-        undoSnapshot: null,
         dirty: true,
       }
       page.value = 'editor'
@@ -221,7 +224,16 @@ export const useEditorStore = defineStore('editor', () => {
     // QA 边角（FR-17）：粘贴预览期禁撤销——预览未决时一切状态变更被锁，撤销也不放开，
     // 避免 pastePreview 与 current 错位后 confirmPaste 走 PASTE_STALE
     if (state.value.pastePending) return
-    state.value = undoOnce(state.value)
+    state.value = undoState(state.value)
+    textSessionKey = null
+    void persistDraft()
+  }
+
+  function redo() {
+    if (!state.value || !canRedo(state.value)) return
+    // FR-17：粘贴预览期重做同样锁定（与撤销同源守卫）
+    if (state.value.pastePending) return
+    state.value = redoState(state.value)
     textSessionKey = null
     void persistDraft()
   }
@@ -398,6 +410,7 @@ export const useEditorStore = defineStore('editor', () => {
     current,
     dirty,
     undoEnabled,
+    redoEnabled,
     selectedSlotId,
     selectedBlockId,
     selectionRange,
@@ -418,6 +431,7 @@ export const useEditorStore = defineStore('editor', () => {
     discardRestored,
     apply,
     undo,
+    redo,
     setSlotText,
     setTheme,
     setZebra,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { isTextEntryTarget, isUndoHotkey, shouldUndo } from './undoHotkey'
+import { isRedoHotkey, isTextEntryTarget, isUndoHotkey, shouldRedo, shouldUndo } from './undoHotkey'
 
 /** 构造键盘事件（jsdom 不派发真实 Ctrl 组合，直接 new KeyboardEvent 断言判定） */
 function keyEvent(init: {
@@ -34,15 +34,33 @@ describe('isUndoHotkey · 撤销键识别（PX-13）', () => {
     expect(isUndoHotkey(keyEvent({ key: 'z', metaKey: true }))).toBe(true)
   })
 
-  it('Shift 组合（重做）/ Alt 组合 / 单键 z 不命中——本期只接单步撤销', () => {
+  it('Shift / Alt 组合 / 单键 z / Ctrl+Y 不命中撤销键（Shift+Z 与 Y 归重做）', () => {
     expect(isUndoHotkey(keyEvent({ key: 'z', ctrlKey: true, shiftKey: true }))).toBe(false)
     expect(isUndoHotkey(keyEvent({ key: 'z', metaKey: true, shiftKey: true }))).toBe(false)
     expect(isUndoHotkey(keyEvent({ key: 'z', ctrlKey: true, altKey: true }))).toBe(false)
     expect(isUndoHotkey(keyEvent({ key: 'z' }))).toBe(false)
-    // Ctrl+Y 不绑定（重做不要求）
     expect(isUndoHotkey(keyEvent({ key: 'y', ctrlKey: true }))).toBe(false)
     // 其他 Ctrl 组合不误伤
     expect(isUndoHotkey(keyEvent({ key: 's', ctrlKey: true }))).toBe(false)
+  })
+})
+
+describe('isRedoHotkey · 重做键识别（E3）', () => {
+  it('Ctrl+Y / Ctrl+Shift+Z / Cmd+Shift+Z 命中', () => {
+    expect(isRedoHotkey(keyEvent({ key: 'y', ctrlKey: true }))).toBe(true)
+    expect(isRedoHotkey(keyEvent({ key: 'Y', ctrlKey: true }))).toBe(true)
+    expect(isRedoHotkey(keyEvent({ key: 'z', ctrlKey: true, shiftKey: true }))).toBe(true)
+    expect(isRedoHotkey(keyEvent({ key: 'Z', metaKey: true, shiftKey: true }))).toBe(true)
+  })
+
+  it('Alt 组合 / 无修饰 / Shift+Y / Ctrl+Y+Shift / 其他键不命中', () => {
+    expect(isRedoHotkey(keyEvent({ key: 'y', ctrlKey: true, altKey: true }))).toBe(false)
+    expect(isRedoHotkey(keyEvent({ key: 'z', ctrlKey: true, shiftKey: true, altKey: true }))).toBe(false)
+    expect(isRedoHotkey(keyEvent({ key: 'y' }))).toBe(false)
+    expect(isRedoHotkey(keyEvent({ key: 'y', shiftKey: true }))).toBe(false)
+    expect(isRedoHotkey(keyEvent({ key: 'y', ctrlKey: true, shiftKey: true }))).toBe(false)
+    expect(isRedoHotkey(keyEvent({ key: 'z', ctrlKey: true }))).toBe(false)
+    expect(isRedoHotkey(keyEvent({ key: 's', ctrlKey: true }))).toBe(false)
   })
 })
 
@@ -80,10 +98,38 @@ describe('shouldUndo · 综合 gate（输入框聚焦 / 粘贴预览期 / 撤销
     ).toBe(false)
   })
 
-  it('Ctrl+Shift+Z / Ctrl+Y 即便可用也不触发（重做未实现，不误吞按键）', () => {
+  it('Ctrl+Shift+Z / Ctrl+Y 是重做键：即便重做可用也不触发撤销', () => {
     expect(
       shouldUndo(keyEvent({ key: 'z', ctrlKey: true, shiftKey: true }), enabledGate, null),
     ).toBe(false)
     expect(shouldUndo(keyEvent({ key: 'y', ctrlKey: true }), enabledGate, null)).toBe(false)
+  })
+})
+
+describe('shouldRedo · 综合 gate（与 shouldUndo 同构三守卫）', () => {
+  const enabledGate = { redoEnabled: true, pastePending: false }
+
+  it('Ctrl+Y / Ctrl+Shift+Z 可用 + 无焦点拦截 → 重做', () => {
+    expect(shouldRedo(keyEvent({ key: 'y', ctrlKey: true }), enabledGate, null)).toBe(true)
+    expect(shouldRedo(keyEvent({ key: 'z', ctrlKey: true, shiftKey: true }), enabledGate, null)).toBe(true)
+  })
+
+  it('输入框聚焦 → 不触发（原生文本重做优先）', () => {
+    const ta = document.createElement('textarea')
+    focusEl(ta)
+    expect(shouldRedo(keyEvent({ key: 'y', ctrlKey: true }), enabledGate, document.activeElement)).toBe(false)
+  })
+
+  it('粘贴预览期 → 禁重做（FR-17 同源）', () => {
+    expect(
+      shouldRedo(keyEvent({ key: 'y', ctrlKey: true }), { redoEnabled: true, pastePending: true }, null),
+    ).toBe(false)
+  })
+
+  it('重做链空（redoEnabled=false）→ 不触发；普通 Ctrl+Z 也不触发重做', () => {
+    expect(
+      shouldRedo(keyEvent({ key: 'y', ctrlKey: true }), { redoEnabled: false, pastePending: false }, null),
+    ).toBe(false)
+    expect(shouldRedo(keyEvent({ key: 'z', ctrlKey: true }), enabledGate, null)).toBe(false)
   })
 })
