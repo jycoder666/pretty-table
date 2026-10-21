@@ -26,6 +26,8 @@ import {
 } from '@/core'
 import PtButton from '../ui/PtButton.vue'
 import PtSegmented from '../ui/PtSegmented.vue'
+import ConfirmDialog from '../ui/ConfirmDialog.vue'
+import { confirmAction } from '../ui/confirm'
 import ColorField from './ColorField.vue'
 
 const editor = useEditorStore()
@@ -121,15 +123,18 @@ function addRow() {
   if (canAddRowNow.value) applyStruct({ kind: 'addRow' })
 }
 
-function removeRow() {
+async function removeRow() {
   const r = targetRow.value
   if (r < headerLevels.value || r >= rowCount.value) return
-  // Q-9：删非空行列先二次确认（连带删除，不可恢复）
-  if (
-    hasContentInRow(editor.current!, r) &&
-    !confirm(`删除第 ${r + 1} 行后，这一行的内容会一起删掉，不可恢复。确定删除？`)
-  ) {
-    return
+  // Q-9：删非空行列先二次确认（连带删除，不可恢复）；PX-05：走统一确认弹窗
+  if (hasContentInRow(editor.current!, r)) {
+    const go = await confirmAction({
+      title: `删除第 ${r + 1} 行`,
+      message: `删除第 ${r + 1} 行后，这一行的内容会一起删掉，不可恢复。确定删除？`,
+      confirmText: '删除',
+      danger: true,
+    })
+    if (!go) return
   }
   applyStruct({ kind: 'removeRow', row: r })
 }
@@ -138,14 +143,17 @@ function addCol() {
   if (canAddColNow.value) applyStruct({ kind: 'addCol' })
 }
 
-function removeCol() {
+async function removeCol() {
   const c = targetCol.value
   if (c < 0 || c >= colCount.value) return
-  if (
-    hasContentInCol(editor.current!, c) &&
-    !confirm(`删除第 ${c + 1} 列后，这一列的内容会一起删掉，不可恢复。确定删除？`)
-  ) {
-    return
+  if (hasContentInCol(editor.current!, c)) {
+    const go = await confirmAction({
+      title: `删除第 ${c + 1} 列`,
+      message: `删除第 ${c + 1} 列后，这一列的内容会一起删掉，不可恢复。确定删除？`,
+      confirmText: '删除',
+      danger: true,
+    })
+    if (!go) return
   }
   applyStruct({ kind: 'removeCol', col: c })
 }
@@ -267,8 +275,14 @@ function toggleEm(kind: Emphasis) {
   editor.setEmphasis(next as Emphasis[])
 }
 
-function removeBlock() {
-  if (!confirm('删除后预览会同步更新，确定删除此区块？')) return
+async function removeBlock() {
+  const go = await confirmAction({
+    title: '删除区块',
+    message: '删除后预览会同步更新，确定删除此区块？',
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!go) return
   editor.removeSelectedBlock()
 }
 </script>
@@ -504,6 +518,9 @@ function removeBlock() {
         <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.splitSelection()">拆分</PtButton>
       </div>
     </div>
+
+    <!-- PX-05：统一确认弹窗（删区块 / 删非空行列） -->
+    <ConfirmDialog />
   </aside>
 </template>
 

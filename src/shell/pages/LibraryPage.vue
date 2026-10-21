@@ -4,6 +4,8 @@ import { useLibraryStore } from '../stores/library'
 import { useEditorStore } from '../stores/editor'
 import { createBlankInstance } from '@/core'
 import PtButton from '../ui/PtButton.vue'
+import ConfirmDialog from '../ui/ConfirmDialog.vue'
+import { confirmAction } from '../ui/confirm'
 import { errorCopy } from '../editor/errorCopy'
 import type { TemplateInstance } from '@/core'
 
@@ -21,10 +23,23 @@ const blankCols = ref(4)
 const blankLevels = ref(1)
 
 function createBlank() {
-  // 与换模板同一口径：有未另存改动先确认（FR-10）
+  // 与换模板同一口径：有未另存改动先确认（FR-10 / PX-05 统一确认弹窗）
   if (editor.dirty && editor.current) {
-    if (!confirm('换一张模板会替换当前的表格，未另存的修改会丢失。确定继续？')) return
+    void confirmAction({
+      title: '替换当前的表格',
+      message: '换一张模板会替换当前的表格，未另存的修改会丢失。确定继续？',
+      confirmText: '替换',
+      danger: true,
+    }).then((go) => {
+      if (!go) return
+      doCreateBlank()
+    })
+    return
   }
+  doCreateBlank()
+}
+
+function doCreateBlank() {
   editor.openTemplate(
     createBlankInstance({
       rows: blankRows.value,
@@ -45,18 +60,31 @@ const typeLabel = (t: TemplateInstance) => {
   return m[t.meta?.templateType ?? ''] ?? '模板'
 }
 
-function useTpl(t: TemplateInstance) {
+async function useTpl(t: TemplateInstance) {
   // PX-02（FR-10 一律二次确认）：只要存在有未另存改动的编辑实例，从库页换模板就确认；
   // 不再依赖 page === 'editor'（库页时 page 已是 'library'，原条件恒假导致静默覆盖）。
+  // PX-05：确认走统一确认弹窗，按钮写明「替换」。
   if (editor.dirty && editor.current) {
-    if (!confirm('换一张模板会替换当前的表格，未另存的修改会丢失。确定继续？')) return
+    const go = await confirmAction({
+      title: '替换当前的表格',
+      message: '换一张模板会替换当前的表格，未另存的修改会丢失。确定继续？',
+      confirmText: '替换',
+      danger: true,
+    })
+    if (!go) return
   }
   editor.openTemplate(t)
 }
 
 /** PX-01：删除「我的模板」，二次确认后经 repo 删除并刷新列表 */
 async function removeTpl(t: TemplateInstance) {
-  if (!confirm('删除后这张模板就没了，确定删除？')) return
+  const go = await confirmAction({
+    title: '删除模板',
+    message: '删除后这张模板就没了，确定删除？',
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!go) return
   const ok = await library.removeTemplate(t.templateId)
   if (ok) editor.showToast('已删除')
   else editor.showToast(errorCopy('TEMPLATE_DELETE_FAIL'))
@@ -152,6 +180,9 @@ async function removeTpl(t: TemplateInstance) {
         </article>
       </div>
     </section>
+
+    <!-- PX-05：统一确认弹窗（删除模板 / 换模板替换） -->
+    <ConfirmDialog />
   </div>
 </template>
 

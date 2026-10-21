@@ -11,6 +11,8 @@ import PropertyPanel from '../editor/PropertyPanel.vue'
 import SaveTemplateDialog from '../editor/SaveTemplateDialog.vue'
 import ExportDrawer from '../export/ExportDrawer.vue'
 import PtButton from '../ui/PtButton.vue'
+import ConfirmDialog from '../ui/ConfirmDialog.vue'
+import { confirmAction } from '../ui/confirm'
 import { pointerOnlySensors, readBlockType } from '../dnd/dndKitAdapter'
 import { usePlaceSession } from '../dnd/placeSession'
 import { computeDropTargets, estimateCellRects, resolveDrop } from '../dnd/slotDnd'
@@ -54,10 +56,16 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onGlobalKey)
 })
 
-function back() {
+async function back() {
   if (editor.dirty) {
-    const ok = confirm('离开后，没另存为模板的改动只保留最近一份，可下次打开时继续')
-    if (!ok) return
+    // PX-05：确认走统一确认弹窗，按钮写明「离开」而非歧义的「确定」
+    const go = await confirmAction({
+      title: '离开编辑台',
+      message: '离开后，没另存为模板的改动只保留最近一份，可下次打开时继续',
+      confirmText: '离开',
+      danger: true,
+    })
+    if (!go) return
   }
   session.cancelPlace()
   editor.goLibrary()
@@ -79,7 +87,13 @@ async function onSave(name: string) {
 }
 
 async function discardRestore() {
-  if (!confirm('不恢复，将重新选模板，当前草稿会被丢弃。确定？')) return
+  const go = await confirmAction({
+    title: '丢弃当前草稿',
+    message: '不恢复，将重新选模板，当前草稿会被丢弃。确定？',
+    confirmText: '丢弃，重新选模板',
+    danger: true,
+  })
+  if (!go) return
   await editor.discardRestored()
 }
 
@@ -165,6 +179,8 @@ function onDragEnd(event: {
         @save="onSave"
       />
       <ExportDrawer v-model:open="exportOpen" />
+      <!-- PX-05：统一确认弹窗（离开编辑台 / 丢弃草稿） -->
+      <ConfirmDialog />
     </div>
 
     <DragOverlay>

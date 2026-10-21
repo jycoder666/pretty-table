@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import {
   BLANK_V1,
   cloneInstance,
@@ -183,46 +183,55 @@ describe('PropertyPanel · 结构编辑区（FR-C3 / Q-9）', () => {
     expect(addColBtn.attributes('disabled')).toBeDefined()
   })
 
-  it('删非空行：先弹二次确认；确认后删行，取消则保留', async () => {
+  it('删非空行：先弹统一确认弹窗；确认后删行，取消则保留（PX-05）', async () => {
     const { editor, wrapper } = await setup()
     const sid = bodySlot(editor)
     editor.setSlotText(sid, '重要数据')
     editor.selectionRange = { start: [3, 1], end: [3, 1] }
-    const confirmSpy = vi.spyOn(window, 'confirm')
     const rowsBefore = editor.current!.layout.slotGrid!.length
 
-    confirmSpy.mockReturnValue(false)
+    // 取消：弹窗出现且文案照搬原文，行保留
     await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
-    expect(confirmSpy).toHaveBeenCalledOnce()
-    expect(String(confirmSpy.mock.calls[0]![0])).toContain('内容会一起删掉')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="confirm-message"]').text()).toContain('内容会一起删掉')
+    await wrapper.find('[data-testid="confirm-cancel"]').trigger('click')
+    await flushPromises()
     expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore)
 
-    confirmSpy.mockReturnValue(true)
+    // 确认：删行
     await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="confirm-ok"]').trigger('click')
+    await flushPromises()
     expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore - 1)
   })
 
   it('删空行不弹确认；删表头行被壳层拦截（不发意图）', async () => {
     const { editor, wrapper } = await setup()
-    const confirmSpy = vi.spyOn(window, 'confirm')
     // 未选中 → 删最后一行（空行）→ 无确认直接删
     await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
-    expect(confirmSpy).not.toHaveBeenCalled()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(false)
     expect(editor.current!.layout.slotGrid!.length).toBe(4)
     // 选中表头行 → 壳层守卫直接返回
     editor.selectionRange = { start: [0, 0], end: [0, 0] }
     await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(false)
     expect(editor.current!.layout.slotGrid!.length).toBe(4)
   })
 
-  it('删列同样走 hasContentInCol 确认；确认文案含列号', async () => {
+  it('删列同样走 hasContentInCol 确认；确认文案含列号（PX-05）', async () => {
     const { editor, wrapper } = await setup()
     const sid = bodySlot(editor)
     editor.setSlotText(sid, '列内容')
     editor.selectionRange = { start: [3, 1], end: [3, 1] }
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     await wrapper.findAll('button').find((b) => b.text() === '删列')!.trigger('click')
-    expect(String(confirmSpy.mock.calls[0]![0])).toContain('第 2 列')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="confirm-message"]').text()).toContain('第 2 列')
+    await wrapper.find('[data-testid="confirm-ok"]').trigger('click')
+    await flushPromises()
     expect(editor.current!.layout.colCount).toBe(3)
   })
 
@@ -239,13 +248,15 @@ describe('PropertyPanel · 结构编辑区（FR-C3 / Q-9）', () => {
     const withStructMerge = cloneInstance(BLANK_V1)
     withStructMerge.layout.structuralMerges = [{ start: [1, 0], end: [1, 1] }]
     const { editor, wrapper } = await setup(withStructMerge)
-    // 行内有内容 → 删行前会弹二次确认
+    // 行内有内容 → 删行前会弹统一确认弹窗（PX-05）
     const topLeft = editor.current!.layout.slotGrid![1]![0]!
     editor.setSlotText(topLeft, '占位')
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     editor.selectionRange = { start: [1, 0], end: [1, 0] }
     await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
-    expect(confirmSpy).toHaveBeenCalledOnce()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="confirm-ok"]').trigger('click')
+    await flushPromises()
     expect(editor.toast).toContain('合并或内容')
   })
 })

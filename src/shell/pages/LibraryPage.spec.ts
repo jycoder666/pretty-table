@@ -51,9 +51,16 @@ function useBtnAt(wrapper: ReturnType<typeof mount>, n: number) {
   return wrapper.findAll('button').filter((b) => b.text().includes('使用此模板'))[n]!
 }
 
-describe('LibraryPage · 换模板替换确认（PX-02 / FR-10）', () => {
-  it('编辑台有未保存改动时换模板：弹确认，确认后切换', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+/** PX-05：确认改走统一确认弹窗；helper 等弹窗出现并点「确认 / 取消」 */
+async function answerConfirm(wrapper: ReturnType<typeof mount>, yes: boolean) {
+  const btn = wrapper.find(`[data-testid="confirm-${yes ? 'ok' : 'cancel'}"]`)
+  expect(btn.exists()).toBe(true)
+  await btn.trigger('click')
+  await flushPromises()
+}
+
+describe('LibraryPage · 换模板替换确认（PX-02 / FR-10 / PX-05）', () => {
+  it('编辑台有未保存改动时换模板：弹确认弹窗，确认后切换', async () => {
     const editor = useEditorStore()
     editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
     editor.setSlotText('obj.name.a', '未保存的方案')
@@ -62,31 +69,33 @@ describe('LibraryPage · 换模板替换确认（PX-02 / FR-10）', () => {
     // blank 居首后：点第 3 张预设，避免与当前打开的 compare-alpha-v1 同模板
     await useBtnAt(wrapper, 2).trigger('click')
     await flushPromises()
-    expect(confirmSpy).toHaveBeenCalledTimes(1)
-    expect(confirmSpy.mock.calls[0]?.[0]).toContain('未另存的修改会丢失')
+    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="confirm-message"]').text()).toContain('未另存的修改会丢失')
+    expect(wrapper.find('[data-testid="confirm-ok"]').text()).toBe('替换')
+    await answerConfirm(wrapper, true)
+    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(false)
     expect(editor.current?.templateId).not.toBe(COMPARE_ALPHA_V1.templateId)
   })
 
   it('有改动但取消确认：不切换', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
     const editor = useEditorStore()
     editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
     editor.setSlotText('obj.name.a', '未保存的方案')
     const wrapper = await mountPage()
     await useBtnAt(wrapper, 2).trigger('click')
     await flushPromises()
+    await answerConfirm(wrapper, false)
     expect(editor.current?.templateId).toBe(COMPARE_ALPHA_V1.templateId)
   })
 
   it('无未保存改动：直接切换，不弹确认', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const editor = useEditorStore()
     editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
     editor.markSaved()
     const wrapper = await mountPage()
     await useBtnAt(wrapper, 2).trigger('click')
     await flushPromises()
-    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(false)
     expect(editor.current?.templateId).not.toBe(COMPARE_ALPHA_V1.templateId)
   })
 })
@@ -103,39 +112,41 @@ describe('LibraryPage · 我的模板删除入口（PX-01）', () => {
   })
 
   it('确认后删除成功：repo 删除 + 列表刷新 + toast「已删除」', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const editor = useEditorStore()
     listMock.mockResolvedValueOnce([fakeMine('user-x1')]).mockResolvedValue([])
     const wrapper = await mountPage()
     const delBtn = wrapper.findAll('button').find((b) => b.text().includes('删除'))!
     await delBtn.trigger('click')
     await flushPromises()
+    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="confirm-ok"]').text()).toBe('删除')
+    await answerConfirm(wrapper, true)
     expect(removeMock).toHaveBeenCalledWith('user-x1')
     expect(useLibraryStore().mine).toHaveLength(0)
     expect(editor.toast).toBe('已删除')
   })
 
   it('取消确认：不删除', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
     const library = useLibraryStore()
     listMock.mockResolvedValue([fakeMine('user-x1')])
     const wrapper = await mountPage()
     const delBtn = wrapper.findAll('button').find((b) => b.text().includes('删除'))!
     await delBtn.trigger('click')
     await flushPromises()
+    await answerConfirm(wrapper, false)
     expect(removeMock).not.toHaveBeenCalled()
     expect(library.mine).toHaveLength(1)
   })
 
   it('删除失败（故障注入 TEMPLATE_DELETE_FAIL）：toast 白话文案，不露错误码', async () => {
     removeMock.mockRejectedValue({ code: 'TEMPLATE_DELETE_FAIL', message: 'remove fail' })
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const editor = useEditorStore()
     listMock.mockResolvedValue([fakeMine('user-x1')])
     const wrapper = await mountPage()
     const delBtn = wrapper.findAll('button').find((b) => b.text().includes('删除'))!
     await delBtn.trigger('click')
     await flushPromises()
+    await answerConfirm(wrapper, true)
     expect(removeMock).toHaveBeenCalledWith('user-x1')
     expect(editor.toast).toBe('删除失败，请重试')
     expect(editor.toast).not.toContain('TEMPLATE_DELETE_FAIL')
@@ -203,13 +214,16 @@ describe('LibraryPage · 新建空白表专属卡与向导（FR-C6 / Q-10 / T05�
     const editor = useEditorStore()
     editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
     editor.setSlotText('obj.name.a', '未保存')
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const wrapper = await openWizard()
     await wrapper.find('[data-testid="blank-create"]').trigger('click')
-    expect(confirmSpy).toHaveBeenCalledOnce()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="confirm-message"]').text()).toContain('未另存的修改会丢失')
+    await answerConfirm(wrapper, false)
     expect(editor.current?.templateId).toBe(COMPARE_ALPHA_V1.templateId)
-    confirmSpy.mockReturnValue(true)
     await wrapper.find('[data-testid="blank-create"]').trigger('click')
+    await flushPromises()
+    await answerConfirm(wrapper, true)
     expect(editor.current?.meta?.templateType).toBe('blank')
   })
 })
