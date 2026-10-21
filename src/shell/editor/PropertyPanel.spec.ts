@@ -118,19 +118,16 @@ describe('PropertyPanel · 颜色自定义区（FR-C1）', () => {
     const base = resolveTheme(editor.current!.themeId).palette
     const dots = wrapper.findAll('[data-testid="color-field-primary"] .dot')
     expect(dots.length).toBeGreaterThanOrEqual(8)
+    // E4：色点不再带裸 title，hex 从内联 CSS 变量 --c 读取
+    const hexOf = (d: { element: Element }) =>
+      (d.element as HTMLElement).style.getPropertyValue('--c').toLowerCase()
     // 点一个 ≠ 主题预设的色 → 成为覆盖
-    const other = dots.find(
-      (d) => (d.element as HTMLButtonElement).getAttribute('title')!.toLowerCase() !== base.primary.toLowerCase(),
-    )!
-    const otherHex = (other.element as HTMLButtonElement).getAttribute('title')!
+    const other = dots.find((d) => hexOf(d) !== base.primary.toLowerCase())!
+    const otherHex = hexOf(other)
     await other.trigger('click')
-    expect(roleColorOf(editor.current, 'primary')).toBe(otherHex.toLowerCase())
+    expect(roleColorOf(editor.current, 'primary')).toBe(otherHex)
     // 点回主题预设色 → setThemeToken 同值裁剪 → 回到未覆盖
-    const presetDot = dots.find(
-      (d) =>
-        (d.element as HTMLButtonElement).getAttribute('title')!.toLowerCase() ===
-        base.primary.toLowerCase(),
-    )
+    const presetDot = dots.find((d) => hexOf(d) === base.primary.toLowerCase())
     await presetDot!.trigger('click')
     expect(isRoleOverridden(editor.current, 'primary')).toBe(false)
     expect(roleColorOf(editor.current, 'primary')).toBe(base.primary)
@@ -604,5 +601,50 @@ describe('PropertyPanel · 区块样式档位（R-4 / QA Bug #2）', () => {
     expect(buttons.map((b) => b.text())).toEqual(['常规', '略大'])
     await buttons[1]!.trigger('click')
     expect(editor.current!.blocks.find((b) => b.id === blk.id)!.props!.styleTier).toBe(2)
+  })
+})
+
+describe('PropertyPanel · 主题切换 pastePending 禁用（PX-15）', () => {
+  async function setupWithPreview() {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const editor = useEditorStore()
+    editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
+    const wrapper = mount(PropertyPanel, { global: { plugins: [pinia] } })
+    // 与 EditorToolbar.spec 同口径：进入粘贴预览期（可写槽作锚点）
+    editor.selectedSlotId = 'row.3.val.a'
+    editor.pasteStart({ text: '1\t2\n3\t4' })
+    expect(editor.pastePending).toBe(true)
+    await flushPromises()
+    return { editor, wrapper }
+  }
+
+  it('粘贴预览期：三个主题按钮与斑马纹开关禁用，tooltip 说明原因', async () => {
+    const { editor, wrapper } = await setupWithPreview()
+    const themeBtns = wrapper.findAll('.theme-btn')
+    expect(themeBtns.length).toBe(3)
+    for (const b of themeBtns) expect(b.attributes('disabled')).toBeDefined()
+    const zebra = wrapper.find('.zebra input[type="checkbox"]')
+    expect(zebra.attributes('disabled')).toBeDefined()
+    // tooltip 说明与 pastePending 其他禁用态同源（GC-25：人话，不露状态码）
+    expect(wrapper.text()).not.toContain('pastePending')
+    editor.cancelPaste()
+  })
+
+  it('非预览期：主题按钮与斑马纹开关可用（行为不回退）', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const editor = useEditorStore()
+    editor.openTemplate(cloneInstance(COMPARE_ALPHA_V1))
+    const wrapper = mount(PropertyPanel, { global: { plugins: [pinia] } })
+    for (const b of wrapper.findAll('.theme-btn')) {
+      expect(b.attributes('disabled')).toBeUndefined()
+    }
+    expect(wrapper.find('.zebra input[type="checkbox"]').attributes('disabled')).toBeUndefined()
+    // E4 顺带核对：结构区四个按钮迁移到 PtTooltip 后不留裸 title
+    for (const label of ['加一行', '删行', '加一列', '删列']) {
+      const btn = wrapper.findAll('button').find((b) => b.text().trim() === label)!
+      expect(btn.attributes('title')).toBeUndefined()
+    }
   })
 })

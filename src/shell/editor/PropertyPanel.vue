@@ -585,12 +585,18 @@ async function removeBlock() {
         <div class="section">
           <h4>主题</h4>
           <div class="themes">
-            <PtTooltip v-for="id in themes" :key="id" :text="`切换到${editor.themeLabel(id)}`">
+            <!-- PX-15：粘贴预览期禁用主题切换（置灰 + tooltip 说明，与 pastePending 其他禁用态同源） -->
+            <PtTooltip
+              v-for="id in themes"
+              :key="id"
+              :text="editor.pastePending ? '粘贴预览期间不能切换主题，先确认或取消粘贴' : `切换到${editor.themeLabel(id)}`"
+            >
               <button
                 type="button"
                 class="theme-btn"
                 :class="{ on: editor.current?.themeId === id }"
                 :style="{ '--swatch': themeSwatch(id) }"
+                :disabled="editor.pastePending"
                 @click="editor.setTheme(id)"
               >
                 <i />
@@ -598,14 +604,17 @@ async function removeBlock() {
               </button>
             </PtTooltip>
           </div>
-          <label class="zebra">
-            <input
-              type="checkbox"
-              :checked="editor.current?.zebraOn !== false"
-              @change="editor.setZebra(($event.target as HTMLInputElement).checked)"
-            />
-            斑马纹
-          </label>
+          <PtTooltip :text="editor.pastePending ? '粘贴预览期间不能切换斑马纹' : '切换表格斑马纹'">
+            <label class="zebra">
+              <input
+                type="checkbox"
+                :checked="editor.current?.zebraOn !== false"
+                :disabled="editor.pastePending"
+                @change="editor.setZebra(($event.target as HTMLInputElement).checked)"
+              />
+              斑马纹
+            </label>
+          </PtTooltip>
         </div>
 
         <!-- 颜色自定义（FR-C1）：改的是当前主题的角色色，随改随生效 -->
@@ -693,40 +702,45 @@ async function removeBlock() {
           <h4>结构</h4>
           <p class="hint">删行/删列删的是选中格所在的行列；未选中时删最后一行/列。</p>
           <div class="row">
-            <PtButton
-              variant="ghost"
-              :disabled="!canAddRowNow || editor.pastePending"
-              title="在表格末尾加一行"
-              @click="addRow"
-            >
-              加一行
-            </PtButton>
-            <PtButton
-              variant="ghost"
-              :disabled="editor.pastePending"
-              :title="`删除第 ${targetRow + 1} 行`"
-              @click="removeRow"
-            >
-              删行
-            </PtButton>
+            <!-- E4：原裸 title 迁移到 PtTooltip（R-5 统一 tooltip） -->
+            <PtTooltip text="在表格末尾加一行">
+              <PtButton
+                variant="ghost"
+                :disabled="!canAddRowNow || editor.pastePending"
+                @click="addRow"
+              >
+                加一行
+              </PtButton>
+            </PtTooltip>
+            <PtTooltip :text="`删除第 ${targetRow + 1} 行`">
+              <PtButton
+                variant="ghost"
+                :disabled="editor.pastePending"
+                @click="removeRow"
+              >
+                删行
+              </PtButton>
+            </PtTooltip>
           </div>
           <div class="row">
-            <PtButton
-              variant="ghost"
-              :disabled="!canAddColNow || editor.pastePending"
-              title="在表格末尾加一列"
-              @click="addCol"
-            >
-              加一列
-            </PtButton>
-            <PtButton
-              variant="ghost"
-              :disabled="editor.pastePending"
-              :title="`删除第 ${targetCol + 1} 列`"
-              @click="removeCol"
-            >
-              删列
-            </PtButton>
+            <PtTooltip text="在表格末尾加一列">
+              <PtButton
+                variant="ghost"
+                :disabled="!canAddColNow || editor.pastePending"
+                @click="addCol"
+              >
+                加一列
+              </PtButton>
+            </PtTooltip>
+            <PtTooltip :text="`删除第 ${targetCol + 1} 列`">
+              <PtButton
+                variant="ghost"
+                :disabled="editor.pastePending"
+                @click="removeCol"
+              >
+                删列
+              </PtButton>
+            </PtTooltip>
           </div>
           <div class="field">
             <span>表头层数</span>
@@ -882,6 +896,11 @@ h4 {
 .theme-btn.on {
   border-color: var(--pt-primary);
   background: var(--pt-tag);
+}
+/* PX-15：粘贴预览期主题按钮置灰 */
+.theme-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .theme-btn i {
   width: 18px;

@@ -91,7 +91,7 @@ function onReset() {
         :class="{ on: hex.toLowerCase() === value.toLowerCase() }"
         :style="{ '--c': hex }"
         :disabled="disabled"
-        :title="hex"
+        :aria-label="`${label} ${hex}`"
         @click="onSwatch(hex)"
       />
     </div>

@@ -50,10 +50,10 @@ function onKeydown(e: KeyboardEvent) {
     role="button"
     :aria-disabled="!enabled"
     :aria-describedby="`hint-${type}`"
-    :title="hint"
     @click="onClick"
     @keydown="onKeydown"
   >
+    <!-- E4：裸 title 删除——提示信息已由 aria-describedby + sr-only hint 覆盖，title 属重复 -->
     <!-- R-1 拖拽把手：整卡仍可拖（保留现有手势，不缩热区），把手提供视觉锚点 -->
     <span class="handle" role="img" aria-label="拖动区块">⠿</span>
     {{ label }}
