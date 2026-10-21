@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useLibraryStore } from '../stores/library'
 import { useEditorStore } from '../stores/editor'
 import { createBlankInstance } from '@/core'
@@ -17,6 +17,55 @@ const editor = useEditorStore()
 onMounted(() => {
   void library.refreshMine()
 })
+
+// ── FR-20 类型筛选（增强期交互口径 §2.1）：chips 同时过滤系统预设与我的模板两段 ──
+type FilterType = 'compare' | 'detail' | 'pricing' | 'matrix'
+const FILTER_CHIPS: { type: FilterType | ''; label: string }[] = [
+  { type: '', label: '全部' },
+  { type: 'compare', label: '多列对比' },
+  { type: 'detail', label: '单主体明细' },
+  { type: 'pricing', label: '价目清单' },
+  { type: 'matrix', label: '宽表矩阵' },
+]
+const filter = ref<FilterType | ''>('')
+
+/** 有模板才显示 Chip（UX-CAT-d）：类型存在于系统预设或我的模板中才出 chip */
+const visibleChips = computed(() =>
+  FILTER_CHIPS.filter(
+    (c) =>
+      c.type === '' ||
+      library.presets.some((t) => t.meta?.templateType === c.type) ||
+      library.mine.some((t) => t.meta?.templateType === c.type),
+  ),
+)
+
+const filteredPresets = computed(() =>
+  filter.value === ''
+    ? library.presets
+    : library.presets.filter((t) => t.meta?.templateType === filter.value),
+)
+const filteredMine = computed(() =>
+  filter.value === ''
+    ? library.mine
+    : library.mine.filter((t) => t.meta?.templateType === filter.value),
+)
+
+/** 当前筛选类型的全称（用于「我的模板」按类型空态文案） */
+const filterLabel = computed(
+  () => FILTER_CHIPS.find((c) => c.type === filter.value)?.label ?? '',
+)
+
+/** FR-20 §2.2 防误解小字：价目「不会自动计算」、矩阵「列多时左右滑动」；其余类型无小字 */
+function typeHint(t: TemplateInstance): string | null {
+  switch (t.meta?.templateType) {
+    case 'pricing':
+      return '行数由模板定好；小计请自己填写，不会自动计算'
+    case 'matrix':
+      return '列多时左右滑动，首列固定'
+    default:
+      return null
+  }
+}
 
 // ── 新建空白表（FR-C6 / Q-10 / T05）：专属卡 + 最小向导，默认 5×4 / 1 层 ──
 const blankOpen = ref(false)
@@ -118,11 +167,33 @@ async function removeTpl(t: TemplateInstance) {
       <p>选一张模板，填字换皮，复制 HTML 或导出 PNG。数据只存在本机浏览器。</p>
     </header>
 
+    <!-- FR-20 §2.1：类型筛选 chips（筛选同时作用于系统预设与我的模板两段） -->
+    <nav class="filters" data-testid="type-filter" aria-label="按模板类型筛选">
+      <button
+        v-for="c in visibleChips"
+        :key="c.type || 'all'"
+        type="button"
+        class="chip fchip"
+        :class="{ active: filter === c.type }"
+        :data-testid="`filter-chip-${c.type || 'all'}`"
+        @click.stop="filter = c.type"
+      >
+        {{ c.label }}
+      </button>
+    </nav>
+
     <section>
       <h2>系统预设</h2>
-      <div class="grid">
-        <!-- 新建空白表专属卡（FR-C6 / Q-10）：区别于普通预设卡，带最小向导 -->
-        <article class="card blank-card" data-testid="blank-card">
+      <!-- FR-20 §2.3：筛选无结果（系统段）→ 提示 + 清空筛选入口，非报错样式 -->
+      <p v-if="!filteredPresets.length" class="empty" data-testid="preset-type-empty">
+        没有这类模板，试试「全部」
+        <PtButton variant="ghost" type="button" data-testid="clear-filter" @click.stop="filter = ''">
+          清空筛选
+        </PtButton>
+      </p>
+      <div v-else class="grid">
+        <!-- 新建空白表专属卡（FR-C6 / Q-10）：区别于普通预设卡，带最小向导；按类型筛选时隐藏 -->
+        <article v-if="filter === ''" class="card blank-card" data-testid="blank-card">
           <span class="chip">空白</span>
           <h3>新建空白表</h3>
           <p>不套模板，从一张空表开始填。</p>
@@ -172,12 +243,14 @@ async function removeTpl(t: TemplateInstance) {
           </div>
         </article>
 
-        <article v-for="t in library.presets" :key="t.templateId" class="card">
+        <article v-for="t in filteredPresets" :key="t.templateId" class="card">
           <!-- PX-06：模板卡缩略图（纯 CSS 骨架示意，固定宽高比） -->
           <TemplateThumb :instance="t" />
           <span class="chip">{{ typeLabel(t) }}</span>
           <h3>{{ t.meta?.displayName }}</h3>
           <p>{{ t.meta?.description }}</p>
+          <!-- FR-20 §2.2：防误解小字（价目「不会自动计算」/ 矩阵「首列固定」） -->
+          <p v-if="typeHint(t)" class="hint" data-testid="tpl-hint">{{ typeHint(t) }}</p>
           <PtButton type="button" @click.stop="() => useTpl(t)">使用此模板</PtButton>
         </article>
       </div>
@@ -189,9 +262,13 @@ async function removeTpl(t: TemplateInstance) {
         {{ library.listError }}
         <PtButton variant="ghost" type="button" @click.stop="() => library.refreshMine()">重试</PtButton>
       </p>
+      <!-- FR-20 §2.3：我的模板该类为空 → 按类型空态文案（筛选中时优先于通用空态；非报错样式） -->
+      <p v-else-if="filter !== '' && !filteredMine.length" class="empty" data-testid="mine-type-empty">
+        还没有存过{{ filterLabel }}模板。选一张系统模板改好后，点「另存为模板」就会出现在这里
+      </p>
       <p v-else-if="!library.mine.length" class="empty">还没有我的模板。在编辑台「另存为模板」后会出现在这里。</p>
       <div v-else class="grid">
-        <article v-for="t in library.mine" :key="t.templateId" class="card">
+        <article v-for="t in filteredMine" :key="t.templateId" class="card">
           <!-- PX-06：我的模板卡同款缩略图 -->
           <TemplateThumb :instance="t" />
           <!-- PX-10：类型标识（复用系统模板 typeLabel）+「我的」标识 -->
@@ -201,6 +278,8 @@ async function removeTpl(t: TemplateInstance) {
           </div>
           <h3>{{ t.meta?.displayName || '未命名模板' }}</h3>
           <p>{{ t.meta?.savedAt ? new Date(t.meta.savedAt).toLocaleString() : '' }}</p>
+          <!-- FR-20 §2.2：防误解小字同源（我的模板卡同样提示） -->
+          <p v-if="typeHint(t)" class="hint" data-testid="tpl-hint">{{ typeHint(t) }}</p>
           <div class="actions">
             <PtButton type="button" @click.stop="() => useTpl(t)">使用此模板</PtButton>
             <!-- PX-10：重命名入口 -->
@@ -309,6 +388,26 @@ h2 {
   background: var(--pt-tag);
   color: var(--pt-tag-text);
 }
+/* FR-20 §2.1：类型筛选 chips（复用 chip 药丸视觉，按钮态 + 选中态） */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.fchip {
+  align-self: auto;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid var(--pt-border);
+  cursor: pointer;
+}
+.fchip.active {
+  background: var(--pt-primary);
+  border-color: var(--pt-primary);
+  color: #fff;
+}
 .chip.mine {
   background: var(--pt-emphasis-soft);
   color: var(--pt-emphasis);
@@ -329,5 +428,10 @@ h2 {
 }
 .err {
   color: var(--pt-emphasis);
+}
+/* FR-20 §2.2：卡片防误解小字（比描述更弱一级） */
+.hint {
+  font-size: 12px;
+  color: #9ca3af;
 }
 </style>

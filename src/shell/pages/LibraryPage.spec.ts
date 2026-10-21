@@ -323,3 +323,76 @@ describe('LibraryPage · 我的模板卡类型标识与重命名（PX-10）', ()
     expect(editor.toast).not.toContain('TEMPLATE_SAVE_FAIL')
   })
 })
+
+describe('LibraryPage · FR-20 类型筛选（TC-070）：chips / 防误解小字 / 按类型空态', () => {
+  /** 点第 n 个筛选 chip（顺序：全部/多列对比/单主体明细/价目清单/宽表矩阵） */
+  async function clickChip(wrapper: ReturnType<typeof mount>, testid: string) {
+    await wrapper.find(`[data-testid="filter-chip-${testid}"]`).trigger('click')
+    await flushPromises()
+  }
+
+  it('chips 顺序：全部/多列对比/单主体明细/价目清单/宽表矩阵，默认「全部」选中', async () => {
+    const wrapper = await mountPage()
+    const chips = wrapper.findAll('[data-testid="type-filter"] .fchip')
+    expect(chips.map((c) => c.text().trim())).toEqual([
+      '全部',
+      '多列对比',
+      '单主体明细',
+      '价目清单',
+      '宽表矩阵',
+    ])
+    expect(
+      (wrapper.find('[data-testid="filter-chip-all"]').element as HTMLButtonElement).classList.contains(
+        'active',
+      ),
+    ).toBe(true)
+  })
+
+  it('点「价目清单」chip：系统段只剩价目卡、空白卡隐藏；我的模板段按类型空态', async () => {
+    listMock.mockResolvedValue([fakeMine('user-cmp')]) // 我的模板是对比类
+    const wrapper = await mountPage()
+    await clickChip(wrapper, 'pricing')
+    const presetSection = wrapper.findAll('section')[0]!
+    const names = presetSection.findAll('article.card h3').map((h) => h.text())
+    expect(names).toEqual(['价目清单'])
+    // 空白专属卡在类型筛选下隐藏
+    expect(wrapper.find('[data-testid="blank-card"]').exists()).toBe(false)
+    // 我的模板段：该类为空 → 按类型空态（非报错样式）
+    const mineEmpty = wrapper.find('[data-testid="mine-type-empty"]')
+    expect(mineEmpty.exists()).toBe(true)
+    expect(mineEmpty.text()).toContain('还没有存过价目清单模板')
+    expect(mineEmpty.text()).toContain('另存为模板')
+    // 「清空筛选」入口只在系统段空态出现（系统段有价目卡，不出现）
+    expect(wrapper.find('[data-testid="clear-filter"]').exists()).toBe(false)
+  })
+
+  it('系统段筛选无结果：「没有这类模板」+ 清空筛选，点击后回「全部」', async () => {
+    const library = useLibraryStore()
+    // 构造一个 chips 可见但系统段无结果的类型：我的模板有 compare，仓库临时移除系统预设
+    library.presets = library.presets.filter((t) => t.meta?.templateType !== 'compare')
+    listMock.mockResolvedValue([fakeMine('user-cmp')])
+    const wrapper = await mountPage()
+    await clickChip(wrapper, 'compare')
+    const empty = wrapper.find('[data-testid="preset-type-empty"]')
+    expect(empty.exists()).toBe(true)
+    expect(empty.text()).toContain('没有这类模板')
+    expect(wrapper.find('[data-testid="clear-filter"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="clear-filter"]').trigger('click')
+    await flushPromises()
+    expect(
+      (wrapper.find('[data-testid="filter-chip-all"]').element as HTMLButtonElement).classList.contains(
+        'active',
+      ),
+    ).toBe(true)
+    // 回「全部」后价目/矩阵卡与空白卡恢复
+    expect(wrapper.find('[data-testid="blank-card"]').exists()).toBe(true)
+  })
+
+  it('防误解小字：价目卡「不会自动计算」、矩阵卡「首列固定」，对比/明细卡无小字', async () => {
+    const wrapper = await mountPage()
+    const hints = wrapper.findAll('[data-testid="tpl-hint"]').map((p) => p.text())
+    expect(hints.some((h) => h.includes('行数由模板定好；小计请自己填写，不会自动计算'))).toBe(true)
+    expect(hints.some((h) => h.includes('列多时左右滑动，首列固定'))).toBe(true)
+    expect(hints).toHaveLength(2) // 仅价目 + 矩阵两类有防误解小字
+  })
+})

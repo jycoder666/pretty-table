@@ -18,7 +18,7 @@ import {
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
 
 test.describe('TC-PT-070 · 价目/矩阵入库：Chip、卡片、防误解小字、空态', () => {
-  test('五系统模板 + 空白卡入库、类型 chip、我的模板空态（类型筛选缺失记偏差/FAIL 项见报告）', async ({
+  test('五系统模板 + 空白卡入库、卡片类型 chip、我的模板空态（FR-20 系统模板与卡片部分）', async ({
     page,
   }) => {
     await page.goto('/')
@@ -31,11 +31,41 @@ test.describe('TC-PT-070 · 价目/矩阵入库：Chip、卡片、防误解小�
     }
     // 卡片小字（meta.description）存在
     const price = page.locator('article.card', { has: page.locator('h3', { hasText: '价目清单' }) })
-    await expect(price.locator('p')).toContainText('报价')
-    // 我的模板空态（通用文案）
+    await expect(price.locator('p').first()).toContainText('报价')
+    // 我的模板空态（通用文案，未筛选时）
     await expect(page.getByText('还没有我的模板')).toBeVisible()
-    // 类型筛选 Chip（全部/多列对比/单主体明细/价目清单/宽表矩阵）未实现 → 偏差
-    await expect(page.getByRole('button', { name: '价目清单', exact: true })).toHaveCount(0)
+  })
+
+  // FR-20 §2.1-2.3 类型筛选（TC-070 原 FAIL 项，修复后转真实断言）
+  test('类型筛选 chips、防误解小字、按类型空态、清空筛选', async ({ page }) => {
+    await page.goto('/')
+    // Chip 顺序与文案（规格 §2.1）
+    const chips = page.locator('[data-testid="type-filter"] button')
+    await expect(chips).toHaveText(['全部', '多列对比', '单主体明细', '价目清单', '宽表矩阵'])
+    // 防误解小字（§2.2）：价目「不会自动计算」、矩阵「列多时左右滑动，首列固定」
+    await expect(
+      page.locator('article.card', { has: page.locator('h3', { hasText: '价目清单' }) }),
+    ).toContainText('行数由模板定好；小计请自己填写，不会自动计算')
+    await expect(
+      page.locator('article.card', { has: page.locator('h3', { hasText: '功能矩阵表' }) }),
+    ).toContainText('列多时左右滑动，首列固定')
+    // 点「价目清单」Chip：系统段只剩价目卡、空白卡隐藏；我的模板段按类型空态（§2.3）
+    await page.getByRole('button', { name: '价目清单', exact: true }).click()
+    const priceCard = page.locator('article.card', {
+      has: page.locator('h3', { hasText: '价目清单' }),
+    })
+    await expect(priceCard).toBeVisible()
+    await expect(
+      page.locator('article.card', { has: page.locator('h3', { hasText: '多列对比表' }) }),
+    ).toHaveCount(0)
+    await expect(page.locator('[data-testid="blank-card"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="mine-type-empty"]')).toContainText(
+      '还没有存过价目清单模板',
+    )
+    // 回「全部」：卡片与空白卡恢复、通用空态回归
+    await page.getByRole('button', { name: '全部', exact: true }).click()
+    await expect(page.locator('[data-testid="blank-card"]')).toBeVisible()
+    await expect(page.getByText('还没有我的模板')).toBeVisible()
   })
 })
 
