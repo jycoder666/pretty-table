@@ -54,9 +54,12 @@ export function confirmAction(opts: ConfirmOptions): Promise<boolean> {
     confirmState.confirmText = opts.confirmText ?? '确认'
     confirmState.cancelText = opts.cancelText ?? '取消'
     confirmState.danger = opts.danger ?? false
-    // 焦点归还锚点：打开瞬间的 document.activeElement（触发按钮）；不可聚焦时为 null
+    // 焦点归还锚点：打开瞬间的 document.activeElement（触发按钮）。
+    // body 持焦 =「无明确触发元素」（如点击遮罩外区域后），记 null，关闭时安全跳过归还
     confirmState.returnFocusEl =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null
+      document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+        ? document.activeElement
+        : null
     confirmState.resolver = resolve
     confirmState.open = true
   })

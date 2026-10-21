@@ -112,7 +112,7 @@ describe('ConfirmDialog · 焦点管理', () => {
     wrapper.unmount()
   })
 
-  it('Esc 关闭同样归还焦点；触发元素未聚焦时打开聚焦确认按钮不抛错', async () => {
+  it('Esc 关闭同样归还焦点', async () => {
     const wrapper = mountAttached()
     const trigger = document.createElement('button')
     document.body.appendChild(trigger)
@@ -123,11 +123,24 @@ describe('ConfirmDialog · 焦点管理', () => {
     expect(await p).toBe(false)
     await wrapper.vm.$nextTick()
     expect(document.activeElement).toBe(trigger)
-    // 触发元素无焦点（activeElement = body）→ returnFocusEl 为 null，归还路径安全跳过
-    const p2 = confirmAction({ title: 'T', message: 'M', confirmText: '确认' })
+    wrapper.unmount()
+  })
+
+  it('打开前 body 持焦（点击遮罩外区域后）：returnFocusEl=null，关闭后安全跳过归还', async () => {
+    const wrapper = mountAttached()
+    // 模拟「焦点不在任何触发元素上、落在 body」（如点击遮罩外区域后）
+    const active = document.activeElement as HTMLElement | null
+    active?.blur?.()
+    expect(document.activeElement).toBe(document.body)
+    const p = confirmAction({ title: 'T', message: 'M', confirmText: '确认' })
     await wrapper.vm.$nextTick()
+    // 打开仍聚焦确认按钮（归还锚点缺失不影响打开行为）
+    expect(document.activeElement).toBe(wrapper.find('[data-testid="confirm-ok"]').element)
     await wrapper.find('[data-testid="confirm-ok"]').trigger('click')
-    expect(await p2).toBe(true)
+    expect(await p).toBe(true)
+    await wrapper.vm.$nextTick()
+    // 归还路径安全跳过：焦点回到 body，不抛错
+    expect(document.activeElement).toBe(document.body)
     wrapper.unmount()
   })
 })

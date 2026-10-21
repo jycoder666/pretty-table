@@ -10,9 +10,11 @@ import type { TemplateRepo } from './templateRepo'
  * 491 条用例大量 vi.mock('idb-keyval')，若在 vitest setupFiles 里全局
  * import 'fake-indexeddb/auto'，线程池同 worker 的全局 indexedDB 会跨测试文件
  * 泄漏，侵入面大。这里选「仅本文件局部接线」：beforeAll 先把全局 indexedDB 换成
- * fake 工厂，再动态 import 被测模块（kvStore 的 createStore 在模块求值时即 open，
- * 必须晚于工厂安装），afterAll 还原全局。vitest 各 spec 文件模块图相互隔离，
- * 现有用例零感知。
+ * fake 工厂，再动态 import 被测模块，afterAll 还原全局。idb-keyval 的
+ * createStore 本身惰性 open（首次读写才建连接），但被测模块在求值期即持有
+ * store 描述符，动态 import 保证整条模块图（含模块级副作用）严格晚于工厂安装，
+ * 是防全局 indexedDB 安装时序问题的稳妥做法。vitest 各 spec 文件模块图相互
+ * 隔离，现有用例零感知。
  */
 
 const T04_IMG =
