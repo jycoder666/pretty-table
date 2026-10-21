@@ -29,6 +29,7 @@ import {
 import { saveDraft, loadDraft, clearDraft } from '../repo/draftRepo'
 import { faultGate } from '../debug/fault'
 import { pasteCopy } from '../paste/pasteCopy'
+import { warnCopy } from '../editor/errorCopy'
 
 export type PageView = 'library' | 'editor'
 
@@ -207,6 +208,10 @@ export const useEditorStore = defineStore('editor', () => {
       return false
     }
     state.value = r.value
+    // T04：核内 warn（STRUCT_LOSS / UNKNOWN_FIELD 等）聚合一条 toast 通知
+    if (r.warnings?.length) {
+      showToast(r.warnings.map((w) => warnCopy(w.code)).join('；'))
+    }
     void persistDraft()
     return true
   }

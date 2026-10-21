@@ -124,6 +124,9 @@ export {
   remapMerges,
   findSlotAtVisual,
   visualToLogicalRow,
+  colWidthAt,
+  rowHeightOf,
+  typeMetrics,
   type CellMeta,
 } from './adapter/toOption'
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import {
@@ -13,6 +13,13 @@ import { applyThemeCssVars } from '../theme/applyCssVars'
 import { useEditorStore } from '../stores/editor'
 import PropertyPanel from './PropertyPanel.vue'
 
+// 组件测试不碰真实 IndexedDB：草稿读写 mock 为空操作，避免异步失败覆盖 toast 断言
+vi.mock('../repo/draftRepo', () => ({
+  saveDraft: vi.fn<() => Promise<void>>(async () => {}),
+  loadDraft: vi.fn<() => Promise<null>>(async () => null),
+  clearDraft: vi.fn<() => Promise<void>>(async () => {}),
+}))
+
 /**
  * FR-C1 颜色自定义区：预设色板点选 / hex 输入（非法不写入 + 提示）/ 恢复预设。
  * CSS 变量刷新由 App/EditorPage 的 version watch 完成；此处以等价的
@@ -26,11 +33,11 @@ function syncCssVars() {
   }
 }
 
-async function setup() {
+async function setup(inst?: typeof BLANK_V1) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const editor = useEditorStore()
-  editor.openTemplate(cloneInstance(BLANK_V1))
+  editor.openTemplate(cloneInstance(inst ?? BLANK_V1))
   const wrapper = mount(PropertyPanel, { global: { plugins: [pinia] } })
   syncCssVars()
   return { editor, wrapper }
@@ -51,6 +58,7 @@ async function typeHex(wrapper: ReturnType<typeof mount>, role: string, raw: str
 beforeEach(() => {
   document.documentElement.style.cssText = ''
   document.documentElement.removeAttribute('data-theme')
+  vi.restoreAllMocks()
 })
 
 describe('PropertyPanel · 颜色自定义区（FR-C1）', () => {
@@ -140,6 +148,134 @@ describe('PropertyPanel · 颜色自定义区（FR-C1）', () => {
     for (const k of ['primary', 'border'] as const) {
       expect(isRoleOverridden(editor.current, k)).toBe(false)
     }
+  })
+})
+
+describe('PropertyPanel · 结构编辑区（FR-C3 / Q-9）', () => {
+  function bodySlot(editor: ReturnType<typeof useEditorStore>): string {
+    const grid = editor.current!.layout.slotGrid!
+    return grid[3]![1]!
+  }
+
+  it('加一行/加一列各算一步；单步撤销回到加列前', async () => {
+    const { editor, wrapper } = await setup()
+    const rowsBefore = editor.current!.layout.slotGrid!.length
+    const colsBefore = editor.current!.layout.colCount
+    await wrapper.findAll('button').find((b) => b.text() === '加一行')!.trigger('click')
+    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore + 1)
+    await wrapper.findAll('button').find((b) => b.text() === '加一列')!.trigger('click')
+    expect(editor.current!.layout.colCount).toBe(colsBefore + 1)
+    // FR-11：撤销一步 = 回到最近一次操作前（加列前），行数保留加行结果
+    editor.undo()
+    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore + 1)
+    expect(editor.current!.layout.colCount).toBe(colsBefore)
+  })
+
+  it('达上限置灰：可见行数 20 时「加一行」disabled，12 列时「加一列」disabled', async () => {
+    const { editor, wrapper } = await setup()
+    for (let i = 0; i < 15; i++) editor.apply({ kind: 'addRow' })
+    await wrapper.vm.$nextTick()
+    const addRowBtn = wrapper.findAll('button').find((b) => b.text() === '加一行')!
+    expect(addRowBtn.attributes('disabled')).toBeDefined()
+    for (let i = 0; i < 8; i++) editor.apply({ kind: 'addCol' })
+    await wrapper.vm.$nextTick()
+    const addColBtn = wrapper.findAll('button').find((b) => b.text() === '加一列')!
+    expect(addColBtn.attributes('disabled')).toBeDefined()
+  })
+
+  it('删非空行：先弹二次确认；确认后删行，取消则保留', async () => {
+    const { editor, wrapper } = await setup()
+    const sid = bodySlot(editor)
+    editor.setSlotText(sid, '重要数据')
+    editor.selectionRange = { start: [3, 1], end: [3, 1] }
+    const confirmSpy = vi.spyOn(window, 'confirm')
+    const rowsBefore = editor.current!.layout.slotGrid!.length
+
+    confirmSpy.mockReturnValue(false)
+    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
+    expect(confirmSpy).toHaveBeenCalledOnce()
+    expect(String(confirmSpy.mock.calls[0]![0])).toContain('内容会一起删掉')
+    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore)
+
+    confirmSpy.mockReturnValue(true)
+    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
+    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore - 1)
+  })
+
+  it('删空行不弹确认；删表头行被壳层拦截（不发意图）', async () => {
+    const { editor, wrapper } = await setup()
+    const confirmSpy = vi.spyOn(window, 'confirm')
+    // 未选中 → 删最后一行（空行）→ 无确认直接删
+    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(editor.current!.layout.slotGrid!.length).toBe(4)
+    // 选中表头行 → 壳层守卫直接返回
+    editor.selectionRange = { start: [0, 0], end: [0, 0] }
+    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
+    expect(editor.current!.layout.slotGrid!.length).toBe(4)
+  })
+
+  it('删列同样走 hasContentInCol 确认；确认文案含列号', async () => {
+    const { editor, wrapper } = await setup()
+    const sid = bodySlot(editor)
+    editor.setSlotText(sid, '列内容')
+    editor.selectionRange = { start: [3, 1], end: [3, 1] }
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await wrapper.findAll('button').find((b) => b.text() === '删列')!.trigger('click')
+    expect(String(confirmSpy.mock.calls[0]![0])).toContain('第 2 列')
+    expect(editor.current!.layout.colCount).toBe(3)
+  })
+
+  it('表头层数 1/2/3：setHeaderLevel 生效；结构操作后清空选区', async () => {
+    const { editor, wrapper } = await setup()
+    editor.selectionRange = { start: [3, 1], end: [3, 1] }
+    const seg = wrapper.findAll('[role="radiogroup"]').at(-1)!
+    await seg.findAll('button')[2]!.trigger('click')
+    expect(editor.current!.layout.headerLevels).toBe(3)
+    expect(editor.selectionRange).toBeNull()
+  })
+
+  it('删行连带删掉结构合并区 → 核内 STRUCT_LOSS warn 聚合为一条 toast', async () => {
+    const withStructMerge = cloneInstance(BLANK_V1)
+    withStructMerge.layout.structuralMerges = [{ start: [1, 0], end: [1, 1] }]
+    const { editor, wrapper } = await setup(withStructMerge)
+    // 行内有内容 → 删行前会弹二次确认
+    const topLeft = editor.current!.layout.slotGrid![1]![0]!
+    editor.setSlotText(topLeft, '占位')
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    editor.selectionRange = { start: [1, 0], end: [1, 0] }
+    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
+    expect(confirmSpy).toHaveBeenCalledOnce()
+    expect(editor.toast).toContain('合并或内容')
+  })
+})
+
+describe('PropertyPanel · 格式微调区（FR-C2）', () => {
+  it('行高/字号/内边距三档写入 style；缺省显示「标准」档', async () => {
+    const { editor, wrapper } = await setup()
+    expect(editor.current!.layout.style?.rowHeightTier).toBeUndefined()
+    const segs = wrapper.findAll('[role="radiogroup"]')
+    // 前 3 个分段组：行高 / 字号 / 内边距
+    await segs[0]!.findAll('button')[0]!.trigger('click')
+    expect(editor.current!.layout.style?.rowHeightTier).toBe(1)
+    await segs[1]!.findAll('button')[2]!.trigger('click')
+    expect(editor.current!.layout.style?.fontSizeTier).toBe(3)
+    await segs[2]!.findAll('button')[2]!.trigger('click')
+    expect(editor.current!.layout.style?.paddingTier).toBe(3)
+  })
+
+  it('列宽输入：合法值 clamp 后写入，留空回默认（null）', async () => {
+    const { editor, wrapper } = await setup()
+    const input = wrapper.find('input[aria-label="第2列宽"]')
+    ;(input.element as HTMLInputElement).value = '500' // 超上限 → clamp 到 360
+    await input.trigger('input')
+    await input.trigger('change')
+    expect(editor.current!.layout.style?.colWidths?.[1]).toBe(360)
+    const input2 = wrapper.find('input[aria-label="第2列宽"]')
+    ;(input2.element as HTMLInputElement).value = ''
+    await input2.trigger('input')
+    await input2.trigger('change')
+    expect(editor.current!.layout.style?.colWidths?.[1]).toBeNull()
   })
 })
 

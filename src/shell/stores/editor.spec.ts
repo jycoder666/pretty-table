@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { COMPARE_ALPHA_V1, cloneInstance } from '@/core'
+import { BLANK_V1, COMPARE_ALPHA_V1, cloneInstance } from '@/core'
 import { useEditorStore } from './editor'
 
 /**
@@ -51,5 +51,35 @@ describe('editor store · 粘贴预览与撤销会话边角（QA 观察）', () 
     expect(store.current?.slots['row.4.val.a']).toMatchObject({ text: '第一段' })
     store.undo()
     expect(store.current?.slots['row.4.val.a']).toBe('全国') // 回到输入前整句
+  })
+})
+
+describe('editor store · 核内 warn 聚合 toast（T04）', () => {
+  it('无 warn 的意图不弹 toast；结构损失聚合为一条白话提示', () => {
+    const store = useEditorStore()
+    store.openTemplate(cloneInstance(BLANK_V1))
+    const merged = store.apply({ kind: 'merge', range: { start: [1, 0], end: [1, 1] } })
+    expect(merged).toBe(true)
+    expect(store.toast).toBeNull()
+    // 升 3 层后在第 2、3 层同列各放文字，再降回 1 层 → 只能并入一处，另一处放不下
+    store.apply({ kind: 'setHeaderLevel', levels: 3 })
+    const grid = store.current!.layout.slotGrid!
+    store.setSlotText(grid[1]![0]!, '甲层')
+    store.setSlotText(grid[2]![0]!, '乙层')
+    const dropped = store.apply({ kind: 'setHeaderLevel', levels: 1 })
+    expect(dropped).toBe(true)
+    expect(store.toast).toContain('合并或内容')
+  })
+
+  it('核内拒绝（达上限）弹对应错误文案，store 不变', () => {
+    const store = useEditorStore()
+    store.openTemplate(cloneInstance(BLANK_V1))
+    for (let i = 0; i < 15; i++) store.apply({ kind: 'addRow' })
+    expect(store.current?.layout.slotGrid?.length).toBe(20)
+    const versionBefore = store.state?.version
+    const blocked = store.apply({ kind: 'addRow' })
+    expect(blocked).toBe(false)
+    expect(store.toast).toBe('最多 20 行，加不下了')
+    expect(store.state?.version).toBe(versionBefore)
   })
 })

@@ -11,13 +11,21 @@ import {
   ROLE_LABELS,
   isRoleOverridden,
   roleColorOf,
+  canAddRow,
+  canAddCol,
+  clampColWidth,
+  colWidthAt,
+  hasContentInRow,
+  hasContentInCol,
   type RoleColorKey,
+  type StructuralIntent,
   type ThemeId,
   type Emphasis,
   type MarkValue,
   type SlotValue,
 } from '@/core'
 import PtButton from '../ui/PtButton.vue'
+import PtSegmented from '../ui/PtSegmented.vue'
 import ColorField from './ColorField.vue'
 
 const editor = useEditorStore()
@@ -41,6 +49,109 @@ function onInvalidColor() {
 
 function resetColors() {
   editor.apply({ kind: 'resetThemeTokens' })
+}
+
+// ── 格式微调（FR-C2）：行高/字号/内边距三档 + 逐列列宽 ──
+const tierOptions = (a: string, b: string, c: string) => [
+  { value: 1, label: a },
+  { value: 2, label: b },
+  { value: 3, label: c },
+]
+
+const rowTierOptions = tierOptions('紧凑', '标准', '宽松')
+const fontTierOptions = tierOptions('小', '标准', '大')
+const padTierOptions = tierOptions('紧', '标准', '松')
+
+const rowTier = computed(() => editor.current?.layout.style?.rowHeightTier ?? 2)
+const fontTier = computed(() => editor.current?.layout.style?.fontSizeTier ?? 2)
+const padTier = computed(() => editor.current?.layout.style?.paddingTier ?? 2)
+
+const colWidthInputs = computed(() => {
+  const n = editor.current?.layout.colCount ?? 0
+  return Array.from({ length: n }, (_, c) => ({
+    col: c,
+    width: editor.current ? colWidthAt(editor.current, c) : 140,
+  }))
+})
+
+function commitColWidth(col: number, raw: string) {
+  const t = raw.trim()
+  if (t === '') {
+    // 留空 = 该列回默认宽（colWidths 置 null）
+    editor.apply({ kind: 'setColWidth', col, width: null })
+    return
+  }
+  const n = Number(t)
+  if (!Number.isFinite(n)) {
+    editor.showToast('列宽请填数字（64～360），留空恢复默认')
+    return
+  }
+  editor.apply({ kind: 'setColWidth', col, width: clampColWidth(n) })
+}
+
+// ── 结构编辑（FR-C3）：行列增删 + 表头层级 ──
+const rowCount = computed(() => editor.current?.layout.slotGrid?.length ?? 0)
+const colCount = computed(() => editor.current?.layout.colCount ?? 0)
+const headerLevels = computed(() => editor.current?.layout.headerLevels ?? 1)
+const canAddRowNow = computed(() => (editor.current ? canAddRow(editor.current) : false))
+const canAddColNow = computed(() => (editor.current ? canAddCol(editor.current) : false))
+
+/** 删行/删列目标：选中格所在行/列；未选中时删最后一行/列 */
+const targetRow = computed(() => {
+  const sel = editor.selectionRange
+  return sel ? Math.min(sel.start[0], rowCount.value - 1) : rowCount.value - 1
+})
+const targetCol = computed(() => {
+  const sel = editor.selectionRange
+  return sel ? Math.min(sel.start[1], colCount.value - 1) : colCount.value - 1
+})
+
+/** 结构变化后原选区/选中槽可能已被 remap，清空防悬挂引用 */
+function applyStruct(intent: StructuralIntent): boolean {
+  const okApplied = editor.apply(intent)
+  if (okApplied) {
+    editor.selectionRange = null
+    editor.selectedSlotId = null
+    editor.selectedBlockId = null
+  }
+  return okApplied
+}
+
+function addRow() {
+  if (canAddRowNow.value) applyStruct({ kind: 'addRow' })
+}
+
+function removeRow() {
+  const r = targetRow.value
+  if (r < headerLevels.value || r >= rowCount.value) return
+  // Q-9：删非空行列先二次确认（连带删除，不可恢复）
+  if (
+    hasContentInRow(editor.current!, r) &&
+    !confirm(`删除第 ${r + 1} 行后，这一行的内容会一起删掉，不可恢复。确定删除？`)
+  ) {
+    return
+  }
+  applyStruct({ kind: 'removeRow', row: r })
+}
+
+function addCol() {
+  if (canAddColNow.value) applyStruct({ kind: 'addCol' })
+}
+
+function removeCol() {
+  const c = targetCol.value
+  if (c < 0 || c >= colCount.value) return
+  if (
+    hasContentInCol(editor.current!, c) &&
+    !confirm(`删除第 ${c + 1} 列后，这一列的内容会一起删掉，不可恢复。确定删除？`)
+  ) {
+    return
+  }
+  applyStruct({ kind: 'removeCol', col: c })
+}
+
+function setHeaderLevels(v: number) {
+  applyStruct({ kind: 'setHeaderLevel', levels: v as 1 | 2 | 3 })
 }
 
 const marks: Record<MarkValue, string> = { ...MARK_LABEL }
@@ -283,6 +394,108 @@ function removeBlock() {
       <PtButton variant="danger" :disabled="editor.pastePending" @click="removeBlock">删除区块</PtButton>
     </div>
 
+    <!-- 格式微调（FR-C2）：全局档位 + 逐列列宽，超界由核内收口 -->
+    <div class="section">
+      <h4>格式微调</h4>
+      <div class="field">
+        <span>行高</span>
+        <PtSegmented
+          :options="rowTierOptions"
+          :model-value="rowTier"
+          :disabled="editor.pastePending"
+          @update:model-value="(v) => editor.apply({ kind: 'setRowHeightTier', tier: v as 1 | 2 | 3 })"
+        />
+      </div>
+      <div class="field">
+        <span>字号</span>
+        <PtSegmented
+          :options="fontTierOptions"
+          :model-value="fontTier"
+          :disabled="editor.pastePending"
+          @update:model-value="(v) => editor.apply({ kind: 'setFontSizeTier', tier: v as 1 | 2 | 3 })"
+        />
+      </div>
+      <div class="field">
+        <span>内边距</span>
+        <PtSegmented
+          :options="padTierOptions"
+          :model-value="padTier"
+          :disabled="editor.pastePending"
+          @update:model-value="(v) => editor.apply({ kind: 'setPaddingTier', tier: v as 1 | 2 | 3 })"
+        />
+      </div>
+      <div class="colwidths">
+        <label v-for="item in colWidthInputs" :key="item.col" class="cw">
+          第{{ item.col + 1 }}列
+          <input
+            type="number"
+            min="64"
+            max="360"
+            :value="item.width"
+            :disabled="editor.pastePending"
+            :aria-label="`第${item.col + 1}列宽`"
+            @change="commitColWidth(item.col, ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+      </div>
+      <p class="hint">列宽范围 64～360，留空恢复默认。</p>
+    </div>
+
+    <!-- 结构编辑（FR-C3）：行列增删 / 表头层级；达上限置灰，删非空先确认 -->
+    <div class="section">
+      <h4>结构</h4>
+      <p class="hint">删行/删列删的是选中格所在的行列；未选中时删最后一行/列。</p>
+      <div class="row">
+        <PtButton
+          variant="ghost"
+          :disabled="!canAddRowNow || editor.pastePending"
+          title="在表格末尾加一行"
+          @click="addRow"
+        >
+          加一行
+        </PtButton>
+        <PtButton
+          variant="ghost"
+          :disabled="editor.pastePending"
+          :title="`删除第 ${targetRow + 1} 行`"
+          @click="removeRow"
+        >
+          删行
+        </PtButton>
+      </div>
+      <div class="row">
+        <PtButton
+          variant="ghost"
+          :disabled="!canAddColNow || editor.pastePending"
+          title="在表格末尾加一列"
+          @click="addCol"
+        >
+          加一列
+        </PtButton>
+        <PtButton
+          variant="ghost"
+          :disabled="editor.pastePending"
+          :title="`删除第 ${targetCol + 1} 列`"
+          @click="removeCol"
+        >
+          删列
+        </PtButton>
+      </div>
+      <div class="field">
+        <span>表头层数</span>
+        <PtSegmented
+          :options="[
+            { value: 1, label: '1 层' },
+            { value: 2, label: '2 层' },
+            { value: 3, label: '3 层' },
+          ]"
+          :model-value="headerLevels"
+          :disabled="editor.pastePending"
+          @update:model-value="setHeaderLevels"
+        />
+      </div>
+    </div>
+
     <div class="section">
       <h4>合并 / 拆分</h4>
       <p class="hint">仅在模板允许区内操作；锁定合并不可拆。</p>
@@ -369,6 +582,39 @@ textarea {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+}
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.field > span {
+  font-size: 12px;
+  color: var(--pt-muted);
+  width: 56px;
+  flex-shrink: 0;
+}
+.colwidths {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.cw {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--pt-muted);
+}
+.cw input {
+  width: 60px;
+  border: 1px solid var(--pt-border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 12px;
 }
 .row :deep(.on),
 .on {
