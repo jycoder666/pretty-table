@@ -2,7 +2,19 @@ import { describe, expect, it, vi } from 'vitest'
 import { COMPARE_ALPHA_V1 } from '../templates'
 import { measureContentSize } from '../adapter/toOption'
 import { cloneInstance } from '../schema/validate'
-import { exportPng, measurePng, PNG_MAX_PIXELS_DEFAULT, collectImageUrls, preloadImages } from './png'
+import {
+  exportPng,
+  measurePng,
+  PNG_MAX_PIXELS_DEFAULT,
+  collectImageUrls,
+  preloadImages,
+  parseColorRgb,
+  hasContentPixels,
+  hasRenderedContent,
+  waitFirstRenderSignal,
+  RenderNotReadyError,
+} from './png'
+import type { ListTable } from '../render/vtableLite'
 
 // T34：VTable 深入口后绕开了 vitest 依赖预打包，lottie-web（vrender 动画依赖）
 // 在 jsdom（无 canvas）模块求值期即崩。本文件全部为失败路径/估算用例，不构造真表，
@@ -104,5 +116,87 @@ describe('PNG 图片预加载（交互升级 T03）', () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+})
+
+// ── P1 首帧竞态防护：信号等待 + 空图守卫（QA 4-worker 压测：旧口径静默空白图）──
+
+describe('P1 · paper 色解析 parseColorRgb', () => {
+  it('六位 / 三位 hex / rgb() 均可解析，预设 paper = #F7F9FC', () => {
+    expect(parseColorRgb('#F7F9FC')).toEqual({ r: 247, g: 249, b: 252 })
+    expect(parseColorRgb('#fff')).toEqual({ r: 255, g: 255, b: 255 })
+    expect(parseColorRgb('rgb(1, 2, 3)')).toEqual({ r: 1, g: 2, b: 3 })
+    expect(parseColorRgb('rgba(10, 20, 30, 0.5)')).toEqual({ r: 10, g: 20, b: 30 })
+  })
+
+  it('异形格式返回 null（守卫放行不误伤）', () => {
+    expect(parseColorRgb('hsl(0, 0%, 0%)')).toBeNull()
+    expect(parseColorRgb('not-a-color')).toBeNull()
+  })
+})
+
+describe('P1 · 内容像素判定 hasContentPixels', () => {
+  const PAPER = { r: 247, g: 249, b: 252 }
+
+  it('有 paper 基准：全 paper / 全透明 = 空白；含任一异色不透明像素 = 有内容', () => {
+    const blankPaper = [247, 249, 252, 255, 247, 249, 252, 255]
+    expect(hasContentPixels(blankPaper, PAPER)).toBe(false)
+    const blankTransparent = [0, 0, 0, 0, 0, 0, 0, 0]
+    expect(hasContentPixels(blankTransparent, PAPER)).toBe(false)
+    const withContent = [247, 249, 252, 255, 200, 30, 30, 255]
+    expect(hasContentPixels(withContent, PAPER)).toBe(true)
+    // 半透明 paper 也不算内容（透明底导出边缘）
+    const paperAlpha = [247, 249, 252, 128]
+    expect(hasContentPixels(paperAlpha, PAPER)).toBe(false)
+  })
+
+  it('paper 未知（null）：退化口径 —— ≥2 种不透明颜色 = 有内容，单色/全透明 = 空白', () => {
+    const mono = [10, 10, 10, 255, 10, 10, 10, 255]
+    expect(hasContentPixels(mono, null)).toBe(false)
+    const twoColors = [10, 10, 10, 255, 20, 20, 20, 255]
+    expect(hasContentPixels(twoColors, null)).toBe(true)
+    const transparent = [0, 0, 0, 0, 0, 0, 0, 0]
+    expect(hasContentPixels(transparent, null)).toBe(false)
+  })
+})
+
+describe('P1 · 探针环境降级（jsdom 无 canvas 实现不炸）', () => {
+  it('画布未定型（0×0）→ null（调用方按未就绪继续等）', () => {
+    expect(hasRenderedContent(null, { r: 0, g: 0, b: 0 })).toBeNull()
+    const zero = document.createElement('canvas')
+    zero.width = 0
+    zero.height = 0
+    expect(hasRenderedContent(zero, { r: 0, g: 0, b: 0 })).toBeNull()
+  })
+
+  it('getContext 不可用（jsdom）→ null，不抛错不误报', () => {
+    const canvas = document.createElement('canvas')
+    expect(hasRenderedContent(canvas, { r: 0, g: 0, b: 0 })).toBeNull()
+  })
+})
+
+describe('P1 · 渲染就绪信号 waitFirstRenderSignal', () => {
+  function fakeTable(on?: (type: string, listener: () => void) => number, off?: (id: number) => void) {
+    return { on, off } as unknown as ListTable
+  }
+
+  it('实例无 on 能力（单测 stub）→ 直接放行', async () => {
+    await expect(waitFirstRenderSignal(fakeTable(), 20)).resolves.toBeUndefined()
+  })
+
+  it('after_render 已在监听挂上后派发 → 立即放行', async () => {
+    let listener: (() => void) | undefined
+    const t = fakeTable((_type, l) => {
+      listener = l
+      return 1
+    }, () => {})
+    const p = waitFirstRenderSignal(t, 500)
+    listener?.()
+    await expect(p).resolves.toBeUndefined()
+  })
+
+  it('信号迟迟不来 → 超时拒绝 RenderNotReadyError（导出取消，不抓空图）', async () => {
+    const t = fakeTable(() => 1, () => {})
+    await expect(waitFirstRenderSignal(t, 15)).rejects.toBeInstanceOf(RenderNotReadyError)
   })
 })

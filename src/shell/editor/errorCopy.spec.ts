@@ -28,4 +28,8 @@ describe('errorCopy — 错误/警告白话文案', () => {
     // 读时清洗 warn：IMAGE_INVALID 聚合白话
     expect(warnCopy('IMAGE_INVALID')).toContain('已清空')
   })
+
+  it('PNG 导出空图守卫（P1 首帧竞态）：白话文案，不露码', () => {
+    expect(errorCopy('EXPORT_PNG_EMPTY')).toBe('表格渲染尚未完成，请稍后重试')
+  })
 })

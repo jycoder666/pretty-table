@@ -17,6 +17,7 @@ const MAP: Partial<Record<ErrorCode, string>> = {
   EXPORT_BLOCKED_RENDERING: '请等待表格渲染完成',
   EXPORT_PNG_TOO_LARGE: '图片太大，请改用更低倍率',
   EXPORT_PNG_IMAGE_MISSING: '图片资源未能加载，请重新上传后再导出',
+  EXPORT_PNG_EMPTY: '表格渲染尚未完成，请稍后重试',
   TEMPLATE_LIST_FAIL: '我的模板加载失败，请重试',
   TEMPLATE_SAVE_FAIL: '保存失败，请重试',
   TEMPLATE_DELETE_FAIL: '删除失败，请重试',

@@ -22,6 +22,159 @@ function waitFrames(n: number): Promise<void> {
   })
 }
 
+// ── P1 首帧竞态修复：QA 4-worker 压测实测（基线 b850527 与 HEAD 一致 100% 复现），
+// 旧口径（画布尺寸稳定 + 1 帧 rAF）在 CPU 紧张时抢在 vrender 舞台首帧渲染完成前
+// 抓到空画布 → 合成后 = 纯 paper 色静默空白图。三层防护：信号等待 + 内容探针 + 空图守卫。
+
+/** 渲染就绪等待上限（ms）：超时走导出失败路径，绝不继续抓空图 */
+const RENDER_READY_TIMEOUT_MS = 5000
+/** 内容探针降采样网格边长：读像素开销可忽略，空白/内容判定足够 */
+const PROBE_GRID = 64
+
+/** 简化 RGB（paper 比对用） */
+interface Rgb {
+  r: number
+  g: number
+  b: number
+}
+
+/** 渲染未就绪（信号超时 / 画布迟迟无内容）：导出取消，绝不抓空图 */
+export class RenderNotReadyError extends Error {
+  constructor() {
+    super('表格渲染未就绪')
+    this.name = 'RenderNotReadyError'
+  }
+}
+
+/**
+ * 解析 CSS 颜色为 RGB（paper 空白比对口径）。
+ * 支持 #RGB / #RRGGBB / rgb() / rgba()；主题预设均为 hex，异形格式返回 null（守卫放行不误伤）。
+ */
+export function parseColorRgb(color: string): Rgb | null {
+  const s = color.trim().toLowerCase()
+  let m = /^#([0-9a-f]{6})$/.exec(s)
+  if (m) {
+    const n = parseInt(m[1]!, 16)
+    return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff }
+  }
+  m = /^#([0-9a-f]{3})$/.exec(s)
+  if (m) {
+    const h = m[1]!
+    return {
+      r: parseInt(h[0]! + h[0]!, 16),
+      g: parseInt(h[1]! + h[1]!, 16),
+      b: parseInt(h[2]! + h[2]!, 16),
+    }
+  }
+  m = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/.exec(s)
+  if (m) return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) }
+  return null
+}
+
+/**
+ * 纯函数（单测口径）：采样像素中是否存在「真实内容」。
+ * 有 paper 基准色：存在任一「不透明且非 paper 色」像素即有内容；
+ * paper 未知：存在 ≥2 种不透明颜色即有内容（纯空白 = 单色）。
+ */
+export function hasContentPixels(data: Uint8ClampedArray | number[], paper: Rgb | null): boolean {
+  if (paper) {
+    for (let i = 0; i < data.length; i += 4) {
+      if ((data[i + 3] as number) === 0) continue
+      const r = data[i] as number
+      const g = data[i + 1] as number
+      const b = data[i + 2] as number
+      if (r !== paper.r || g !== paper.g || b !== paper.b) return true
+    }
+    return false
+  }
+  let seen: number | null = null
+  for (let i = 0; i < data.length; i += 4) {
+    if ((data[i + 3] as number) === 0) continue
+    const key = (((data[i] as number) << 16) | ((data[i + 1] as number) << 8) | (data[i + 2] as number)) >>> 0
+    if (seen === null) seen = key
+    else if (key !== seen) return true
+  }
+  return false
+}
+
+/**
+ * 降采样读像素探针：把画布缩到 PROBE_GRID² 后扫描内容像素。
+ * 返回 true/false = 判定结果；null = 环境不支持读像素（jsdom / 异常），不可据此报错。
+ */
+export function sampleCanvasContent(canvas: HTMLCanvasElement, paper: Rgb | null): boolean | null {
+  const probe = document.createElement('canvas')
+  probe.width = PROBE_GRID
+  probe.height = PROBE_GRID
+  const ctx = probe.getContext('2d')
+  if (!ctx) return null
+  try {
+    ctx.drawImage(canvas, 0, 0, PROBE_GRID, PROBE_GRID)
+    return hasContentPixels(ctx.getImageData(0, 0, PROBE_GRID, PROBE_GRID).data, paper)
+  } catch {
+    return null
+  }
+}
+
+/** 表格画布就绪探针：画布不存在/未定型返回 null（调用方按「未就绪」继续等） */
+export function hasRenderedContent(canvas: HTMLCanvasElement | null, paper: Rgb | null): boolean | null {
+  if (!canvas || canvas.width <= 0 || canvas.height <= 0) return null
+  return sampleCanvasContent(canvas, paper)
+}
+
+function getTableCanvas(table: ListTable): HTMLCanvasElement | null {
+  const el = table.getElement?.() as HTMLElement | undefined
+  return (el?.querySelector?.('canvas') as HTMLCanvasElement | null) ?? null
+}
+
+/**
+ * P1 信号等待（首保险）：等 vtable 的 after_render 事件 —— 1.26.8 在 stage 每次渲染
+ * 完成后经 afterRender 钩子派发（scenegraph.js），首个事件即「首帧渲染完成」。
+ * 必须在构造的同一任务内挂监听（首帧渲染 rAF 异步派发，先挂必不漏）；
+ * 实例无 on 能力（单测 stub / jsdom）直接放行，交由内容探针 + 空图守卫兜底。
+ */
+export function waitFirstRenderSignal(table: ListTable, timeoutMs: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof table.on !== 'function') {
+      resolve()
+      return
+    }
+    let settled = false
+    const id = table.on('after_render', () => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve()
+    })
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      try {
+        table.off(id)
+      } catch {
+        /* ignore */
+      }
+      reject(new RenderNotReadyError())
+    }, timeoutMs)
+  })
+}
+
+/**
+ * P1 内容探针轮询（次保险）：after_render 之后仍确认画布上出现了非 paper 的真实
+ * 内容像素才放行（防「空舞台渲染也派发事件」的极端时序）。
+ * 前提：waitCanvasStable 已保证画布存在且尺寸定型，画布缺失不可达；
+ * 读像素不受支持（null）放行，交由空图守卫终检，不误伤极端环境。
+ */
+async function waitCanvasContent(table: ListTable, paper: Rgb | null, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    const has = hasRenderedContent(getTableCanvas(table), paper)
+    if (has === true) return
+    if (has === null) return
+    if (Date.now() >= deadline) throw new RenderNotReadyError()
+    await waitFrames(1)
+  }
+}
+
 async function waitCanvasStable(table: ListTable): Promise<{ w: number; h: number }> {
   let last = ''
   for (let i = 0; i < 120; i++) {
@@ -95,10 +248,19 @@ export async function exportPng(
     option.animationAppear = false
 
     table = new ListTable(host, option as ConstructorParameters<typeof ListTable>[1])
+    // P1：构造同一任务内先挂 after_render 监听（首帧渲染 rAF 派发，先挂必不漏），
+    // 再 setPixelRatio（内部含 resize/重渲染，信号只认其后的渲染完成）
+    const firstRender = waitFirstRenderSignal(table, RENDER_READY_TIMEOUT_MS)
+    // waitCanvasStable 可能先抛（画布尺寸 120 帧未定型），提前挂空 catch
+    // 避免 firstRender 的超时拒绝沦为 unhandledrejection
+    firstRender.catch(() => {})
     if (typeof table.setPixelRatio === 'function') {
       table.setPixelRatio(scale)
     }
     await waitCanvasStable(table)
+    // P1：信号先行（正常路径零可感知延迟），rAF 兜底保留，内容探针确认真实内容
+    await firstRender
+    await waitCanvasContent(table, parseColorRgb(palette.paper), RENDER_READY_TIMEOUT_MS)
     await waitFrames(1)
 
     const dataUrl = table.exportImg()
@@ -122,10 +284,22 @@ export async function exportPng(
     }
     ctx.drawImage(img, PNG_PAD * scale, PNG_PAD * scale, img.width, img.height)
 
+    // P1 空图守卫（终检兜底）：产物降采样后除纸面/透明外无任何内容像素 →
+    // 显式报错（EXPORT_PNG_EMPTY + errorCopy 白话，GC-25），绝不静默交付全空白图。
+    // 读像素不受支持（jsdom 等极端环境）时放弃守卫，不误伤正常导出。
+    const paperRgb = parseColorRgb(palette.paper)
+    if (paperRgb && sampleCanvasContent(canvas, paperRgb) === false) {
+      return fail('EXPORT_PNG_EMPTY', '表格渲染尚未完成，请稍后重试')
+    }
+
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
     if (!blob) return fail('EXPORT_PNG_FAIL', 'PNG 编码失败')
     return ok(blob)
   } catch (e) {
+    // P1：渲染就绪等待超时 → 走现有导出失败路径（不抓空图、不静默成功）
+    if (e instanceof RenderNotReadyError) {
+      return fail('EXPORT_PNG_FAIL', '表格渲染尚未完成，导出已取消，请稍后重试')
+    }
     return fail('EXPORT_PNG_FAIL', e instanceof Error ? e.message : '导出 PNG 失败')
   } finally {
     await waitFrames(1)
