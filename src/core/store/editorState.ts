@@ -87,6 +87,9 @@ export function undoOnce(state: EditorState): EditorState {
     undoPrev: null,
     dirty: true,
     version: state.version + 1,
+    // QA 边角：粘贴预览中撤销不丢 pastePending 语义（FR-17）——
+    // 壳层在预览期直接禁撤销；core 防御性保留字段，避免撤销后 pastePending 落 undefined
+    pastePending: state.pastePending,
   }
 }
 

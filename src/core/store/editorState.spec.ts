@@ -196,3 +196,15 @@ describe('editorState · 自定义格式新意图（pastePending 互斥 + 一步
     expect(dispatch(s, { kind: 'removeRow', row: 0 }).ok).toBe(false)
   })
 })
+
+describe('editorState · 撤销会话边角（QA 观察）', () => {
+  it('undoOnce 保留 pastePending 字段，预览中撤销语义不落空（FR-17）', () => {
+    const s = createEditorState(cloneInstance(BLANK_V1))
+    const r = dispatch(s, { kind: 'setRowHeightTier', tier: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const withPending: import('../types').EditorState = { ...r.value, pastePending: true }
+    const u = undoOnce(withPending)
+    expect(u.pastePending).toBe(true)
+  })
+})

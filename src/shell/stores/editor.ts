@@ -144,6 +144,8 @@ export const useEditorStore = defineStore('editor', () => {
   function cancelPaste() {
     pastePreview.value = null
     if (state.value) state.value.pastePending = false
+    // QA 边角：取消预览后结束文字编辑会话，避免与预览前的输入合并成一步撤销
+    textSessionKey = null
   }
 
   function showToast(msg: string) {
@@ -211,6 +213,9 @@ export const useEditorStore = defineStore('editor', () => {
 
   function undo() {
     if (!state.value || !canUndo(state.value)) return
+    // QA 边角（FR-17）：粘贴预览期禁撤销——预览未决时一切状态变更被锁，撤销也不放开，
+    // 避免 pastePreview 与 current 错位后 confirmPaste 走 PASTE_STALE
+    if (state.value.pastePending) return
     state.value = undoOnce(state.value)
     textSessionKey = null
     void persistDraft()
