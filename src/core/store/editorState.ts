@@ -1,4 +1,4 @@
-import { fail, ok, type Result } from '../errors'
+import { fail, ok, type CoreWarning, type Result } from '../errors'
 import { UNDO_LIMITS, type EditIntent, type EditorState, type TemplateInstance } from '../types'
 import { applyEditIntent } from './intent'
 import { cloneInstance } from '../schema/validate'
@@ -30,6 +30,7 @@ export function pushSnapshot(
 const PASTE_BLOCKED_INTENTS: ReadonlySet<EditIntent['kind']> = new Set([
   'merge',
   'split',
+  'clearSlots',
   'setAlign',
   'setEmphasis',
   'addBlock',
@@ -89,6 +90,37 @@ export function dispatch(
     },
     // warn（STRUCT_LOSS / TOKEN_INVALID 等）透传给壳层聚合 toast
     result.warnings,
+  )
+}
+
+/**
+ * 批量意图（WP3/WP4：多选同改 / 列宽一次拖动 → 一步撤销）：
+ * 逐条 apply 到同一副本链上，任一失败整体回滚（store 不变、不入快照）；
+ * 全部成功只 push 一条「批前」快照并清 redoStack（与单条 dispatch 同语义）。
+ */
+export function dispatchBatch(state: EditorState, intents: EditIntent[]): Result<EditorState> {
+  if (intents.length === 0) return ok(state)
+  if (state.pastePending === true) {
+    return fail('SLOT_DROP_BLOCKED', '先确认或取消这次粘贴')
+  }
+  let cur = state.current
+  const warnings: CoreWarning[] = []
+  for (const intent of intents) {
+    const r = applyEditIntent(cur, intent)
+    if (!r.ok) return r
+    cur = r.value
+    if (r.warnings?.length) warnings.push(...r.warnings)
+  }
+  return ok(
+    {
+      current: cur,
+      undoStack: pushSnapshot(state.undoStack, snapshotForUndo(state.current)),
+      redoStack: [],
+      dirty: true,
+      version: state.version + 1,
+      pastePending: state.pastePending,
+    },
+    warnings,
   )
 }
 

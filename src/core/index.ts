@@ -33,6 +33,8 @@ export type {
   PngExportOptions,
   CoreOptions,
   CoreHandle,
+  ViewportRect,
+  ViewportHit,
 } from './types'
 
 export type { ErrorCode, WarnCode, CoreError, CoreWarning, Result, PasteErrorCode } from './errors'
@@ -96,7 +98,13 @@ export { toVTableTheme } from './theme/vtableTheme'
 export { cellInlineStyle } from './theme/inlineStyle'
 export { semanticColor, type SemanticColorKind } from './theme/semantic'
 
-export { applyEditIntent, isEmphasizable, getSlotDisplayText } from './store/intent'
+export {
+  applyEditIntent,
+  isEmphasizable,
+  getSlotDisplayText,
+  countFilledSlotsInRange,
+  slotIdsInRange,
+} from './store/intent'
 export {
   applyStructuralIntent,
   hasContentInRow,
@@ -123,6 +131,7 @@ export {
 export {
   createEditorState,
   dispatch,
+  dispatchBatch,
   undo,
   redo,
   markClean,

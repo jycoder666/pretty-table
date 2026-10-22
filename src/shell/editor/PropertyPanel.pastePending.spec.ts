@@ -172,10 +172,10 @@ describe('PropertyPanel · pastePending 禁用面系统断言（PX-15 / FR-17）
     expect(
       (wrapper.find('input[aria-label="第1列宽"]').element as HTMLInputElement).disabled,
     ).toBe(false)
-    // 结构组代表：加一行 + 合并/拆分（选区命中既有合并区，非预览期双双可用）
+    // 结构组代表：加一行 + 合并/拆分（选区命中既有合并区：WP1 收紧后合并置灰、拆分可用）
     expect((btn(wrapper, '加一行').element as HTMLButtonElement).disabled).toBe(false)
     expect((wrapper.find('[data-testid="merge-btn"]').element as HTMLButtonElement).disabled).toBe(
-      false,
+      true,
     )
     expect((wrapper.find('[data-testid="split-btn"]').element as HTMLButtonElement).disabled).toBe(
       false,

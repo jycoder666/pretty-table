@@ -1,9 +1,12 @@
 <script setup lang="ts">
-defineProps<{ message: string | null }>()
+defineProps<{ message: string | null; seq?: number }>()
 </script>
 
 <template>
-  <div v-if="message" class="pt-toast" role="status" aria-live="polite">{{ message }}</div>
+  <!-- data-seq：连续同一句话时节点不重建，端到端用例靠它确认「这一次」提示已落地 -->
+  <div v-if="message" class="pt-toast" role="status" aria-live="polite" :data-seq="seq">
+    {{ message }}
+  </div>
 </template>
 
 <style scoped>

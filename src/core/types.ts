@@ -161,11 +161,15 @@ export type EditIntent =
   | { kind: 'setZebra'; on: boolean }
   | { kind: 'merge'; range: MergeRange }
   | { kind: 'split'; range: MergeRange }
+  /** WP3：清空选区内容（跳过只读格；与合并/拆分同为一步撤销） */
+  | { kind: 'clearSlots'; range: MergeRange }
   | { kind: 'setAlign'; slotId: string; align: Align }
   | { kind: 'setEmphasis'; slotId: string; emphasize: Emphasis[] }
   | { kind: 'addBlock'; block: BlockDesc }
   | { kind: 'removeBlock'; blockId: string }
   | { kind: 'updateBlock'; blockId: string; props: Partial<NonNullable<BlockDesc['props']>> }
+  /** WP4：表内区块换位（目标槽空 → 移动；已占用 → 两区块互换，双侧 accept 都要允许） */
+  | { kind: 'moveBlock'; blockId: string; toSlotId: string }
   /** 增强期 FR-23：最多一列推荐；设新列即替换旧值，null 取消 */
   | { kind: 'setRecommendCol'; col: number | null }
   /** FR-C1 颜色覆盖：value=null 清除该角色覆盖（回到预设） */
@@ -182,6 +186,9 @@ export type EditIntent =
   | { kind: 'addCol'; afterCol?: number }
   | { kind: 'removeCol'; col: number }
   | { kind: 'setHeaderLevel'; levels: 1 | 2 | 3 }
+  /** WP4：整行/整列换位（内容与合并区、只读格一起走；区块锚点按位置不动） */
+  | { kind: 'moveRow'; from: number; to: number }
+  | { kind: 'moveCol'; from: number; to: number }
 
 /** E3 多次撤销：撤销/重做栈深上限（入栈超限裁掉最旧一条，恒定内存上界） */
 export const UNDO_LIMITS = { maxDepth: 50 } as const
@@ -224,6 +231,20 @@ export interface CoreOptions {
   onRenderState?: (s: RenderState) => void
 }
 
+/** 可视格矩形（相对预览容器左上角；已含滚动与冻结列补偿） */
+export interface ViewportRect {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+/** 命中结果：可视行列（列 = 列号，行 = 可视行，与 buildVisualRows 的 metas 同索引） */
+export interface ViewportHit {
+  row: number
+  col: number
+}
+
 export interface CoreHandle {
   loadTemplate(json: TemplateJSON): void
   applyTheme(themeId: string | ThemeTokens): void
@@ -233,5 +254,18 @@ export interface CoreHandle {
   exportHtml(): Promise<string>
   exportPng(opts?: PngExportOptions): Promise<Blob>
   getPreviewEl(): HTMLElement | null
+  /**
+   * PX-04 v2「命中直接问渲染器」：(x, y) 相对预览容器左上角，内部换算到画布坐标后交给
+   * VTable 命中（滚动 / 冻结列 / 列宽调整感知）。未挂载或落在表外返回 null。
+   */
+  hitTest(x: number, y: number): ViewportHit | null
+  /** 单格可视矩形（相对预览容器左上角）；未挂载返回 null */
+  getCellViewportRect(visualRow: number, col: number): ViewportRect | null
+  /** 整表可视格矩形（相对预览容器左上角；行 = 可视行，与 metas 同索引）；未挂载返回 null */
+  getCellViewportRects(): ViewportRect[][] | null
+  /** 视口变化（滚动 / 列宽调整 / 重绘完成）订阅；返回退订函数 */
+  onViewportChange(cb: () => void): () => void
+  /** 列宽拖拽结束（widths = 全量列宽，画布内调整、未落模型）；返回退订函数 */
+  onColResize(cb: (col: number, widths: number[]) => void): () => void
   destroy(): void
 }

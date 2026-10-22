@@ -200,12 +200,15 @@ test.describe('TC-PT-057 · 预览期间其他操作与导出禁用', () => {
     const exportBtn = page.getByRole('button', { name: '导出', exact: true })
     await expect(exportBtn).toBeDisabled()
     // 右栏操作按钮禁用（对齐 / 强调 / 主题 / 斑马纹 / 合并）
+    // exact 必须开：WP4 新增的「列左移/列右移」含「左」「右」子串，非精确匹配会命中两个按钮
     for (const name of ['左', '中', '右', '红字', '加粗', '底色']) {
-      await expect(page.locator('.props').getByRole('button', { name })).toBeDisabled()
+      await expect(page.locator('.props').getByRole('button', { name, exact: true })).toBeDisabled()
     }
     await expect(page.locator('.theme-btn').first()).toBeDisabled()
     await expect(page.getByRole('button', { name: '合并选区' })).toBeDisabled()
-    await expect(page.getByRole('button', { name: '拆分' })).toBeDisabled()
+    // 「拆分」在右栏与选区工具条各有一个（WP1）：同名的两处都要禁用，用 testid 定位
+    await expect(page.getByTestId('split-btn')).toBeDisabled()
+    await expect(page.getByTestId('selection-split')).toBeDisabled()
     // 守卫存在且覆盖全屏
     await expect(page.locator('[data-testid="paste-guard"]')).toBeAttached()
     // 「导出」等控件位置实际命中守卫层（点击无效果 = 取消预览，不触发按钮）

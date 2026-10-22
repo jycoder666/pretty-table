@@ -1,0 +1,48 @@
+{
+  "scrollHit": {
+    "viewport": "900x720",
+    "base": "feat.1.b",
+    "afterScroll": "feat.1.c",
+    "baseRect": {
+      "x": 474,
+      "y": 172.5,
+      "width": 140,
+      "height": 36
+    },
+    "rect": {
+      "x": 474,
+      "y": 172.5,
+      "width": 140,
+      "height": 36
+    },
+    "covers": true
+  },
+  "mergeSplit": {
+    "mergeEnabled": true,
+    "splitEnabled": false,
+    "mergedCells": 1,
+    "splitCells": 4
+  },
+  "inlineEdit": {
+    "typed": "真机就地编辑",
+    "landed": "真机就地编辑",
+    "beforeTab": "row.3.val.a",
+    "afterTab": "row.3.val.b"
+  },
+  "colWidth": {
+    "boundaryX": 473,
+    "midDragSelection": 0,
+    "widthAfterDrag": 180,
+    "widthAfterReload": 180
+  },
+  "blockSwap": {
+    "before": [
+      "preset-g1",
+      "preset-g2"
+    ],
+    "after": [
+      "preset-g2",
+      "preset-g1"
+    ]
+  }
+}

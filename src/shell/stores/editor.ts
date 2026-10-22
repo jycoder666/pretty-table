@@ -27,6 +27,11 @@ import {
   type MergeRange,
   type BlockType,
   type DispatchOptions,
+  colWidthAt,
+  countFilledSlotsInRange,
+  slotIdsInRange,
+  isEmphasizable,
+  dispatchBatch,
 } from '@/core'
 import { saveDraft, loadDraft, clearDraft } from '../repo/draftRepo'
 import { faultGate } from '../debug/fault'
@@ -45,6 +50,12 @@ export const useEditorStore = defineStore('editor', () => {
   const selectedBlockId = ref<string | null>(null)
   const selectionRange = ref<MergeRange | null>(null)
   const toast = ref<string | null>(null)
+  /**
+   * toast 序号：连续两次提示同一句话时节点不会重建（v-if 只判有值），
+   * 端到端用例就没法判断「这一次」的操作是否真的落地了（曾因此读到上一轮剪贴板内容）。
+   * 每次 showToast 递增并渲染成 data-seq，给自动化一个确定性的同步点。
+   */
+  const toastSeq = ref(0)
   const banner = ref<string | null>(null)
   const restorePrompt = ref(false)
   const exporting = ref(false)
@@ -155,6 +166,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   function showToast(msg: string) {
     toast.value = msg
+    toastSeq.value += 1
     if (lastToastTimer.value) clearTimeout(lastToastTimer.value)
     lastToastTimer.value = setTimeout(() => {
       toast.value = null
@@ -219,6 +231,47 @@ export const useEditorStore = defineStore('editor', () => {
     return true
   }
 
+  /**
+   * 批量意图（WP3/WP4）：N 条意图 = 一条撤销快照（核内 dispatchBatch）。
+   * 任一失败整批回滚，store 不变；warn 聚合一条 toast。
+   */
+  function applyBatch(intents: EditIntent[]): boolean {
+    if (!state.value || intents.length === 0) return false
+    textSessionKey = null
+    const r = dispatchBatch(state.value, intents)
+    if (!r.ok) {
+      showToast(r.error.message)
+      return false
+    }
+    state.value = r.value
+    if (r.warnings?.length) {
+      showToast(r.warnings.map((w) => warnCopy(w.code)).join('；'))
+    }
+    void persistDraft()
+    return true
+  }
+
+  /**
+   * 画布列宽拖拽落模型（PX-04 v2 / WP4）：VTable 自带列宽拖拽只改画布内部状态，
+   * 这里把宽度差异写回 layout.style.colWidths —— 模型成为单点，导出/PNG/命中一并生效。
+   * 一次拖动 = 一条批量意图 = 一步撤销。
+   */
+  function applyCanvasColWidths(widths: number[]): boolean {
+    const inst = current.value
+    if (!inst) return false
+    const changes: EditIntent[] = []
+    const cols = Math.min(inst.layout.colCount, widths.length)
+    for (let c = 0; c < cols; c++) {
+      const w = widths[c]
+      if (typeof w !== 'number' || !Number.isFinite(w)) continue
+      if (Math.abs(w - colWidthAt(inst, c)) > 0.5) {
+        changes.push({ kind: 'setColWidth', col: c, width: w })
+      }
+    }
+    if (changes.length === 0) return false
+    return applyBatch(changes)
+  }
+
   function undo() {
     if (!state.value || !canUndo(state.value)) return
     // QA 边角（FR-17）：粘贴预览期禁撤销——预览未决时一切状态变更被锁，撤销也不放开，
@@ -276,14 +329,109 @@ export const useEditorStore = defineStore('editor', () => {
     apply({ kind: 'setEmphasis', slotId: selectedSlotId.value, emphasize })
   }
 
+  /**
+   * 合并选区（WP1）：成功必须可见——toast「已合并」+ 选区描边闪一次（TH-F3 ≤200ms）；
+   * 合并会清掉非左上格的内容，被清的格数写进 toast，避免「内容凭空没了」的误解。
+   */
   function mergeSelection() {
-    if (!selectionRange.value) return
-    apply({ kind: 'merge', range: selectionRange.value })
+    const inst = current.value
+    const range = selectionRange.value
+    if (!inst || !range) return
+    const cleared = countFilledSlotsInRange(inst, range, { skipTopLeft: true })
+    if (!apply({ kind: 'merge', range })) return
+    flashSelection()
+    showToast(cleared > 0 ? `已合并（清除了 ${cleared} 格内容）` : '已合并')
   }
 
   function splitSelection() {
-    if (!selectionRange.value) return
-    apply({ kind: 'split', range: selectionRange.value })
+    const range = selectionRange.value
+    if (!range) return
+    if (!apply({ kind: 'split', range })) return
+    flashSelection()
+    showToast('已拆分')
+  }
+
+  /** 清空选区内容（WP1）：只清可写格；选区内本来没内容时给明确反馈，不做无声操作 */
+  function clearSelection() {
+    const inst = current.value
+    const range = selectionRange.value
+    if (!inst || !range) return
+    const filled = countFilledSlotsInRange(inst, range)
+    if (filled === 0) {
+      showToast('选区内没有内容')
+      return
+    }
+    if (!apply({ kind: 'clearSlots', range })) return
+    showToast(`已清空 ${filled} 格`)
+  }
+
+  // ── WP3：选区批量修改（对齐 / 强调），N 格一批 = 一步撤销 ──
+  /** 选区格数（面板「已选 N 格」与「单格 vs 批量」分流口径） */
+  const selectionCellCount = computed(() => {
+    const r = selectionRange.value
+    if (!r) return 0
+    return (Math.abs(r.end[0] - r.start[0]) + 1) * (Math.abs(r.end[1] - r.start[1]) + 1)
+  })
+
+  /** 选区内可写槽位（只读格 / 无槽位格跳过；核内 slotIdsInRange 单点） */
+  function writableSlotsInSelection(): string[] {
+    const inst = current.value
+    const range = selectionRange.value
+    if (!inst || !range) return []
+    return slotIdsInRange(inst, range)
+  }
+
+  function emphasisOf(inst: TemplateInstance, slotId: string): Emphasis[] {
+    const v = inst.slots[slotId]
+    if (!v || typeof v !== 'object' || !('emphasize' in v)) return []
+    const e = v.emphasize
+    if (Array.isArray(e)) return [...e]
+    return e ? [e] : []
+  }
+
+  /** 批量对齐：选区内所有可写格一次改齐（一批一步撤销） */
+  function setAlignForSelection(align: Align): boolean {
+    const ids = writableSlotsInSelection()
+    if (ids.length === 0) {
+      showToast('选区内没有可改的格子')
+      return false
+    }
+    return applyBatch(ids.map((slotId) => ({ kind: 'setAlign', slotId, align }) as EditIntent))
+  }
+
+  /**
+   * 批量强调：组内一致切换——选区内每格都已有该强调 → 全部去掉；否则全部加上。
+   * （逐格翻转会让「一半有一半没有」的选区越点越乱。）
+   */
+  function toggleEmphasisForSelection(kind: Emphasis): boolean {
+    const inst = current.value
+    const ids = writableSlotsInSelection().filter((id) => isEmphasizable(inst as TemplateInstance, id))
+    if (ids.length === 0) {
+      showToast('选区内没有可强调的格子')
+      return false
+    }
+    const i = inst as TemplateInstance
+    const all = ids.every((id) => emphasisOf(i, id).includes(kind))
+    const intents: EditIntent[] = ids.map((slotId) => {
+      const cur = emphasisOf(i, slotId)
+      const next = all ? cur.filter((x) => x !== kind) : cur.includes(kind) ? cur : [...cur, kind]
+      return { kind: 'setEmphasis', slotId, emphasize: next }
+    })
+    return applyBatch(intents)
+  }
+
+  // ── WP1：成功操作的「闪边」反馈（选区描边闪一次，TH-F3 ≤200ms）──
+  // flashKey 递增触发叠加层重放动画；归零即停（同一块选区连续操作也能重放）
+  const flashKey = ref(0)
+  let flashTimer: ReturnType<typeof setTimeout> | null = null
+
+  function flashSelection() {
+    flashKey.value += 1
+    if (flashTimer) clearTimeout(flashTimer)
+    flashTimer = setTimeout(() => {
+      flashTimer = null
+      flashKey.value = 0
+    }, 260)
   }
 
   function addBlock(type: BlockType, slotId: string) {
@@ -306,6 +454,44 @@ export const useEditorStore = defineStore('editor', () => {
     if (!selectedBlockId.value) return
     apply({ kind: 'removeBlock', blockId: selectedBlockId.value })
     selectedBlockId.value = null
+  }
+
+  /**
+   * WP4：表内区块换位（拖动把手 → 落到别的槽位）。
+   * 目标槽空 = 移动；已占用 = 两个区块互换（核内双侧 accept 校验）。
+   * 成功给一句可见反馈（WP1 的口径：动了结构就必须看得见）。
+   */
+  function moveBlock(blockId: string, toSlotId: string): boolean {
+    const inst = current.value
+    if (!inst) return false
+    const moving = inst.blocks.find((b) => b.id === blockId)
+    if (!moving || moving.slotId === toSlotId) return false
+    const swapping = inst.blocks.some((b) => b.slotId === toSlotId && b.id !== blockId)
+    if (!apply({ kind: 'moveBlock', blockId, toSlotId })) return false
+    selectedBlockId.value = null
+    showToast(swapping ? '已换位' : '已移到新槽位')
+    return true
+  }
+
+  /**
+   * WP4：整行/整列换位（面板按钮）。内容随行走（合并区/只读格/列宽一起重映射），
+   * 被结构约束挡住时核内给白话原因（表头行 / 标签列 / 冻结边界 / 与合并区交错）。
+   * 选区跟着被挪的那一行/列走：否则用户接着点第二次按钮，挪的是「别处挪过来的那一行」。
+   */
+  function moveRow(from: number, to: number): boolean {
+    const sel = selectionRange.value
+    if (!apply({ kind: 'moveRow', from, to })) return false
+    if (sel) selectionRange.value = { start: [to, sel.start[1]], end: [to, sel.end[1]] }
+    showToast(to < from ? '已上移' : '已下移')
+    return true
+  }
+
+  function moveCol(from: number, to: number): boolean {
+    const sel = selectionRange.value
+    if (!apply({ kind: 'moveCol', from, to })) return false
+    if (sel) selectionRange.value = { start: [sel.start[0], to], end: [sel.end[0], to] }
+    showToast(to < from ? '已左移' : '已右移')
+    return true
   }
 
   // ── R-3 图片写入（交互升级 T04）：上传 / 粘贴同一入口 ──
@@ -414,7 +600,9 @@ export const useEditorStore = defineStore('editor', () => {
     selectedSlotId,
     selectedBlockId,
     selectionRange,
+    selectionCellCount,
     toast,
+    toastSeq,
     banner,
     restorePrompt,
     exporting,
@@ -430,6 +618,8 @@ export const useEditorStore = defineStore('editor', () => {
     tryRestoreDraft,
     discardRestored,
     apply,
+    applyBatch,
+    applyCanvasColWidths,
     undo,
     redo,
     setSlotText,
@@ -437,10 +627,17 @@ export const useEditorStore = defineStore('editor', () => {
     setZebra,
     setAlign,
     setEmphasis,
+    setAlignForSelection,
+    toggleEmphasisForSelection,
     mergeSelection,
     splitSelection,
+    clearSelection,
+    flashKey,
     addBlock,
     removeSelectedBlock,
+    moveBlock,
+    moveRow,
+    moveCol,
     updateBlockText,
     uploadImage,
     setImageDataUrl,

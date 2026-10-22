@@ -34,7 +34,7 @@ watch(
   <div class="app">
     <LibraryPage v-if="editor.page === 'library'" />
     <EditorPage v-else />
-    <PtToast :message="editor.toast" />
+    <PtToast :message="editor.toast" :seq="editor.toastSeq" />
     <component :is="debugPanel" v-if="debugPanel" />
   </div>
 </template>

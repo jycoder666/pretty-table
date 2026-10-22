@@ -8,13 +8,32 @@ import {
 
 export type DropTarget = {
   blockSlotId: string
-  rect: DOMRect
+  rect: CellRect
   accept: BlockType[]
+}
+
+/**
+ * 格几何（左/上/宽/高）。PX-04 v2：优先由渲染核提供（滚动/冻结列/列宽调整感知），
+ * 无核时回退 estimateCellRects 的内容坐标纯算术。与 DOMRect / core ViewportRect 结构兼容。
+ */
+export interface CellRect {
+  left: number
+  top: number
+  width: number
+  height: number
 }
 
 const ROW_HEIGHT = 36
 const HEADER_HEIGHT = 36
 const BLOCK_HEIGHT = 32
+
+/** 区块类型 → 界面用词（组件库卡片 / 拖拽幽灵 / 表内拖动把手共用一套词） */
+export const BLOCK_TYPE_LABEL: Record<BlockType, string> = {
+  sectionBar: '分区色条',
+  groupHeader: '分组标题行',
+  emphFooter: '强调注脚',
+  leftTag: '左栏标签块',
+}
 
 /** 生效列宽合计（PX-04：与 toOption 渲染同源，colWidths / 默认宽都从这里走） */
 export function totalContentWidth(inst: TemplateInstance): number {
@@ -23,22 +42,22 @@ export function totalContentWidth(inst: TemplateInstance): number {
   return sum
 }
 
-/** Approximate per-cell DOMRects in preview coordinates (origin = host top-left). */
+/** Approximate per-cell rects in preview coordinates (origin = host top-left). */
 export function estimateCellRects(
   inst: TemplateInstance,
   origin: { left: number; top: number } = { left: 0, top: 0 },
-): DOMRect[][] {
+): CellRect[][] {
   const { metas, rowHeights } = buildVisualRows(inst)
   const colCount = inst.layout.colCount
-  const rows: DOMRect[][] = []
+  const rows: CellRect[][] = []
   let y = origin.top
   for (let r = 0; r < metas.length; r++) {
     const h = rowHeights[r] ?? (r < (inst.layout.headerLevels ?? 1) ? HEADER_HEIGHT : ROW_HEIGHT)
-    const cols: DOMRect[] = []
+    const cols: CellRect[] = []
     let x = origin.left
     for (let c = 0; c < colCount; c++) {
       const w = colWidthAt(inst, c)
-      cols.push(new DOMRect(x, y, w, h))
+      cols.push({ left: x, top: y, width: w, height: h })
       x += w
     }
     rows.push(cols)
@@ -50,7 +69,7 @@ export function estimateCellRects(
 /** Drop targets for every `layout.blockSlots` entry, top-to-bottom by visual gap rows. */
 export function computeDropTargets(
   inst: TemplateInstance,
-  cellRects: DOMRect[][],
+  cellRects: CellRect[][],
 ): DropTarget[] {
   const { blockRowIndexes } = buildVisualRows(inst)
   const orderedVisual = [...blockRowIndexes.entries()].sort((a, b) => a[0] - b[0])
@@ -66,11 +85,11 @@ export function computeDropTargets(
     const last = row[row.length - 1]!
     const left = first.left
     const top = first.top
-    const width = last.right - first.left
+    const width = last.left + last.width - first.left
     const height = first.height || BLOCK_HEIGHT
     targets.push({
       blockSlotId: slotId,
-      rect: new DOMRect(left, top, width, height),
+      rect: { left, top, width, height },
       accept: [...def.accept],
     })
     seen.add(slotId)
@@ -79,13 +98,13 @@ export function computeDropTargets(
   // Remaining slots (footer / left-tag) — park below content so resolveDrop still works
   let bottom = 0
   for (const row of cellRects) {
-    for (const cell of row) bottom = Math.max(bottom, cell.bottom)
+    for (const cell of row) bottom = Math.max(bottom, cell.top + cell.height)
   }
   for (const def of inst.layout.blockSlots) {
     if (seen.has(def.id)) continue
     targets.push({
       blockSlotId: def.id,
-      rect: new DOMRect(0, bottom, totalContentWidth(inst), BLOCK_HEIGHT),
+      rect: { left: 0, top: bottom, width: totalContentWidth(inst), height: BLOCK_HEIGHT },
       accept: [...def.accept],
     })
     bottom += BLOCK_HEIGHT

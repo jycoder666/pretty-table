@@ -145,11 +145,24 @@ export async function openExportDrawer(page: Page): Promise<void> {
   await expect(page.locator('.drawer')).toBeVisible()
 }
 
-/** 导出 HTML 读回（走「复制 HTML」→ 剪贴板 text/html 风味，等价富文本粘贴产物） */
+/** 当前 toast 的序号（无 toast 时为 null）；用于确认「这一次」提示已落地 */
+async function toastSeqOf(page: Page): Promise<string | null> {
+  return page.evaluate(
+    () => document.querySelector('.pt-toast')?.getAttribute('data-seq') ?? null,
+  )
+}
+
+/**
+ * 导出 HTML 读回（走「复制 HTML」→ 剪贴板 text/html 风味，等价富文本粘贴产物）。
+ * 同步口径：不能只看 toast 文案——连续两次复制同一句话时节点不重建，文案断言会立刻通过，
+ * 而此时剪贴板可能还是上一轮内容。故等 data-seq 递增，确认这一次复制已完成。
+ */
 export async function exportedHtml(page: Page): Promise<string> {
   await openExportDrawer(page)
+  const seqBefore = await toastSeqOf(page)
   await page.getByRole('button', { name: '复制 HTML' }).click()
   await expect(page.locator('.pt-toast')).toHaveText('已复制到剪贴板')
+  await expect.poll(() => toastSeqOf(page)).not.toBe(seqBefore)
   // P1 修复后剪贴板为双风味（text/html 片段 + text/plain TSV）：取 text/html，
   // 与公众号/邮件等富文本编辑器粘到的内容一致；纯文本风味见 exportedText
   const html = await readClipboardFlavor(page, 'text/html')
@@ -157,21 +170,39 @@ export async function exportedHtml(page: Page): Promise<string> {
   return html
 }
 
-/** 读剪贴板指定风味（真机剪贴板多风味：text/html / text/plain） */
+/**
+ * 读剪贴板指定风味（真机剪贴板多风味：text/html / text/plain）。
+ * Chromium 的 async clipboard 有竞态：多风味写入（本应用一次写 text/html + text/plain）
+ * 刚落地时立刻 `read()` → `getType()` 会抛 InvalidStateError「Clipboard data has changed」，
+ * 属引擎时序问题而非产品缺陷（重读即可拿到稳定内容），故此处退避重试，全败才抛。
+ */
 export async function readClipboardFlavor(page: Page, type: string): Promise<string> {
-  return page.evaluate(async (t) => {
-    const items = await navigator.clipboard.read()
-    for (const it of items) {
-      if (it.types.includes(t)) return await (await it.getType(t)).text()
+  const read = () =>
+    page.evaluate(async (t) => {
+      const items = await navigator.clipboard.read()
+      for (const it of items) {
+        if (it.types.includes(t)) return await (await it.getType(t)).text()
+      }
+      return ''
+    }, type)
+  let lastErr: unknown = null
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await read()
+    } catch (err) {
+      lastErr = err
+      await page.waitForTimeout(80)
     }
-    return ''
-  }, type)
+  }
+  throw lastErr
 }
 
 /** 导出纯文本风味读回（text/plain = TSV，落 Excel/WPS 等价；调用前抽屉须已打开） */
 export async function exportedText(page: Page): Promise<string> {
+  const seqBefore = await toastSeqOf(page)
   await page.getByRole('button', { name: '复制 HTML' }).click()
   await expect(page.locator('.pt-toast')).toHaveText('已复制到剪贴板')
+  await expect.poll(() => toastSeqOf(page)).not.toBe(seqBefore)
   const text = await page.evaluate(() => navigator.clipboard.readText())
   await page.getByRole('button', { name: '关闭' }).click()
   return text

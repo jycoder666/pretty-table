@@ -9,12 +9,15 @@ import type {
   SlotValue,
   TemplateJSON,
   ThemeTokens,
+  ViewportHit,
+  ViewportRect,
 } from '../types'
 import { toOption } from '../adapter/toOption'
 import { exportHtml } from '../export/html'
 import { collectImageUrls, exportPng, preloadImages } from '../export/png'
 import { cloneInstance } from '../schema/validate'
 import { isThemeId, DEFAULT_THEME_ID } from '../theme/palettes'
+import { COL_WIDTH_RANGE } from '../theme/layoutScales'
 
 export function mount(el: HTMLElement, options?: CoreOptions): CoreHandle {
   let instance = options?.initial ? cloneInstance(options.initial) : null
@@ -28,6 +31,66 @@ export function mount(el: HTMLElement, options?: CoreOptions): CoreHandle {
   const setState = (s: RenderState) => {
     renderState = s
     options?.onRenderState?.(s)
+  }
+
+  // ── PX-04 v2：命中与叠加层几何直接消费渲染器（VTable）的权威坐标 ──
+  // 壳层几何（estimateCellRects/locateVisual）是「内容坐标」纯算术，不含滚动与冻结列偏移；
+  // VTable 内部滚动（frozenColCount 模板横向滚动）后两者会脱节 → 点选/描边/落点错位。
+  // 这里把 VTable 的 relative 系 API（滚动 / 冻结列 / 列宽调整感知）经 CoreHandle 暴露给壳层。
+  const viewportListeners = new Set<() => void>()
+  const colResizeListeners = new Set<(col: number, widths: number[]) => void>()
+  let eventsAttached = false
+
+  const notifyViewport = () => {
+    for (const cb of viewportListeners) {
+      try {
+        cb()
+      } catch {
+        /* 订阅方异常不影响渲染核 */
+      }
+    }
+  }
+
+  /** 画布相对容器（mount 传入元素）的偏移；VTable 坐标以画布为原点，叠加层以容器为原点 */
+  const canvasOffset = (): { dx: number; dy: number } => {
+    const canvas = el.querySelector('canvas')
+    if (!canvas) return { dx: 0, dy: 0 }
+    const c = canvas.getBoundingClientRect()
+    const h = el.getBoundingClientRect()
+    return { dx: c.left - h.left, dy: c.top - h.top }
+  }
+
+  const attachTableEvents = () => {
+    if (!table || eventsAttached) return
+    eventsAttached = true
+    // 订阅生命周期随 table.release()（destroy）一并回收
+    table.on('scroll', () => notifyViewport())
+    table.on('resize_column', () => notifyViewport())
+    table.on('resize_column_end', (args) => {
+      notifyViewport()
+      for (const cb of colResizeListeners) {
+        try {
+          cb(args.col, args.colWidths)
+        } catch {
+          /* 同上 */
+        }
+      }
+    })
+    table.on('resize_row_end', () => notifyViewport())
+  }
+
+  /**
+   * WP4：列宽拖拽实时钳制到模型允许区间（[64,360]），与 setColWidth 的 clampColWidth 同源；
+   * 不设限则拖到 600 松手后模型收口，视觉上「弹回」。VTable 在 _moveHeaderPosition（dragOrder）
+   * 与重建路径会清空该表，故每次 paint 后重设。
+   */
+  const applyColWidthLimits = () => {
+    if (!table) return
+    const limits: Record<number, { min: number; max: number }> = {}
+    for (let col = 0; col < table.colCount; col++) {
+      limits[col] = { min: COL_WIDTH_RANGE[0], max: COL_WIDTH_RANGE[1] }
+    }
+    table.colWidthsLimit = limits
   }
 
   const paint = async () => {
@@ -55,10 +118,16 @@ export function mount(el: HTMLElement, options?: CoreOptions): CoreHandle {
       if (seq !== paintSeq) return
       if (!table) {
         table = new ListTable(el, option)
+        attachTableEvents()
       } else {
         table.updateOption(option)
       }
-      if (seq === paintSeq) setState('ready')
+      applyColWidthLimits()
+      if (seq === paintSeq) {
+        setState('ready')
+        // 重绘后几何已变（行列/区块/列宽）：通知壳层重算叠加层与落点
+        notifyViewport()
+      }
     } catch (e) {
       if (seq !== paintSeq) return
       setState('error')
@@ -118,6 +187,47 @@ export function mount(el: HTMLElement, options?: CoreOptions): CoreHandle {
     getPreviewEl() {
       return el
     },
+    hitTest(x: number, y: number): ViewportHit | null {
+      if (!table) return null
+      const { dx, dy } = canvasOffset()
+      const hit = table.getCellAtRelativePosition(x - dx, y - dy)
+      if (!hit || hit.row < 0 || hit.col < 0) return null
+      if (hit.row >= table.rowCount || hit.col >= table.colCount) return null
+      return { row: hit.row, col: hit.col }
+    },
+    getCellViewportRect(visualRow: number, col: number): ViewportRect | null {
+      if (!table) return null
+      if (visualRow < 0 || col < 0 || visualRow >= table.rowCount || col >= table.colCount) return null
+      const { dx, dy } = canvasOffset()
+      const r = table.getCellRelativeRect(col, visualRow)
+      return { left: r.left + dx, top: r.top + dy, width: r.width, height: r.height }
+    },
+    getCellViewportRects(): ViewportRect[][] | null {
+      if (!table) return null
+      const { dx, dy } = canvasOffset()
+      const rows: ViewportRect[][] = []
+      for (let row = 0; row < table.rowCount; row++) {
+        const line: ViewportRect[] = []
+        for (let col = 0; col < table.colCount; col++) {
+          const r = table.getCellRelativeRect(col, row)
+          line.push({ left: r.left + dx, top: r.top + dy, width: r.width, height: r.height })
+        }
+        rows.push(line)
+      }
+      return rows
+    },
+    onViewportChange(cb: () => void): () => void {
+      viewportListeners.add(cb)
+      return () => {
+        viewportListeners.delete(cb)
+      }
+    },
+    onColResize(cb: (col: number, widths: number[]) => void): () => void {
+      colResizeListeners.add(cb)
+      return () => {
+        colResizeListeners.delete(cb)
+      }
+    },
     destroy() {
       try {
         table?.release?.()
@@ -126,6 +236,9 @@ export function mount(el: HTMLElement, options?: CoreOptions): CoreHandle {
       }
       table = null
       instance = null
+      eventsAttached = false
+      viewportListeners.clear()
+      colResizeListeners.clear()
     },
   }
 

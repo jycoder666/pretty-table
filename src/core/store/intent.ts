@@ -112,6 +112,64 @@ function clearSlotsInRange(inst: TemplateInstance, range: import('../types').Mer
   }
 }
 
+/**
+ * 选区内有内容的可写格数（清空/合并前的提示口径；跳过只读格与空槽位）。
+ * `skipTopLeft`：合并前口径——合并保留左上格内容，只有其余格的内容会被清掉。
+ */
+export function countFilledSlotsInRange(
+  inst: TemplateInstance,
+  range: import('../types').MergeRange,
+  opts?: { skipTopLeft?: boolean },
+): number {
+  const grid = inst.layout.slotGrid
+  if (!grid) return 0
+  const readonly = new Set((inst.layout.readonlyCells ?? []).map(([r, c]) => `${r},${c}`))
+  const r0 = Math.min(range.start[0], range.end[0])
+  const r1 = Math.max(range.start[0], range.end[0])
+  const c0 = Math.min(range.start[1], range.end[1])
+  const c1 = Math.max(range.start[1], range.end[1])
+  let n = 0
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      if (opts?.skipTopLeft && r === r0 && c === c0) continue
+      if (readonly.has(`${r},${c}`)) continue
+      const sid = grid[r]?.[c]
+      if (!sid) continue
+      if (slotText(inst.slots[sid]) !== '') n += 1
+    }
+  }
+  return n
+}
+
+/**
+ * 选区内的可写槽位 id（WP3 批量对齐/强调的落点）：跳过只读格与无槽位格，按阅读顺序去重。
+ * 合并区只返回左上格的槽（渲染与导出同口径：合并区只有左上格承载内容）。
+ */
+export function slotIdsInRange(
+  inst: TemplateInstance,
+  range: import('../types').MergeRange,
+): string[] {
+  const grid = inst.layout.slotGrid
+  if (!grid) return []
+  const readonly = new Set((inst.layout.readonlyCells ?? []).map(([r, c]) => `${r},${c}`))
+  const r0 = Math.min(range.start[0], range.end[0])
+  const r1 = Math.max(range.start[0], range.end[0])
+  const c0 = Math.min(range.start[1], range.end[1])
+  const c1 = Math.max(range.start[1], range.end[1])
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      if (readonly.has(`${r},${c}`)) continue
+      const sid = grid[r]?.[c]
+      if (!sid || seen.has(sid)) continue
+      seen.add(sid)
+      out.push(sid)
+    }
+  }
+  return out
+}
+
 export function applyEditIntent(
   inst: TemplateInstance,
   intent: EditIntent,
@@ -216,6 +274,8 @@ export function applyEditIntent(
     case 'addCol':
     case 'removeCol':
     case 'setHeaderLevel':
+    case 'moveRow':
+    case 'moveCol':
       return applyStructuralIntent(inst, intent)
     case 'setTheme': {
       next.themeId = intent.themeId
@@ -244,6 +304,24 @@ export function applyEditIntent(
             m.end[1] === intent.range.end[1]
           ),
       )
+      return ok(next)
+    }
+    case 'clearSlots': {
+      const grid = next.layout.slotGrid
+      if (!grid) return fail('SLOT_UNKNOWN', '当前模板不支持清空内容')
+      const readonly = new Set((next.layout.readonlyCells ?? []).map(([r, c]) => `${r},${c}`))
+      const r0 = Math.min(intent.range.start[0], intent.range.end[0])
+      const r1 = Math.max(intent.range.start[0], intent.range.end[0])
+      const c0 = Math.min(intent.range.start[1], intent.range.end[1])
+      const c1 = Math.max(intent.range.start[1], intent.range.end[1])
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          // 只读格（模板固定）不清；空槽位跳过
+          if (readonly.has(`${r},${c}`)) continue
+          const sid = grid[r]?.[c]
+          if (sid) next.slots[sid] = ''
+        }
+      }
       return ok(next)
     }
     case 'setAlign': {
@@ -281,6 +359,37 @@ export function applyEditIntent(
       const b = next.blocks.find((x) => x.id === intent.blockId)
       if (!b) return fail('BLOCK_NOT_FOUND', '区块不存在', { blockId: intent.blockId })
       b.props = { ...b.props, ...intent.props }
+      return ok(next)
+    }
+    // WP4：表内区块换位——目标槽空则移动；已占用则两个区块互换（双侧 accept 都要允许，
+    // 单向校验会让「A 槽不收 B 类」的模板在互换时留下类型不合法的区块）
+    case 'moveBlock': {
+      const moving = next.blocks.find((b) => b.id === intent.blockId)
+      if (!moving) return fail('BLOCK_NOT_FOUND', '区块不存在', { blockId: intent.blockId })
+      const toDef = next.layout.blockSlots.find((s) => s.id === intent.toSlotId)
+      if (!toDef) return fail('SLOT_DROP_BLOCKED', '这个槽位不存在', { slotId: intent.toSlotId })
+      if (moving.slotId === intent.toSlotId) return ok(next)
+      if (!toDef.accept.includes(moving.type)) {
+        return fail('BLOCK_TYPE_REJECT', '这里不能放这个区块', { slotId: intent.toSlotId })
+      }
+      const occupant = next.blocks.find((b) => b.slotId === intent.toSlotId && b.id !== moving.id)
+      if (occupant) {
+        const fromDef = next.layout.blockSlots.find((s) => s.id === moving.slotId)
+        if (!fromDef || !fromDef.accept.includes(occupant.type)) {
+          return fail('BLOCK_TYPE_REJECT', '这两个区块不能互换', { slotId: moving.slotId })
+        }
+        next.blocks = next.blocks.map((b) =>
+          b.id === moving.id
+            ? { ...b, slotId: intent.toSlotId }
+            : b.id === occupant.id
+              ? { ...b, slotId: moving.slotId }
+              : b,
+        )
+        return ok(next)
+      }
+      next.blocks = next.blocks.map((b) =>
+        b.id === moving.id ? { ...b, slotId: intent.toSlotId } : b,
+      )
       return ok(next)
     }
     default:

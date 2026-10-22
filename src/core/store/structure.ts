@@ -1,14 +1,17 @@
 import { fail, ok, type CoreWarning, type Result } from '../errors'
-import type { BlockDesc, CellCoord, MergeRange, TemplateInstance } from '../types'
+import type { BlockDesc, CellCoord, TemplateInstance } from '../types'
 import { cloneInstance } from '../schema/validate'
 import { LIMITS, visibleRowCount } from '../theme/layoutScales'
 import { MARK_LABEL } from '../format/formatTokens'
+import { remapRangesInsert, remapRangesRemove } from './remap'
+import { doMoveCol, doMoveRow } from './moveOps'
 
 /**
  * 结构编辑核（自定义格式设计增量 §1.4，FR-C3）。
  * 纯函数：在副本上一次改完全部 remap 联动，返回完整新实例（含 STRUCT_LOSS warns）。
  * 禁止在壳里拆成多次 dispatch 拼一个结构操作——一个结构操作 = 一张撤销快照。
  * 新槽位 id 一律 u<单调序号>（§1.4.4）：实例内不重用、不改既有 id。
+ * 区间重映射原语见 ./remap，整行/整列换位见 ./moveOps（WP5 拆分，行为不变）。
  */
 
 export type StructuralIntent =
@@ -17,6 +20,10 @@ export type StructuralIntent =
   | { kind: 'addCol'; afterCol?: number }
   | { kind: 'removeCol'; col: number }
   | { kind: 'setHeaderLevel'; levels: 1 | 2 | 3 }
+  /** WP4：整行换位（from → to，其余行按序让位） */
+  | { kind: 'moveRow'; from: number; to: number }
+  /** WP4：整列换位 */
+  | { kind: 'moveCol'; from: number; to: number }
 
 type SlotRecord = TemplateInstance['slots']
 
@@ -82,77 +89,6 @@ function formatAnchor(form: 'after' | 'left', row: number): string {
 function anchorOf(rowHint: string | undefined): number | null {
   const a = parseAnchor(rowHint)
   return a ? a.row : null
-}
-
-// ── 区间 remap（axis: 0=行, 1=列）─────────────────────────────
-
-function mkRange(ns: number, ne: number, o0: number, o1: number, axis: 0 | 1): MergeRange {
-  // axis=0（行）：[row, col] = [n, o]；axis=1（列）：[row, col] = [o, n]
-  return {
-    start: axis === 0 ? [ns, o0] : [o0, ns],
-    end: axis === 0 ? [ne, o1] : [o1, ne],
-  }
-}
-
-/** 在 axis 轴 at 位置插入 delta 个单位：插入点落在区间内部 → 拉长；≥ at → 平移 */
-function remapRangesInsert(
-  ranges: MergeRange[],
-  at: number,
-  delta: number,
-  axis: 0 | 1,
-): MergeRange[] {
-  return ranges.map((r) => {
-    const s = axis === 0 ? r.start[0] : r.start[1]
-    const e = axis === 0 ? r.end[0] : r.end[1]
-    const o0 = axis === 0 ? r.start[1] : r.start[0]
-    const o1 = axis === 0 ? r.end[1] : r.end[0]
-    let ns = s
-    let ne = e
-    if (s < at && e >= at) {
-      ne = e + delta
-    } else if (s >= at) {
-      ns = s + delta
-      ne = e + delta
-    }
-    return mkRange(ns, ne, o0, o1, axis)
-  })
-}
-
-/** 在 axis 轴删除第 at 个单位：相交收缩；完全在删单位内或收缩后只剩单格 → 移除 */
-function remapRangesRemove(
-  ranges: MergeRange[],
-  at: number,
-  axis: 0 | 1,
-): { ranges: MergeRange[]; removed: MergeRange[] } {
-  const out: MergeRange[] = []
-  const removed: MergeRange[] = []
-  for (const r of ranges) {
-    const s = axis === 0 ? r.start[0] : r.start[1]
-    const e = axis === 0 ? r.end[0] : r.end[1]
-    const o0 = axis === 0 ? r.start[1] : r.start[0]
-    const o1 = axis === 0 ? r.end[1] : r.end[0]
-    if (e < at || s > at) {
-      // 不相交：仅平移
-      const ns = s > at ? s - 1 : s
-      const ne = e > at ? e - 1 : e
-      out.push(mkRange(ns, ne, o0, o1, axis))
-      continue
-    }
-    // 相交：收缩
-    const ns = s > at ? s - 1 : s
-    const ne = e >= at ? e - 1 : e
-    if (ns > ne) {
-      removed.push(r)
-      continue
-    }
-    const nr = mkRange(ns, ne, o0, o1, axis)
-    if (nr.start[0] === nr.end[0] && nr.start[1] === nr.end[1]) {
-      removed.push(r)
-      continue
-    }
-    out.push(nr)
-  }
-  return { ranges: out, removed }
 }
 
 function makeSlot(
@@ -440,6 +376,10 @@ export function applyStructuralIntent(
     }
     case 'setHeaderLevel':
       return doSetHeaderLevel(inst, intent.levels, warnings)
+    case 'moveRow':
+      return doMoveRow(inst, intent.from, intent.to, warnings)
+    case 'moveCol':
+      return doMoveCol(inst, intent.from, intent.to, warnings)
   }
 }
 

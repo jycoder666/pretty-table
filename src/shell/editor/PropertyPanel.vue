@@ -13,13 +13,13 @@ import {
   roleColorOf,
   canAddRow,
   canAddCol,
-  canMerge,
-  canSplit,
   canSetImage,
   clampColWidth,
   colWidthAt,
   hasContentInRow,
   hasContentInCol,
+  slotIdsInRange,
+  type Align,
   type RoleColorKey,
   type StructuralIntent,
   type ThemeId,
@@ -33,6 +33,7 @@ import PtSegmented from '../ui/PtSegmented.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import { confirmAction } from '../ui/confirm'
 import { panelGroupOpen, togglePanelGroup } from './panelGroups'
+import { useMergeGates } from './useMergeGates'
 import ColorField from './ColorField.vue'
 
 const editor = useEditorStore()
@@ -167,36 +168,47 @@ function setHeaderLevels(v: number) {
   applyStruct({ kind: 'setHeaderLevel', levels: v as 1 | 2 | 3 })
 }
 
-// ── PX-08：合并 / 拆分按钮随选区实时置灰（核内 mergeGuard 同源判定） ──
-interface MergeGate {
-  ok: boolean
-  /** 不可用时的一句白话原因（挂按钮 title） */
-  reason: string
+// ── WP4：行列换位（按钮式；核内还会挡表头行/标签列/冻结边界/与合并区交错）──
+const headerLevelsNow = computed(() => editor.current?.layout.headerLevels ?? 1)
+const canMoveRowUp = computed(
+  () => !editor.pastePending && targetRow.value > headerLevelsNow.value,
+)
+const canMoveRowDown = computed(
+  () =>
+    !editor.pastePending &&
+    targetRow.value >= headerLevelsNow.value &&
+    targetRow.value < rowCount.value - 1,
+)
+/** 第一列是标签列（左栏标签块锚点 / 首列固定 / Q-004 强调规则都挂在列号上）→ 不参与换位 */
+const frozenNow = computed(() => editor.current?.layout.frozenColCount ?? 0)
+/** 冻结列与普通列不能互串（核内同样拒绝）：换位两侧的冻结属性必须一致，否则按钮别装可用 */
+function sameFrozenSide(a: number, b: number): boolean {
+  return a < frozenNow.value === b < frozenNow.value
+}
+const canMoveColLeft = computed(
+  () =>
+    !editor.pastePending && targetCol.value > 1 && sameFrozenSide(targetCol.value, targetCol.value - 1),
+)
+const canMoveColRight = computed(
+  () =>
+    !editor.pastePending &&
+    targetCol.value > 0 &&
+    targetCol.value < colCount.value - 1 &&
+    sameFrozenSide(targetCol.value, targetCol.value + 1),
+)
+
+function moveRowBy(delta: number) {
+  const from = targetRow.value
+  editor.moveRow(from, from + delta)
 }
 
-const mergeGate = computed<MergeGate>(() => {
-  const inst = editor.current
-  if (!inst || editor.pastePending) {
-    return { ok: false, reason: editor.pastePending ? '粘贴预览期间不可操作' : '先打开一张表格' }
-  }
-  if (!editor.selectionRange) {
-    return { ok: false, reason: '先在预览里选中格子：点起点格后按住 Shift 点终点格，选一块矩形区域' }
-  }
-  const r = canMerge(inst.layout, editor.selectionRange)
-  return r.ok ? { ok: true, reason: '' } : { ok: false, reason: r.error.message }
-})
+function moveColBy(delta: number) {
+  const from = targetCol.value
+  editor.moveCol(from, from + delta)
+}
 
-const splitGate = computed<MergeGate>(() => {
-  const inst = editor.current
-  if (!inst || editor.pastePending) {
-    return { ok: false, reason: editor.pastePending ? '粘贴预览期间不可操作' : '先打开一张表格' }
-  }
-  if (!editor.selectionRange) {
-    return { ok: false, reason: '先在预览里选中一个已合并的格子再拆分' }
-  }
-  const r = canSplit(inst.layout, editor.selectionRange)
-  return r.ok ? { ok: true, reason: '' } : { ok: false, reason: r.error.message }
-})
+// ── PX-08 / WP1：合并 / 拆分按钮随选区实时置灰（与画布选区工具条共用 useMergeGates 判定）──
+const { mergeGate, splitGate } = useMergeGates()
 
 const marks: Record<MarkValue, string> = { ...MARK_LABEL }
 const glyphs: Record<MarkValue, string> = { ...MARK_GLYPH }
@@ -402,12 +414,28 @@ function setBlockTier(v: number) {
   editor.apply({ kind: 'updateBlock', blockId: b.id, props: { styleTier: v as 1 | 2 } })
 }
 
+const multiSelect = computed(() => editor.selectionCellCount > 1)
+
 const canEmphasize = computed(() => {
-  if (!editor.current || !editor.selectedSlotId) return false
-  return isEmphasizable(editor.current, editor.selectedSlotId)
+  const inst = editor.current
+  if (!inst) return false
+  // WP3 多选：选区内有可写格即可批量强调（只读格由核内逐格跳过）
+  if (multiSelect.value) return slotIdsInRange(inst, editor.selectionRange!).length > 0
+  if (!editor.selectedSlotId) return false
+  return isEmphasizable(inst, editor.selectedSlotId)
 })
 
+/** WP3：对齐 / 强调在「多选」时作用整块选区（一批一步撤销），单格走既有单点意图 */
+function applyAlign(align: Align) {
+  if (multiSelect.value) editor.setAlignForSelection(align)
+  else editor.setAlign(align)
+}
+
 function toggleEm(kind: Emphasis) {
+  if (multiSelect.value) {
+    editor.toggleEmphasisForSelection(kind)
+    return
+  }
   if (!editor.selectedSlotId || !editor.current) return
   const v = editor.current.slots[editor.selectedSlotId]
   const cur =
@@ -529,10 +557,14 @@ async function removeBlock() {
           <template v-else>
             <textarea v-if="!selectedImage" v-model="slotText" rows="3" @blur="editor.endTextSession()" />
           </template>
+          <!-- WP3：多选时按钮作用于整块选区（一批一步撤销） -->
+          <p v-if="multiSelect" class="hint" data-testid="selection-count">
+            已选 {{ editor.selectionCellCount }} 格，下面的对齐与强调会一起改
+          </p>
           <div class="row">
-            <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('left')">左</PtButton>
-            <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('center')">中</PtButton>
-            <PtButton variant="ghost" :disabled="editor.pastePending" @click="editor.setAlign('right')">右</PtButton>
+            <PtButton variant="ghost" :disabled="editor.pastePending" @click="applyAlign('left')">左</PtButton>
+            <PtButton variant="ghost" :disabled="editor.pastePending" @click="applyAlign('center')">中</PtButton>
+            <PtButton variant="ghost" :disabled="editor.pastePending" @click="applyAlign('right')">右</PtButton>
           </div>
           <div class="row">
             <PtTooltip text="给选中格子加红字">
@@ -545,7 +577,7 @@ async function removeBlock() {
               <PtButton variant="ghost" :disabled="!canEmphasize || editor.pastePending" @click="toggleEm('bg')">底色</PtButton>
             </PtTooltip>
           </div>
-          <p v-if="!canEmphasize" class="hint">此处由模板固定，不能强调</p>
+          <p v-if="!canEmphasize && !multiSelect" class="hint">此处由模板固定，不能强调</p>
         </div>
 
         <div v-if="editor.selectedBlockId" class="section">
@@ -742,6 +774,51 @@ async function removeBlock() {
               </PtButton>
             </PtTooltip>
           </div>
+          <!-- WP4：行列换位（内容随行走，合并区/只读格/列宽一起重映射） -->
+          <div class="row">
+            <PtTooltip text="把选中的行和上一行换位（表头行不参与）">
+              <PtButton
+                variant="ghost"
+                data-testid="move-row-up"
+                :disabled="!canMoveRowUp"
+                @click="moveRowBy(-1)"
+              >
+                行上移
+              </PtButton>
+            </PtTooltip>
+            <PtTooltip text="把选中的行和下一行换位（表头行不参与）">
+              <PtButton
+                variant="ghost"
+                data-testid="move-row-down"
+                :disabled="!canMoveRowDown"
+                @click="moveRowBy(1)"
+              >
+                行下移
+              </PtButton>
+            </PtTooltip>
+          </div>
+          <div class="row">
+            <PtTooltip text="把选中的列和左一列换位（第一列是标签列，不参与）">
+              <PtButton
+                variant="ghost"
+                data-testid="move-col-left"
+                :disabled="!canMoveColLeft"
+                @click="moveColBy(-1)"
+              >
+                列左移
+              </PtButton>
+            </PtTooltip>
+            <PtTooltip text="把选中的列和右一列换位（第一列是标签列，不参与）">
+              <PtButton
+                variant="ghost"
+                data-testid="move-col-right"
+                :disabled="!canMoveColRight"
+                @click="moveColBy(1)"
+              >
+                列右移
+              </PtButton>
+            </PtTooltip>
+          </div>
           <div class="field">
             <span>表头层数</span>
             <PtSegmented
@@ -759,7 +836,9 @@ async function removeBlock() {
 
         <div class="section">
           <h4>合并 / 拆分</h4>
-          <p class="hint">仅在模板允许区内操作；锁定合并不可拆。</p>
+          <p class="hint">
+            选中格子后也可用画布上的浮动工具条；模板固定的合并区不能动，拆分要选中整个合并区。
+          </p>
           <div class="row">
             <PtTooltip :text="mergeGate.reason || '合并当前选区的格子'">
               <PtButton

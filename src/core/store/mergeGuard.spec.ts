@@ -33,9 +33,21 @@ describe('mergeGuard · 合并闸放宽（自定义格式 §1.4.1）', () => {
     expect(r.error.code).toBe('MERGE_CONFLICT')
   })
 
-  it('同区间重复合并 → 放行（幂等）', () => {
+  // WP1 收紧：旧实现「同区间重复合并放行」会把同一区间再追加进 merges（重复项），
+  // 且按钮一直可点。现在直接拒并给出可读原因。
+  it('同区间重复合并 → 拒（MERGE_NOT_ALLOWED「已经是合并区」）', () => {
     const l = layout({ merges: [R(0, 1, 0, 2)] })
-    expect(canMerge(l, R(0, 1, 0, 2)).ok).toBe(true)
+    const r = canMerge(l, R(0, 1, 0, 2))
+    expect(r.ok).toBe(false)
+    expect(!r.ok ? r.error.code : '').toBe('MERGE_NOT_ALLOWED')
+    expect(!r.ok ? r.error.message : '').toContain('已经是合并区')
+  })
+
+  it('选区恰好等于锁定合并区 → MERGE_STRUCTURAL（不再假装可合并）', () => {
+    const l = layout({ structuralMerges: [R(0, 0, 1, 0)] })
+    const r = canMerge(l, R(0, 0, 1, 0))
+    expect(r.ok).toBe(false)
+    expect(!r.ok ? r.error.code : '').toBe('MERGE_STRUCTURAL')
   })
 
   it('单格仍 MERGE_NOT_ALLOWED', () => {
@@ -82,5 +94,31 @@ describe('mergeGuard · 合并闸放宽（自定义格式 §1.4.1）', () => {
   it('allowedMerges 不影响 canSplit 判定', () => {
     const l = layout({ merges: [R(2, 0, 2, 1)] })
     expect(canSplit(l, R(2, 0, 2, 1)).ok).toBe(true)
+  })
+
+  // WP1：拆分闸收紧为「选区恰好等于某个合并区」，消灭「可点但点了没反应」的静默 no-op
+  it('选区落在合并区之内（子区域）→ 拒 + 指引「请选中整个合并区再拆分」', () => {
+    const l = layout({ merges: [R(0, 1, 0, 3)] })
+    const r = canSplit(l, R(0, 1, 0, 2))
+    expect(r.ok).toBe(false)
+    expect(!r.ok ? r.error.code : '').toBe('MERGE_NOT_ALLOWED')
+    expect(!r.ok ? r.error.message : '').toContain('整个合并区')
+  })
+
+  it('选区比合并区大（含未合并格）→ 拒（不再假可点）', () => {
+    const l = layout({ merges: [R(0, 1, 0, 2)] })
+    expect(canSplit(l, R(0, 0, 0, 2)).ok).toBe(false)
+  })
+
+  it('非合并区选区 → 拒（MERGE_NOT_ALLOWED）', () => {
+    const l = layout({ merges: [R(2, 0, 2, 1)] })
+    expect(canSplit(l, R(3, 0, 3, 1)).ok).toBe(false)
+  })
+
+  it('选区恰好等于锁定合并区（含归一化 end<start）→ MERGE_STRUCTURAL', () => {
+    const l = layout({ structuralMerges: [R(0, 0, 1, 0)] })
+    const r = canSplit(l, { start: [1, 0], end: [0, 0] })
+    expect(r.ok).toBe(false)
+    expect(!r.ok ? r.error.code : '').toBe('MERGE_STRUCTURAL')
   })
 })

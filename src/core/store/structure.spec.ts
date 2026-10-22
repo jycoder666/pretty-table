@@ -555,3 +555,224 @@ describe('structure · 大矩形 merges 收缩回归（R-2，实现零改动证�
     expect(r.value.layout.merges).toHaveLength(0)
   })
 })
+
+// ── WP4：整行/整列换位（内容随行走；结构约束挡住时给白话原因）──
+
+/** 带列宽/推荐列/只读格/区块锚点的 3×3 实例，用于换位 remap 全断言（默认不冻结列） */
+function movable3x3(): TemplateInstance {
+  const inst = custom5x4()
+  inst.layout.headerLevels = 1
+  inst.layout.frozenColCount = 0
+  inst.layout.readonlyCells = [[1, 2]]
+  inst.layout.recommendableCols = [1, 2]
+  inst.highlight = { recommendCol: 2 }
+  inst.layout.style = { colWidths: [100, 200, 300] }
+  inst.layout.blockSlots = [{ id: 'gap-1', accept: ['sectionBar'], rowHint: 'after-1' }]
+  inst.blocks = [{ id: 'bar-1', type: 'sectionBar', slotId: 'gap-1', props: {} }]
+  return inst
+}
+
+describe('structure · moveRow（WP4 整行换位）', () => {
+  it('内容随行走：槽位行置换，其它行按序让位', () => {
+    const r = run(movable3x3(), { kind: 'moveRow', from: 2, to: 1 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.slotGrid).toEqual([
+      ['a', 'b', 'c'],
+      ['g', 'h', 'i'],
+      ['d', 'e', 'f'],
+    ])
+    // 槽位数据不动（id 跟着行一起走）
+    expect(r.value.slots.a).toBe('A0')
+    expect(r.value.slots.g).toBe('')
+  })
+
+  it('只读格与合并区按置换重映射（内容语义跟着行）', () => {
+    const inst = movable3x3()
+    inst.layout.merges = [{ start: [1, 1], end: [1, 2] }]
+    const r = run(inst, { kind: 'moveRow', from: 2, to: 1 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    // 第 2 行挪到 1，原第 1 行落到 2 → 单行合并区与只读格一起下去
+    expect(r.value.layout.merges).toEqual([{ start: [2, 1], end: [2, 2] }])
+    expect(r.value.layout.readonlyCells).toEqual([[2, 2]])
+  })
+
+  it('区块锚点是位置语义：换行不动 rowHint（与加行/删行口径一致）', () => {
+    const r = run(movable3x3(), { kind: 'moveRow', from: 1, to: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.blockSlots[0]?.rowHint).toBe('after-1')
+    expect(r.value.blocks[0]?.slotId).toBe('gap-1')
+  })
+
+  it('表头行不参与换位 → STRUCT_MOVE_BLOCKED', () => {
+    const r = run(movable3x3(), { kind: 'moveRow', from: 0, to: 2 })
+    expect(!r.ok ? r.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!r.ok ? r.error.message : '').toContain('表头')
+  })
+
+  it('跨行合并区被抽走一行（碎成不相邻）→ 拒绝而不是悄悄拆开', () => {
+    const inst = movable3x3()
+    // 合并区只占 0..1 行：把第 1 行抽到第 2 行 → 影像 {0,2} 不相邻
+    inst.layout.merges = [{ start: [0, 1], end: [1, 1] }]
+    const r = run(inst, { kind: 'moveRow', from: 1, to: 2 })
+    expect(!r.ok ? r.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!r.ok ? r.error.message : '').toContain('合并区')
+  })
+
+  it('合并区内部的换位（整体仍在区间内）→ 允许', () => {
+    const inst = movable3x3()
+    inst.layout.merges = [{ start: [0, 1], end: [2, 1] }]
+    const r = run(inst, { kind: 'moveRow', from: 1, to: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.merges).toEqual([{ start: [0, 1], end: [2, 1] }])
+  })
+
+  it('跨行合并区整体平移（不交错）→ 允许，端点重新归一化', () => {
+    const inst = movable3x3()
+    inst.layout.merges = [{ start: [1, 0], end: [2, 2] }]
+    const r = run(inst, { kind: 'moveRow', from: 1, to: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.merges).toEqual([{ start: [1, 0], end: [2, 2] }])
+  })
+
+  it('from === to → 原样返回（不入栈的空操作由壳层拦）', () => {
+    const inst = movable3x3()
+    const r = run(inst, { kind: 'moveRow', from: 1, to: 1 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.slotGrid).toEqual(inst.layout.slotGrid)
+  })
+
+  it('越界下标 → TEMPLATE_INVALID', () => {
+    const r = run(movable3x3(), { kind: 'moveRow', from: 1, to: 9 })
+    expect(!r.ok ? r.error.code : '').toBe('TEMPLATE_INVALID')
+  })
+})
+
+describe('structure · moveCol（WP4 整列换位）', () => {
+  it('列内容、列宽、推荐列一起走', () => {
+    const r = run(movable3x3(), { kind: 'moveCol', from: 2, to: 1 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.slotGrid).toEqual([
+      ['a', 'c', 'b'],
+      ['d', 'f', 'e'],
+      ['g', 'i', 'h'],
+    ])
+    expect(r.value.layout.style?.colWidths).toEqual([100, 300, 200])
+    expect(r.value.highlight?.recommendCol).toBe(1)
+    expect(r.value.layout.recommendableCols).toEqual([2, 1])
+  })
+
+  it('只读格与合并区按列置换重映射', () => {
+    const inst = movable3x3()
+    inst.layout.merges = [{ start: [0, 1], end: [0, 2] }]
+    const r = run(inst, { kind: 'moveCol', from: 2, to: 1 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.readonlyCells).toEqual([[1, 1]])
+    expect(r.value.layout.merges).toEqual([{ start: [0, 1], end: [0, 2] }])
+  })
+
+  it('第一列（标签列）不参与换位 → STRUCT_MOVE_BLOCKED', () => {
+    const r = run(movable3x3(), { kind: 'moveCol', from: 1, to: 0 })
+    expect(!r.ok ? r.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!r.ok ? r.error.message : '').toContain('标签列')
+  })
+
+  it('冻结列与普通列不能互串 → STRUCT_MOVE_BLOCKED', () => {
+    const inst = movable3x3()
+    inst.layout.frozenColCount = 2 // 第 0、1 列冻结
+    const r = run(inst, { kind: 'moveCol', from: 1, to: 2 })
+    expect(!r.ok ? r.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!r.ok ? r.error.message : '').toContain('冻结列')
+  })
+
+  it('跨列合并区被抽走一列 → 拒绝；区间内部换位允许', () => {
+    const inst = movable3x3()
+    inst.layout.merges = [{ start: [0, 0], end: [0, 1] }]
+    const r = run(inst, { kind: 'moveCol', from: 2, to: 1 }) // 影像 {0,2} 不相邻
+    expect(!r.ok ? r.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    const inst2 = movable3x3()
+    inst2.layout.merges = [{ start: [0, 1], end: [0, 2] }]
+    const r2 = run(inst2, { kind: 'moveCol', from: 2, to: 1 })
+    expect(r2.ok).toBe(true)
+  })
+
+  it('原地不动 → ok（核内纯函数，不改入参）', () => {
+    const inst = movable3x3()
+    const r = run(inst, { kind: 'moveCol', from: 2, to: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.slotGrid).toEqual([
+      ['a', 'b', 'c'],
+      ['d', 'e', 'f'],
+      ['g', 'h', 'i'],
+    ])
+  })
+})
+
+describe('intent · moveBlock（WP4 表内区块换位）', () => {
+  function withTwoSlots(): TemplateInstance {
+    const inst = movable3x3()
+    inst.layout.blockSlots = [
+      { id: 'gap-1', accept: ['sectionBar'], rowHint: 'after-1' },
+      { id: 'gap-2', accept: ['sectionBar'], rowHint: 'after-2' },
+    ]
+    inst.blocks = [{ id: 'bar-1', type: 'sectionBar', slotId: 'gap-1', props: {} }]
+    return inst
+  }
+
+  it('目标槽为空 → 移动（一步意图）', () => {
+    const r = applyEditIntent(withTwoSlots(), { kind: 'moveBlock', blockId: 'bar-1', toSlotId: 'gap-2' })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.blocks[0]?.slotId).toBe('gap-2')
+  })
+
+  it('目标槽已占用 → 两区块互换（含 accept 双向校验）', () => {
+    const inst = withTwoSlots()
+    inst.blocks.push({ id: 'bar-2', type: 'sectionBar', slotId: 'gap-2', props: {} })
+    const r = applyEditIntent(inst, { kind: 'moveBlock', blockId: 'bar-1', toSlotId: 'gap-2' })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.blocks.find((b) => b.id === 'bar-1')?.slotId).toBe('gap-2')
+    expect(r.value.blocks.find((b) => b.id === 'bar-2')?.slotId).toBe('gap-1')
+  })
+
+  it('目标槽 accept 不收该类型 → BLOCK_TYPE_REJECT', () => {
+    const inst = withTwoSlots()
+    inst.layout.blockSlots[1] = { id: 'gap-2', accept: ['groupHeader'], rowHint: 'after-2' }
+    const r = applyEditIntent(inst, { kind: 'moveBlock', blockId: 'bar-1', toSlotId: 'gap-2' })
+    expect(!r.ok ? r.error.code : '').toBe('BLOCK_TYPE_REJECT')
+  })
+
+  it('互换时源槽不收对方类型 → 也拒绝（不留类型不合法的区块）', () => {
+    const inst = withTwoSlots()
+    inst.blocks.push({ id: 'bar-2', type: 'groupHeader', slotId: 'gap-2', props: {} })
+    inst.layout.blockSlots[1] = { id: 'gap-2', accept: ['groupHeader', 'sectionBar'], rowHint: 'after-2' }
+    const r = applyEditIntent(inst, { kind: 'moveBlock', blockId: 'bar-1', toSlotId: 'gap-2' })
+    expect(!r.ok ? r.error.code : '').toBe('BLOCK_TYPE_REJECT')
+    expect(!r.ok ? r.error.message : '').toContain('互换')
+  })
+
+  it('区块不存在 / 槽位不存在 → BLOCK_NOT_FOUND / SLOT_DROP_BLOCKED', () => {
+    const inst = withTwoSlots()
+    const a = applyEditIntent(inst, { kind: 'moveBlock', blockId: 'nope', toSlotId: 'gap-2' })
+    expect(!a.ok ? a.error.code : '').toBe('BLOCK_NOT_FOUND')
+    const b = applyEditIntent(inst, { kind: 'moveBlock', blockId: 'bar-1', toSlotId: 'nope' })
+    expect(!b.ok ? b.error.code : '').toBe('SLOT_DROP_BLOCKED')
+  })
+
+  it('原地放下 → 原样返回（壳层不再提示）', () => {
+    const inst = withTwoSlots()
+    const r = applyEditIntent(inst, { kind: 'moveBlock', blockId: 'bar-1', toSlotId: 'gap-1' })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.blocks[0]?.slotId).toBe('gap-1')
+  })
+})

@@ -377,12 +377,13 @@ describe('PropertyPanel · 合并/拆分按钮随选区置灰（PX-08）', () =>
     expect(splitBtn(wrapper).attributes('disabled')).toBeDefined()
   })
 
-  it('选区命中已有合并（同范围）：合并与拆分都可用', async () => {
+  it('选区命中已有合并（同范围）：合并置灰（已经是合并区），拆分可用', async () => {
     const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
     // compare-alpha-v1 有合并区 [0,1]-[0,2]
+    // WP1 收紧：同区间再合并只是把同一区间压一遍（旧实现会重复追加 merges）→ 合并置灰
     editor.selectionRange = { start: [0, 1], end: [0, 2] }
     await wrapper.vm.$nextTick()
-    expect(mergeBtn(wrapper).attributes('disabled')).toBeUndefined()
+    expect(mergeBtn(wrapper).attributes('disabled')).toBeDefined()
     expect(splitBtn(wrapper).attributes('disabled')).toBeUndefined()
   })
 

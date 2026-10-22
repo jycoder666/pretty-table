@@ -549,6 +549,11 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     rowHeightConfig: rowHeights.map((height, key) => ({ key, height })),
     showHeader: false,
     frozenColCount: inst.layout.frozenColCount ?? 0,
+    // WP4 列宽持久化：表头不可见（showHeader:false）→ 只能选 'all' 才能在表体列边界起拖；
+    // 拖拽结束由 resize_column_end 落回模型（coreHost 订阅 → 壳层 setColWidth 批量意图）。
+    columnResizeMode: 'all',
+    // 双击已是就地编辑（WP3）入口，关掉 VTable 的双击自适应列宽，避免两个手势互抢
+    disableDblclickAutoResizeColWidth: true,
     theme,
     rowSeriesNumber: false,
     animationAppear: false,

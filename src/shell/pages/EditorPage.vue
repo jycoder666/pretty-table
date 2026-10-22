@@ -15,9 +15,9 @@ import PtButton from '../ui/PtButton.vue'
 import PtTooltip from '../ui/PtTooltip.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import { confirmAction } from '../ui/confirm'
-import { pointerOnlySensors, readBlockType } from '../dnd/dndKitAdapter'
+import { pointerOnlySensors, readBlockDrag } from '../dnd/dndKitAdapter'
 import { usePlaceSession } from '../dnd/placeSession'
-import { computeDropTargets, estimateCellRects, resolveDrop } from '../dnd/slotDnd'
+import { BLOCK_TYPE_LABEL, computeDropTargets, estimateCellRects, resolveDrop } from '../dnd/slotDnd'
 import { shouldRedo, shouldUndo } from '../editor/undoHotkey'
 
 const editor = useEditorStore()
@@ -113,12 +113,11 @@ async function discardRestore() {
 }
 
 function onDragStart(event: { operation: { source?: { data?: unknown } | null } }) {
-  const type = readBlockType(event.operation.source?.data)
+  const payload = readBlockDrag(event.operation.source?.data)
   // R-1：把拖拽类型带进会话（SlotOverlay 按 accept 匹配高亮 / 弱化）
-  session.setDragging(true, type ?? undefined)
+  session.setDragging(true, payload?.type)
   session.cancelPlace()
-  ghostLabel.value =
-    type === 'sectionBar' ? '分区色条' : type === 'groupHeader' ? '分组标题行' : '区块'
+  ghostLabel.value = payload ? BLOCK_TYPE_LABEL[payload.type] : '区块'
   previewRef.value?.refreshTargets?.()
 }
 
@@ -129,8 +128,9 @@ function onDragEnd(event: {
   session.setDragging(false)
   ghostLabel.value = ''
   if (event.canceled) return
-  const type = readBlockType(event.operation.source?.data)
-  if (!type || !editor.current) return
+  const payload = readBlockDrag(event.operation.source?.data)
+  if (!payload || !editor.current) return
+  const type = payload.type
 
   const targetId = event.operation.target?.id
   const targets =
@@ -139,6 +139,18 @@ function onDragEnd(event: {
       : computeDropTargets(editor.current, estimateCellRects(editor.current))
   const hit =
     targetId != null ? (targets.find((t) => t.blockSlotId === String(targetId)) ?? null) : null
+
+  // WP4：表内区块拖动（把手拖到别的槽位）——空槽移动、占用则互换，都走核内 moveBlock
+  if (payload.blockId) {
+    if (!hit) {
+      editor.showToast('请拖到表内虚线槽位')
+      return
+    }
+    if (hit.blockSlotId === payload.fromSlotId) return // 原地放下：不动也不提示
+    editor.moveBlock(payload.blockId, hit.blockSlotId)
+    return
+  }
+
   const resolved = resolveDrop(hit, type)
   if ('reject' in resolved) {
     editor.showToast(

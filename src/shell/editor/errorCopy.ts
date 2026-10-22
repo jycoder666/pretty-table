@@ -7,11 +7,14 @@ const MAP: Partial<Record<ErrorCode, string>> = {
   SLOT_MISS: '请放到表内虚线槽位',
   BLOCK_TYPE_REJECT: '这里不能放这个区块',
   BLOCK_SLOT_OCCUPIED: '该位置已有区块，请先删除或换空槽',
-  MERGE_NOT_ALLOWED: '此处不能合并，请在模板允许区内选择',
-  MERGE_STRUCTURAL: '此处由模板锁定，不能拆分',
+  // WP1：闸门口径对齐（allowedMerges 早已降级为兼容字段，不再有「模板允许区」这一说）
+  MERGE_NOT_ALLOWED: '这里不能合并：单格无需合并、已经是合并区，或含模板固定的格子',
+  MERGE_STRUCTURAL: '这一块由模板固定，不能合并也不能拆分',
   MERGE_CONFLICT: '和已有的合并区叠不上，请先拆开再合并',
   LIMIT_ROWS: '最多 20 行，加不下了',
   LIMIT_COLS: '最多 12 列',
+  // WP4：行列换位被结构约束挡住（核内已给具体原因，这里兜底一句白话）
+  STRUCT_MOVE_BLOCKED: '这一行/列现在挪不动，请先处理合并区或表头',
   EXPORT_HTML_FAIL: '复制失败，请重试',
   EXPORT_PNG_FAIL: '导出失败，请重试',
   EXPORT_BLOCKED_RENDERING: '请等待表格渲染完成',

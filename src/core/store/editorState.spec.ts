@@ -8,6 +8,7 @@ import {
   canUndo,
   canRedo,
   replaceCurrent,
+  dispatchBatch,
   type DispatchOptions,
 } from './editorState'
 import { UNDO_LIMITS, type EditorState, type EditIntent } from '../types'
@@ -451,5 +452,77 @@ describe('editorState · 撤销会话边角（QA 观察）', () => {
     const s = createEditorState(cloneInstance(BLANK_V1))
     expect(s.undoStack).toEqual([])
     expect(s.redoStack).toEqual([])
+  })
+})
+
+/**
+ * WP0/WP3：批量意图（dispatchBatch）——N 条意图一步撤销、任一失败整批回滚。
+ * 落点：多选批量改对齐/强调/清空、画布列宽一次拖动的差异批量写入。
+ */
+describe('dispatchBatch 批量意图（一步撤销）', () => {
+  it('N 条意图只入一条快照；undo 一次回到批前', () => {
+    const s0 = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    const r = dispatchBatch(s0, [
+      { kind: 'setColWidth', col: 0, width: 100 },
+      { kind: 'setColWidth', col: 1, width: 200 },
+      { kind: 'setColWidth', col: 2, width: 300 },
+    ])
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.current.layout.style?.colWidths?.slice(0, 3)).toEqual([100, 200, 300])
+    expect(r.value.undoStack).toHaveLength(1)
+    expect(r.value.version).toBe(s0.version + 1)
+    const back = undo(r.value)
+    expect(back.current.layout.style?.colWidths?.slice(0, 3)).toEqual(
+      s0.current.layout.style?.colWidths?.slice(0, 3),
+    )
+    expect(canUndo(back)).toBe(false)
+  })
+
+  it('任一意图失败 → 整批不落地（store 原样、无快照）', () => {
+    const s0 = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    const r = dispatchBatch(s0, [
+      { kind: 'setColWidth', col: 0, width: 100 },
+      { kind: 'setColWidth', col: 999, width: 100 }, // 列不存在
+    ])
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(s0.current.layout.style?.colWidths?.[0]).toBeUndefined()
+    expect(s0.undoStack).toHaveLength(0)
+  })
+
+  it('空批次 no-op；pastePending 期整批拒绝（FR-17 互斥）', () => {
+    const s0 = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    const empty = dispatchBatch(s0, [])
+    expect(empty.ok).toBe(true)
+    expect(empty.ok ? empty.value : null).toBe(s0)
+    expect(empty.ok ? empty.value.undoStack : []).toHaveLength(0)
+    const pending: EditorState = { ...s0, pastePending: true }
+    const blocked = dispatchBatch(pending, [{ kind: 'setColWidth', col: 0, width: 100 }])
+    expect(blocked.ok).toBe(false)
+    expect(!blocked.ok ? blocked.error.code : '').toBe('SLOT_DROP_BLOCKED')
+  })
+
+  it('清空选区（clearSlots）：清掉区内已填格、区外不动，一步撤销复原', () => {
+    const s0 = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    const before = cloneInstance(s0.current)
+    // R1–R3 × C1–C3：含 obj.name.a / row.2.val.a，不含 row.9.val.a
+    const r = dispatchBatch(s0, [{ kind: 'clearSlots', range: { start: [1, 1], end: [3, 3] } }])
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.current.slots['obj.name.a']).toBe('')
+    expect(r.value.current.slots['row.2.val.a']).toBe('')
+    expect(r.value.current.slots['row.9.val.a']).toBe(before.slots['row.9.val.a'])
+    const back = undo(r.value)
+    expect(back.current.slots['obj.name.a']).toBe(before.slots['obj.name.a'])
+  })
+
+  it('清空选区跳过只读格（readonlyCells 全在内 → 无变化）', () => {
+    const s0 = createEditorState(cloneInstance(COMPARE_ALPHA_V1))
+    // [0,0] 与 [1,0] 均为只读（structuralMerges 区）
+    const r = dispatchBatch(s0, [{ kind: 'clearSlots', range: { start: [0, 0], end: [1, 0] } }])
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.current.slots).toEqual(s0.current.slots)
   })
 })
