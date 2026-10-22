@@ -542,6 +542,11 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     heightMode: 'standard',
     defaultRowHeight: rowHeightOf(inst.layout.style, false),
     defaultHeaderRowHeight: 0,
+    // 行高单点（PX-04 命中与渲染同源）：rowHeights 已喂给壳几何（命中/叠加层）与 PNG 尺寸，
+    // 也必须喂给 VTable——否则 VTable 一律按 defaultRowHeight 渲染，区块行（32）与表体（36）
+    // 的差异会让应用几何逐区块行漂移 4px：叠加层描边错位、点格底落到下一行、PNG 底部多留空白。
+    // 逐行给全量（而非只给区块行），避免 VTable 对未配置行改走内容自适应高度。
+    rowHeightConfig: rowHeights.map((height, key) => ({ key, height })),
     showHeader: false,
     frozenColCount: inst.layout.frozenColCount ?? 0,
     theme,

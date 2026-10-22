@@ -14,7 +14,8 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
-      exclude: [...configDefaults.exclude, 'e2e/**'],
+      // e2e/ 与 manual-verify/ 都是真机 Playwright 套件（各由自己的 config 收集），不进单测
+      exclude: [...configDefaults.exclude, 'e2e/**', 'manual-verify/**'],
       root: fileURLToPath(new URL('./', import.meta.url)),
     },
   }),

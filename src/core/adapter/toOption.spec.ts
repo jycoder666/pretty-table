@@ -407,6 +407,25 @@ describe('toOption · 二期区块渲染（R-4）', () => {
     expect(rowHeights[metas.length - 1]).toBe(32) // 区块行高不变
   })
 
+  it('rowHeightConfig 逐行钉住模型行高（区块行 32 也喂给渲染器，PX-04 同源）', () => {
+    const inst = withSlots((i) => {
+      i.blocks.push({ id: 'foot-1', type: 'emphFooter', slotId: 'footer-1', props: { text: '以上价格含税' } })
+    })
+    const { rowHeights, blockRowIndexes } = buildVisualRows(inst)
+    const cfg = (toOption(inst, { mode: 'preview' }).rowHeightConfig ?? []) as {
+      key: number
+      height: number
+    }[]
+    // 逐行全量（不只区块行）：未配置行 VTable 会改走内容自适应高度，同样脱离模型
+    expect(cfg.map((c) => c.key)).toEqual(rowHeights.map((_, i) => i))
+    expect(cfg.map((c) => c.height)).toEqual(rowHeights)
+    const blockVisual = [...blockRowIndexes.keys()]
+    expect(blockVisual.length).toBeGreaterThan(0)
+    // 区块行必须是 32：漏配会让 VTable 一律按 defaultRowHeight(36) 渲染，
+    // 使叠加层描边/命中/PNG 高度逐区块行漂移（F4 伴生几何缺陷）
+    for (const v of blockVisual) expect(cfg[v]!.height).toBe(32)
+  })
+
   it('footer 槽空置时不预留表底行（预览/导出不多一行）', () => {
     const inst = withSlots((i) => {
       i.layout.blockSlots.push({ id: 'left-3', accept: ['leftTag'], region: 'left-tag', rowHint: 'left-3' })

@@ -1,0 +1,31 @@
+{
+  "inside": {
+    "activeInFrame": true,
+    "selLen": 0
+  },
+  "selAfterA": 188,
+  "clip": {
+    "formats": [
+      "HTML Format",
+      "System.String",
+      "UnicodeText",
+      "Text",
+      "Chromium internal source RFH token",
+      "Chromium internal source URL",
+      "CanIncludeInClipboardHistory",
+      "CanUploadToCloudClipboard",
+      "Locale",
+      "OEMText"
+    ],
+    "textLen": 199,
+    "htmlLen": 13188,
+    "htmlHasTable": true
+  },
+  "pasted": {
+    "tableCount": 1,
+    "cellCount": 40,
+    "imgCount": 0,
+    "captionText": "多列对比表",
+    "textHead": "多列对比表项目基础档进阶档方案 A方案 B方案 C分组一核心指标✓✓◐响应时效1 个工作日2 个工作日3 个工作日服务覆盖全国一二线城市指定区域年费参考¥9,800¥6,800¥3"
+  }
+}

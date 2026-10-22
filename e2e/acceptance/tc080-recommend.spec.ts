@@ -3,6 +3,7 @@ import {
   clickSlot,
   downloadPng,
   exportedHtml,
+  grantClipboardIfChromium,
   openExportDrawer,
   openPreset,
   presetOf,
@@ -12,7 +13,9 @@ import {
  * T30 验收 · TC-PT-080（推荐列：最多一列、自动转移、可撤销、导出带角标）
  */
 
-test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
+test.beforeEach(async ({ context, browserName }) => {
+  await grantClipboardIfChromium(context, browserName)
+})
 
 test.describe('TC-PT-080 · 推荐列', () => {
   test('设 B → 设 C 自动转移 → 撤销回 B → 关闭取消；导出带「推荐」角标', async ({ page }) => {

@@ -1,12 +1,21 @@
 import { expect, test, type Page } from '@playwright/test'
-import { exportedHtml, openPreset, presetOf } from './helpers'
+import {
+  exportedHtml,
+  grantClipboardIfChromium,
+  openExportDrawer,
+  openPreset,
+  presetOf,
+  readClipboardFlavor,
+} from './helpers'
 import { createBlankInstance, type TemplateInstance } from '../../src/core/index'
 
 /**
  * T30 验收 · TC-PT-085（HTML 语义结构）/ TC-PT-088（375px 窄屏）
  */
 
-test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
+test.beforeEach(async ({ context, browserName }) => {
+  await grantClipboardIfChromium(context, browserName)
+})
 
 /** 把实例写进 IndexedDB 草稿位（App 启动 tryRestoreDraft 恢复） */
 async function seedDraft(page: Page, inst: TemplateInstance) {
@@ -99,6 +108,31 @@ test.describe('TC-PT-085 · HTML 语义结构 + 全内联样式', () => {
     expect(m.firstTdStyleAttr.length).toBeGreaterThan(60)
     expect(m.firstTdStyleAttr).toContain('font-family:"PingFang SC"')
     expect(m.firstTdStyleAttr).toContain('background:')
+  })
+})
+
+test.describe('TC-PT-086 前置 · 「复制 HTML」双风味（P1 修复回归）', () => {
+  test('一次复制写入 text/html 片段 + text/plain TSV 两风味（公众号粘的是前者）', async ({
+    page,
+  }) => {
+    await openPreset(page, '多列对比表')
+    await openExportDrawer(page)
+    await page.getByRole('button', { name: '复制 HTML' }).click()
+    await expect(page.locator('.pt-toast')).toHaveText('已复制到剪贴板')
+    // 同一次剪贴板写入读两风味（分开复制会覆盖前者）
+    const html = await readClipboardFlavor(page, 'text/html')
+    const text = await page.evaluate(() => navigator.clipboard.readText())
+    await page.getByRole('button', { name: '关闭' }).click()
+    // 富文本风味：公众号/邮件编辑器粘到的就是这段（P1 修复前缺失 → 粘出转义源码文本）
+    expect(html).toContain('<table')
+    expect(html).toContain('多列对比表')
+    expect(html).not.toContain('&lt;table')
+    // 纯文本风味：TSV（设计增量 §5.2），落 Excel/WPS 按位置粘贴
+    expect(text).toContain('\t')
+    expect(text).not.toContain('<table')
+    const tsvRows = text.split('\n').filter((l) => l.includes('\t'))
+    expect(tsvRows.length).toBeGreaterThan(2)
+    expect(tsvRows[0]!.split('\t').length).toBeGreaterThan(2)
   })
 })
 

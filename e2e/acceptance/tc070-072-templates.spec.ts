@@ -3,8 +3,9 @@ import {
   clickSlot,
   confirmPaste,
   downloadPng,
-  exportedHtml,
   expectToast,
+  exportedHtml,
+  grantClipboardIfChromium,
   openPreset,
   pasteBarText,
   pasteClipboard,
@@ -15,7 +16,9 @@ import {
  * T30 验收 · TC-PT-070～072（价目清单 / 宽表矩阵入库与填槽导出）
  */
 
-test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
+test.beforeEach(async ({ context, browserName }) => {
+  await grantClipboardIfChromium(context, browserName)
+})
 
 test.describe('TC-PT-070 · 价目/矩阵入库：Chip、卡片、防误解小字、空态', () => {
   test('五系统模板 + 空白卡入库、卡片类型 chip、我的模板空态（FR-20 系统模板与卡片部分）', async ({

@@ -62,6 +62,21 @@ export default defineConfig({
       use: {
         ...devices['Desktop Safari'],
       },
+      /**
+       * WebKit 构建（Playwright 版）既不支持 clipboard-read/write 权限项
+       * （`grantPermissions` 直接抛 Unknown permission，`navigator.clipboard.read/readText`
+       * 恒 NotAllowedError），这些用例的「剪贴板读回」断言无法执行，故整份排除：
+       * 排除的是**读回能力**，不是应用层——WebKit 侧的应用行为由
+       * `manual-verify/webkit-spotcheck.spec.ts`（Safari 引擎真机抽查）覆盖，见报告 §六。
+       */
+      testIgnore: [
+        '**/acceptance/tc051-058-paste-basic.spec.ts',
+        '**/acceptance/tc059-069-paste-reject.spec.ts',
+        '**/acceptance/tc070-072-templates.spec.ts',
+        '**/acceptance/tc073-079-marks-numbers.spec.ts',
+        '**/acceptance/tc080-recommend.spec.ts',
+        '**/acceptance/tc085-088-html-narrow.spec.ts',
+      ],
     },
 
     /* Test against mobile viewports. */

@@ -3,8 +3,9 @@ import {
   cancelPaste,
   clickSlot,
   confirmPaste,
-  exportedHtml,
   expectToast,
+  exportedHtml,
+  grantClipboardIfChromium,
   openPreset,
   pasteBarText,
   pasteCells,
@@ -18,7 +19,9 @@ import {
  * 外部应用真实复制路径标注「待人工复测」。
  */
 
-test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
+test.beforeEach(async ({ context, browserName }) => {
+  await grantClipboardIfChromium(context, browserName)
+})
 
 const COMPARE = 'compare-alpha-v1'
 const TSV_3X4 = 'R1C1\tR1C2\tR1C3\tR1C4\nR2C1\tR2C2\tR2C3\tR2C4\nR3C1\tR3C2\tR3C3\tR3C4'

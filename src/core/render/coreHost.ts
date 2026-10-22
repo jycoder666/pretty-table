@@ -44,7 +44,8 @@ export function mount(el: HTMLElement, options?: CoreOptions): CoreHandle {
         if (seq !== paintSeq) return // 期间已有更新的 paint，过期资源不再落地
         for (const [k, v] of loaded) imageAssets.set(k, v)
       }
-      for (const k of [...imageAssets.keys()]) {
+      // 迭代中删除自身键是 Map 的既有语义，无需先复制
+      for (const k of imageAssets.keys()) {
         if (!urls.includes(k)) imageAssets.delete(k)
       }
       const images = urls.length > 0 ? imageAssets : undefined

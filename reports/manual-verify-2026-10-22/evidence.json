@@ -1,0 +1,258 @@
+{
+  "sourceImage": {
+    "file": "F:\\pretty-table\\reports\\manual-verify-2026-10-22\\source-image-480x320.png",
+    "size": 17267
+  },
+  "previewScan": {
+    "red": 900,
+    "best": {
+      "r": 255,
+      "g": 0,
+      "b": 0,
+      "a": 255,
+      "x": 121,
+      "y": 281
+    },
+    "canvasesScanned": 1,
+    "cell": {
+      "x": 120,
+      "y": 280,
+      "w": 140,
+      "h": 36
+    }
+  },
+  "exported2xWithImage": {
+    "bytes": 119585,
+    "width": 1148,
+    "height": 916,
+    "redPixels": 3573,
+    "redBBox": {
+      "minX": 274,
+      "minY": 594,
+      "maxX": 387,
+      "maxY": 629
+    },
+    "reddestPixel": {
+      "r": 255,
+      "g": 0,
+      "b": 0,
+      "a": 255,
+      "x": 274,
+      "y": 594
+    }
+  },
+  "dimsOpaque": {
+    "1×": {
+      "actual": {
+        "w": 574,
+        "h": 458
+      },
+      "estimateText": "约 574 × 458 像素",
+      "estimate": {
+        "w": 574,
+        "h": 458
+      },
+      "bytes": 34053
+    },
+    "2×": {
+      "actual": {
+        "w": 1148,
+        "h": 916
+      },
+      "estimateText": "约 1148 × 916 像素",
+      "estimate": {
+        "w": 1148,
+        "h": 916
+      },
+      "bytes": 119585
+    },
+    "3×": {
+      "actual": {
+        "w": 1722,
+        "h": 1374
+      },
+      "estimateText": "约 1722 × 1374 像素",
+      "estimate": {
+        "w": 1722,
+        "h": 1374
+      },
+      "bytes": 194218
+    }
+  },
+  "transparent2x": {
+    "width": 1148,
+    "height": 916,
+    "corners": [
+      {
+        "x": 2,
+        "y": 2,
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0
+      },
+      {
+        "x": 1145,
+        "y": 2,
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0
+      },
+      {
+        "x": 2,
+        "y": 913,
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0
+      },
+      {
+        "x": 1145,
+        "y": 913,
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0
+      },
+      {
+        "x": 574,
+        "y": 458,
+        "r": 197,
+        "g": 208,
+        "b": 222,
+        "a": 255
+      }
+    ],
+    "redPixels": 3573
+  },
+  "transparent2xNoZebra": {
+    "width": 1148,
+    "height": 916,
+    "cornerAlpha": 0
+  },
+  "exportedHtml": {
+    "length": 33894,
+    "head": "<div style=\"max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch\"><table style=\"border-collapse:collapse;widt"
+  },
+  "clipboardFlavors": {
+    "types": [
+      "text/plain",
+      "text/html"
+    ],
+    "htmlLen": 33894,
+    "plainHead": "多列对比表\r\n项目\t基础档\t\t进阶档\r\n\t方案 A\t方案 B\t方案 C\r\n分组一\t\t\t\r\n核心指标\t✗\t✓\t◐\r\n响应时效\t1 个工作日\t2 个工作日\t3 个工作日\r\n服务覆盖\t全国\t一二线城市\t指定区域\r\n年费参考\t¥9,800\t¥6,8",
+    "plainTabs": 36
+  },
+  "clipboardAfterCopyHtml": {
+    "formats": [
+      "HTML Format",
+      "System.String",
+      "UnicodeText",
+      "Text",
+      "Chromium internal source RFH token",
+      "Chromium internal source URL",
+      "CanIncludeInClipboardHistory",
+      "CanUploadToCloudClipboard",
+      "Locale",
+      "OEMText"
+    ],
+    "textLen": 208,
+    "htmlLen": 34145,
+    "htmlBytes": 34378,
+    "htmlHasTable": true,
+    "htmlHasDataImg": true,
+    "htmlHasMarks": true,
+    "textHead": " 多列对比表 项目 基础档 进阶档 方案 A 方案 B 方案 C 分组一 核心指标 ✗ ✓ ◐ 响应时效 1 个工作日 2 个工作日 3 个"
+  },
+  "pasteOfCopyHtml": {
+    "method": "native-ctrl-v",
+    "tableCount": 1,
+    "cellCount": 40,
+    "imgCount": 1,
+    "dataImgCount": 1,
+    "captionText": "多列对比表",
+    "markChars": {
+      "yes": true,
+      "no": true,
+      "partial": true
+    },
+    "styledCellCount": 40,
+    "textHead": "多列对比表项目基础档进阶档方案 A方案 B方案 C分组一核心指标✗✓◐响应时效1 个工作日2 个工作日3 个工作日服务覆盖全国一二线城市指定区域年费参考¥9,800¥6,800¥3,800定制报告加购",
+    "innerHTMLHead": "<div style=\"max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch\"><table style=\"border-collapse:collapse;width:100%;max-width:100%;min-width:456px\"><"
+  },
+  "clipboardAfterCopyFromRendered": {
+    "formats": [
+      "HTML Format",
+      "System.String",
+      "UnicodeText",
+      "Text",
+      "Chromium internal source RFH token",
+      "Chromium internal source URL",
+      "CanIncludeInClipboardHistory",
+      "CanUploadToCloudClipboard",
+      "Locale",
+      "OEMText"
+    ],
+    "textLen": 198,
+    "htmlLen": 36177,
+    "htmlBytes": 36410,
+    "htmlHasTable": true,
+    "htmlHasDataImg": true,
+    "htmlHasMarks": true,
+    "textHead": " 多列对比表 项目 基础档 进阶档 方案 A 方案 B 方案 C 分组一 核心指标 ✗ ✓ ◐ 响应时效 1 个工作日 2 个工作日 3 个工作日 "
+  },
+  "pasteFromRendered": {
+    "method": "native-ctrl-v",
+    "tableCount": 1,
+    "cellCount": 40,
+    "imgCount": 1,
+    "dataImgCount": 1,
+    "captionText": "多列对比表",
+    "markChars": {
+      "yes": true,
+      "no": true,
+      "partial": true
+    },
+    "styledCellCount": 40,
+    "textHead": "多列对比表项目基础档进阶档方案 A方案 B方案 C分组一核心指标✗✓◐响应时效1 个工作日2 个工作日3 个工作日服务覆盖全国一二线城市指定区域年费参考¥9,800¥6,800¥3,800定制报告加购"
+  },
+  "previewIframeFocus": {
+    "focusInFrame": true
+  },
+  "clipboardAfterCopyFromPreviewIframe": {
+    "formats": [
+      "HTML Format",
+      "System.String",
+      "UnicodeText",
+      "Text",
+      "Chromium internal source RFH token",
+      "Chromium internal source URL",
+      "CanIncludeInClipboardHistory",
+      "CanUploadToCloudClipboard",
+      "Locale",
+      "OEMText"
+    ],
+    "textLen": 198,
+    "htmlLen": 36290,
+    "htmlBytes": 36523,
+    "htmlHasTable": true,
+    "htmlHasDataImg": true,
+    "htmlHasMarks": true,
+    "textHead": " 多列对比表 项目 基础档 进阶档 方案 A 方案 B 方案 C 分组一 核心指标 ✗ ✓ ◐ 响应时效 1 个工作日 2 个工作日 3 个工作日 "
+  },
+  "pasteFromPreviewIframe": {
+    "method": "native-ctrl-v",
+    "tableCount": 1,
+    "cellCount": 40,
+    "imgCount": 1,
+    "dataImgCount": 1,
+    "captionText": "多列对比表",
+    "markChars": {
+      "yes": true,
+      "no": true,
+      "partial": true
+    },
+    "styledCellCount": 40
+  }
+}

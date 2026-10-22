@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test'
 import {
   clickSlot,
-  countPngNearColor,
   confirmPaste,
+  countPngNearColor,
   downloadPng,
   exportedHtml,
+  grantClipboardIfChromium,
   openExportDrawer,
   openPreset,
   pasteBarText,
@@ -18,7 +19,9 @@ import {
  * 主题颜色断言以导出 HTML 内联样式（与预览/PNG 同源 store + formatTokens）替代截屏取色。
  */
 
-test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
+test.beforeEach(async ({ context, browserName }) => {
+  await grantClipboardIfChromium(context, browserName)
+})
 
 const COMPARE = 'compare-alpha-v1'
 const MATRIX = 'matrix-v1'

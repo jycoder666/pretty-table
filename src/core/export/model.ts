@@ -291,4 +291,46 @@ export function renderExportHtml(model: ExportModel): string {
   return `<div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch">${table}</div>`
 }
 
+/**
+ * 渲染 ExportModel → TSV 纯文本（设计增量 §5.2 剪贴板行：text/plain 风味，便于再贴回表格软件）。
+ * 口径与 HTML 的 textContent 一致：caption 占首行、单元格文本 + 表头角标文本；
+ * 合并格按锚点写文本、被覆盖的位置补空串，保证矩形网格（Excel/WPS 粘回后列数不塌）；
+ * 单元格内不可能含制表符/换行（槽位文本来自 TSV 粘贴解析或单行输入），仍统一替换为空格兜底。
+ */
+export function renderExportText(model: ExportModel): string {
+  const cellText = (cell: ExportCell): string =>
+    `${cell.text}${cell.badge ?? ''}`.replace(/[\t\r\n]+/g, ' ')
+  const lines: string[] = []
+  if (model.caption) lines.push(model.caption.replace(/[\t\r\n]+/g, ' '))
+  /** 列号 → 还需覆盖的行数（含当前行）；被 rowspan 覆盖的列在本行补空串 */
+  const spans = new Map<number, number>()
+  for (const row of [...model.headRows, ...model.bodyRows, ...model.footRows]) {
+    const out: string[] = []
+    let ci = 0
+    const fillCovered = () => {
+      while (spans.has(ci)) {
+        out.push('')
+        ci++
+      }
+    }
+    for (const cell of row) {
+      fillCovered()
+      const cs = cell.colSpan ?? 1
+      const rs = cell.rowSpan ?? 1
+      out.push(cellText(cell))
+      for (let k = 1; k < cs; k++) out.push('')
+      if (rs > 1) for (let k = 0; k < cs; k++) spans.set(ci + k, rs)
+      ci += cs
+    }
+    fillCovered()
+    // 迭代中删/改自身键是 Map 的既有语义，无需先复制
+    for (const [c, n] of spans) {
+      if (n - 1 <= 0) spans.delete(c)
+      else spans.set(c, n - 1)
+    }
+    lines.push(out.join('\t'))
+  }
+  return lines.join('\n')
+}
+
 export { escapeHtml }

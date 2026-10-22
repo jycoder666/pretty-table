@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { DialogRoot, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 'reka-ui'
-import { exportHtml, loadRenderCore, measurePng } from '@/core'
+import { exportHtml, exportText, loadRenderCore, measurePng } from '@/core'
 import { useEditorStore } from '../stores/editor'
 import { errorCopy } from '../editor/errorCopy'
 import { pngMaxOverride } from '../debug/flags'
 import { faultGate } from '../debug/fault'
 import { getPngScale, setPngScale, type PngScale } from '../repo/prefs'
 import { triggerBlobDownload } from './blobDownload'
-import { copyText } from './clipboard'
+// 与本地处理函数 copyHtml 同名，导入时改名避免遮蔽（否则调用会递归到自身）
+import { copyHtml as writeClipboard } from './clipboard'
 import PtButton from '../ui/PtButton.vue'
 import PtTooltip from '../ui/PtTooltip.vue'
 
@@ -80,12 +81,14 @@ async function copyHtml() {
       editor.showToast(errorCopy(r.error.code, r.error.message))
       return
     }
+    // text/plain 风味用 TSV（设计增量 §5.2）：文本导出失败时退回 HTML 源码，不挡主流程
+    const t = exportText(editor.current)
     try {
-      await copyText(r.value)
-      editor.showToast('已复制 HTML')
+      await writeClipboard(r.value, t.ok ? t.value : r.value)
+      editor.showToast('已复制到剪贴板')
     } catch {
       htmlFallback.value = r.value
-      editor.showToast('无法写入剪贴板，请手动全选复制下方 HTML')
+      editor.showToast('浏览器没有允许写入剪贴板，请在下方框里全选后手动复制')
     }
   } catch {
     editor.showToast(errorCopy('EXPORT_HTML_FAIL'))
@@ -183,7 +186,7 @@ async function downloadPng() {
               预览
             </PtButton>
           </PtTooltip>
-          <PtTooltip text="复制带样式的 HTML，粘贴到支持富文本的编辑器">
+          <PtTooltip text="自带标题和表头，粘到公众号、邮件、文档里结构不乱">
             <PtButton class="wide" :disabled="editor.exporting" @click="copyHtml">复制 HTML</PtButton>
           </PtTooltip>
           <PtTooltip text="按当前倍率导出 PNG 图片（与预览同源）">

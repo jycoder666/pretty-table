@@ -113,7 +113,13 @@ function assertNoSilentBlank(outcomes: Outcome[]): void {
 async function exportOnce(page: Page): Promise<Outcome> {
   const dl = page
     .waitForEvent('download', { timeout: 60_000 })
-    .then(async (d) => ({ kind: 'download' as const, path: await d.path() }))
+    .then(async (d) => {
+      // 下载事件即到即读 toast：toast 数秒后自动消失，等读完产物像素再读必然落空
+      const t = await toast(page)
+        .textContent()
+        .catch(() => '')
+      return { kind: 'download' as const, path: await d.path(), toast: t }
+    })
     .catch(() => ({ kind: 'none' as const }))
   const failToast = page.locator('.pt-toast', { hasText: '重试' }).first()
   const failureToast = failToast
@@ -130,9 +136,9 @@ async function exportOnce(page: Page): Promise<Outcome> {
     return { kind: 'error', toastText: '(60s 无下载无报错)' }
   }
   const bytes = readFileSync(r.path)
-  const stats = await productStats(page, bytes)
   // 成功提示口径核对：下载事件后 toast 必报「PNG 已下载」
-  await expect(toast(page)).toContainText('PNG 已下载')
+  expect(r.toast, '下载事件后 toast 必报「PNG 已下载」').toContain('PNG 已下载')
+  const stats = await productStats(page, bytes)
   const blank = stats.distinct <= 1 || stats.nonPaper === 0
   return { kind: blank ? 'blank' : 'non-blank', toastText: 'PNG 已下载' }
 }

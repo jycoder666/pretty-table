@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type BrowserContext, type Page } from '@playwright/test'
 import {
   buildVisualRows,
   colWidthAt,
@@ -13,6 +13,20 @@ import {
  * - 模拟剪贴板：Excel/WPS 来源统一用 DataTransfer 构造 text/plain(+text/html) 粘贴事件注入
  * - 导出 HTML 读回：走导出抽屉「复制 HTML」→ 剪贴板读回（等价粘贴产物）
  */
+
+/**
+ * 剪贴板权限按引擎授予：`clipboard-read/write` 权限项只有 chromium 项目支持，
+ * webkit 在 `newPage` 阶段就抛 `Unknown permission: clipboard-write`（整份用例卡在开页，
+ * 报错与产品行为无关）；故不能在文件级 `test.use` 里无条件声明。
+ * 需要真实剪贴板的用例自行 skip 非 chromium，其余用例（构造粘贴事件/打桩 clipboard）照常跑。
+ */
+export async function grantClipboardIfChromium(
+  context: BrowserContext,
+  browserName: string,
+): Promise<void> {
+  if (browserName !== 'chromium') return
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+}
 
 /** 库页按展示名打开系统预设并等预览画布就绪（二次进入时先清草稿，保证落在库页） */
 export async function openPreset(page: Page, displayName: string, query = ''): Promise<void> {
@@ -131,14 +145,36 @@ export async function openExportDrawer(page: Page): Promise<void> {
   await expect(page.locator('.drawer')).toBeVisible()
 }
 
-/** 导出 HTML 读回（走「复制 HTML」→ 剪贴板 readText，等价粘贴产物） */
+/** 导出 HTML 读回（走「复制 HTML」→ 剪贴板 text/html 风味，等价富文本粘贴产物） */
 export async function exportedHtml(page: Page): Promise<string> {
   await openExportDrawer(page)
   await page.getByRole('button', { name: '复制 HTML' }).click()
-  await expect(page.locator('.pt-toast')).toHaveText('已复制 HTML')
-  const html = await page.evaluate(() => navigator.clipboard.readText())
+  await expect(page.locator('.pt-toast')).toHaveText('已复制到剪贴板')
+  // P1 修复后剪贴板为双风味（text/html 片段 + text/plain TSV）：取 text/html，
+  // 与公众号/邮件等富文本编辑器粘到的内容一致；纯文本风味见 exportedText
+  const html = await readClipboardFlavor(page, 'text/html')
   await page.getByRole('button', { name: '关闭' }).click()
   return html
+}
+
+/** 读剪贴板指定风味（真机剪贴板多风味：text/html / text/plain） */
+export async function readClipboardFlavor(page: Page, type: string): Promise<string> {
+  return page.evaluate(async (t) => {
+    const items = await navigator.clipboard.read()
+    for (const it of items) {
+      if (it.types.includes(t)) return await (await it.getType(t)).text()
+    }
+    return ''
+  }, type)
+}
+
+/** 导出纯文本风味读回（text/plain = TSV，落 Excel/WPS 等价；调用前抽屉须已打开） */
+export async function exportedText(page: Page): Promise<string> {
+  await page.getByRole('button', { name: '复制 HTML' }).click()
+  await expect(page.locator('.pt-toast')).toHaveText('已复制到剪贴板')
+  const text = await page.evaluate(() => navigator.clipboard.readText())
+  await page.getByRole('button', { name: '关闭' }).click()
+  return text
 }
 
 /** 导出 PNG 下载并返回文件字节（触发真实下载事件） */
@@ -201,8 +237,15 @@ export async function samplePngPixels(
     const buf = new Uint8Array(bin.length)
     for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
     const bmp = await createImageBitmap(new Blob([buf], { type: 'image/png' }))
-    const canvas = new OffscreenCanvas(bmp.width, bmp.height)
-    const ctx = canvas.getContext('2d')!
+    // Playwright 的 WebKit 构建没有 OffscreenCanvas（ReferenceError），回退到普通 canvas
+    const canvas =
+      typeof OffscreenCanvas === 'function'
+        ? new OffscreenCanvas(bmp.width, bmp.height)
+        : Object.assign(document.createElement('canvas'), {
+            width: bmp.width,
+            height: bmp.height,
+          })
+    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
     ctx.drawImage(bmp, 0, 0)
     return pts.map(([x, y]) => {
       const d = ctx.getImageData(x, y, 1, 1).data

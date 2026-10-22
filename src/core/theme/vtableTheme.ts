@@ -40,5 +40,13 @@ export function toVTableTheme(
       borderColor: palette.border,
       borderLineWidth: 1,
     },
+    // 选区高亮：本应用自绘（壳 .selection-cell 叠加层，主题 primary 10% + 2px 描边，R-2），
+    // 必须关掉 VTable 内建选区底色——vtable 1.26.8 在 selectionStyle.cellBgColor 缺省时
+    // 兜底 rgba(0,0,255,0.1)（create-select-border.js），会在画布上给选中格蒙一层纯蓝，
+    // 使预览里选中的图片格整格偏色（导出无选区故不偏），即 F4「预览画布颜色漂移」的成因。
+    selectionStyle: {
+      cellBgColor: 'transparent',
+      cellBorderColor: 'transparent',
+    },
   }
 }

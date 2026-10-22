@@ -153,6 +153,7 @@ export {
 // T34：渲染核（VTable 依赖图）只经动态导入出口暴露，壳层用 loadRenderCore()
 export { loadRenderCore, type RenderCore } from './render/lazyCore'
 export { exportHtml } from './export/html'
+export { exportText } from './export/text'
 export {
   buildExportModel,
   renderExportHtml,

@@ -1,0 +1,42 @@
+{
+  "myComputedRect": {
+    "x": 120,
+    "y": 280,
+    "w": 140,
+    "h": 36
+  },
+  "hostRect": [
+    212,
+    67,
+    956,
+    822
+  ],
+  "rootRect": [
+    213,
+    68,
+    954,
+    400
+  ],
+  "canvasRect": [
+    213,
+    68,
+    954,
+    400
+  ],
+  "selRect": [
+    333,
+    348,
+    140,
+    36
+  ],
+  "canvasOffsetInHost": [
+    1,
+    1
+  ],
+  "dpr": 1,
+  "scanColX": 189,
+  "nonPaperRange": [
+    239,
+    325
+  ]
+}

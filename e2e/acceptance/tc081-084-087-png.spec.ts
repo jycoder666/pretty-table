@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import {
   downloadPng,
   expectToast,
+  grantClipboardIfChromium,
   openExportDrawer,
   openPreset,
   pngSize,
@@ -12,7 +13,9 @@ import {
  * T30 验收 · TC-PT-081～084 / 087（PNG 倍率·透明底·超限·生成中·剪贴板被拒）
  */
 
-test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
+test.beforeEach(async ({ context, browserName }) => {
+  await grantClipboardIfChromium(context, browserName)
+})
 
 test.describe('TC-PT-081 · PNG 倍率 1x/2x/3x，默认 2x，尺寸口径与记忆', () => {
   test('默认 2x；三档实测宽 ≈1:2:3；本机记忆倍率', async ({ page }) => {
@@ -143,7 +146,7 @@ test.describe('TC-PT-087 · 剪贴板写入被拒：手动复制框', () => {
     await openExportDrawer(page)
     await page.getByRole('button', { name: '复制 HTML' }).click()
     // 行内错 toast + 手动复制框出现，框内为完整 HTML
-    await expectToast(page, '无法写入剪贴板，请手动全选复制下方 HTML')
+    await expectToast(page, '浏览器没有允许写入剪贴板，请在下方框里全选后手动复制')
     const fallback = page.locator('.drawer textarea.fallback')
     await expect(fallback).toBeVisible()
     const value = await fallback.inputValue()

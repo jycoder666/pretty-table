@@ -1,0 +1,36 @@
+{
+  "png": {
+    "dims": {
+      "1×": {
+        "w": 574,
+        "h": 458
+      },
+      "2×": {
+        "w": 1148,
+        "h": 916
+      },
+      "3×": {
+        "w": 1722,
+        "h": 1374
+      }
+    },
+    "transparent2x": {
+      "width": 1148,
+      "height": 916,
+      "red": 3658,
+      "cornerAlpha": 0,
+      "centerAlpha": 255
+    }
+  },
+  "drag": {
+    "path": "pointer-drag",
+    "slotCount": 11,
+    "beforeHasBlock": false,
+    "afterHasBlock": true,
+    "changed": true
+  },
+  "refreshRecovery": {
+    "markNoPressedAfterReload": "true",
+    "imageRedPixelsAfterReload": 917
+  }
+}

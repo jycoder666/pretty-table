@@ -105,7 +105,7 @@ if (bad.length) {
 console.log(`License check OK (${Object.keys(json).length} packages)`)
 
 // T31 交付要求：构建产物附带第三方许可证文本。dist/ 存在时生成 dist/THIRD-PARTY-LICENSES.txt。
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 const distDir = resolve(process.cwd(), 'dist')
 if (existsSync(distDir)) {

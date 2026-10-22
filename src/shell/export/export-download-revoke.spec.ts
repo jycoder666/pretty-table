@@ -22,10 +22,10 @@ vi.mock('@/core', async (importOriginal) => {
   const orig = await importOriginal<typeof import('@/core')>()
   return {
     ...orig,
-    exportHtml: vi.fn(),
+    exportHtml: vi.fn<() => unknown>(),
     measurePng: measurePngMock,
-    loadRenderCore: vi.fn(async () => ({
-      mount: vi.fn(),
+    loadRenderCore: vi.fn<() => Promise<Record<string, unknown>>>(async () => ({
+      mount: vi.fn<() => void>(),
       exportPng: exportPngMock,
       measurePng: measurePngMock,
       measureContentSize: orig.measureContentSize,
@@ -86,8 +86,8 @@ describe('ExportDrawer · PNG 下载 blob URL 生命周期（防静默丢下载�
       ok: true,
       value: new Blob(['fake-png'], { type: 'image/png' }),
     })
-    const createObjectURL = vi.fn(() => 'blob:pt-revoke-test')
-    const revokeObjectURL = vi.fn()
+    const createObjectURL = vi.fn<(blob: Blob) => string>(() => 'blob:pt-revoke-test')
+    const revokeObjectURL = vi.fn<(url: string) => void>()
     URL.createObjectURL = createObjectURL as unknown as typeof URL.createObjectURL
     URL.revokeObjectURL = revokeObjectURL as unknown as typeof URL.revokeObjectURL
 
@@ -124,8 +124,8 @@ describe('ExportDrawer · PNG 下载 blob URL 生命周期（防静默丢下载�
     })
     const createdUrls = ['blob:pt-a', 'blob:pt-b']
     let next = 0
-    const createObjectURL = vi.fn(() => createdUrls[next++]!)
-    const revokeObjectURL = vi.fn()
+    const createObjectURL = vi.fn<(blob: Blob) => string>(() => createdUrls[next++]!)
+    const revokeObjectURL = vi.fn<(url: string) => void>()
     URL.createObjectURL = createObjectURL as unknown as typeof URL.createObjectURL
     URL.revokeObjectURL = revokeObjectURL as unknown as typeof URL.revokeObjectURL
 

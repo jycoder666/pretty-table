@@ -19,6 +19,13 @@ const { exportHtmlMock, exportPngMock, measurePngMock } = vi.hoisted(() => ({
   measurePngMock: vi.fn<() => { outWidth: number; outHeight: number }>(),
 }))
 
+// 剪贴板写入门面（真机行为由 manual-verify 真机用例覆盖）
+const { copyHtmlMock } = vi.hoisted(() => ({
+  copyHtmlMock: vi.fn<(html: string, plain: string) => Promise<void>>(async () => {}),
+}))
+
+vi.mock('./clipboard', () => ({ copyHtml: copyHtmlMock }))
+
 vi.mock('@/core', async (importOriginal) => {
   const orig = await importOriginal<typeof import('@/core')>()
   return {
@@ -26,8 +33,8 @@ vi.mock('@/core', async (importOriginal) => {
     exportHtml: exportHtmlMock,
     measurePng: measurePngMock,
     // T34：组件经 loadRenderCore 取 exportPng（渲染核动态 chunk），此处直连 mock
-    loadRenderCore: vi.fn(async () => ({
-      mount: vi.fn(),
+    loadRenderCore: vi.fn<() => Promise<Record<string, unknown>>>(async () => ({
+      mount: vi.fn<() => void>(),
       exportPng: exportPngMock,
       measurePng: measurePngMock,
       measureContentSize: orig.measureContentSize,
@@ -84,6 +91,34 @@ beforeEach(() => {
   exportHtmlMock.mockReset()
   exportPngMock.mockReset()
   measurePngMock.mockReset().mockReturnValue({ outWidth: 1028, outHeight: 640 })
+  copyHtmlMock.mockReset().mockResolvedValue(undefined)
+})
+
+describe('ExportDrawer · 复制 HTML 双风味（TC-PT-086 回归）', () => {
+  it('点「复制 HTML」：同写 HTML 与 TSV，成功 toast 用契约文案', async () => {
+    const { editor } = await setupDrawer()
+    exportHtmlMock.mockReturnValue({ ok: true, value: '<table><tr><td>甲</td></tr></table>' })
+    await clickByText('复制 HTML')
+    expect(copyHtmlMock).toHaveBeenCalledTimes(1)
+    const [html, plain] = copyHtmlMock.mock.calls[0]!
+    expect(html).toContain('<table>')
+    // text/plain 风味是 TSV（设计增量 §5.2），不是 HTML 源码
+    expect(plain).not.toContain('<table>')
+    expect(plain.split('\n')[0]).toBe('多列对比表')
+    expect(editor.toast).toBe('已复制到剪贴板')
+    expect(q('.fallback')).toBeNull()
+  })
+
+  it('剪贴板被拒：展开手动复制框（框内为 HTML）+ TC-PT-087 文案', async () => {
+    const { editor } = await setupDrawer()
+    exportHtmlMock.mockReturnValue({ ok: true, value: '<table><tr><td>甲</td></tr></table>' })
+    copyHtmlMock.mockRejectedValue(new Error('NotAllowedError'))
+    await clickByText('复制 HTML')
+    expect(editor.toast).toBe('浏览器没有允许写入剪贴板，请在下方框里全选后手动复制')
+    const box = q('.fallback') as HTMLTextAreaElement | null
+    expect(box).not.toBeNull()
+    expect(box!.value).toContain('<table>')
+  })
 })
 
 describe('ExportDrawer · 副标题正向文案（PX-11）', () => {

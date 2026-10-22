@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test'
 import {
   clickSlot,
   confirmPaste,
-  exportedHtml,
   expectToast,
+  exportedHtml,
+  grantClipboardIfChromium,
   openPreset,
   pasteBarText,
   pasteClipboard,
@@ -15,7 +16,9 @@ import {
  * Excel/WPS 来源以「模拟剪贴板」等价执行。
  */
 
-test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
+test.beforeEach(async ({ context, browserName }) => {
+  await grantClipboardIfChromium(context, browserName)
+})
 
 const COMPARE = 'compare-alpha-v1'
 const PRICING = 'pricing-v1'
