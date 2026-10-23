@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { buildVisualRows, colWidthAt, type TemplateInstance } from '../../src/core/index'
-import { expectToast, openPreset, presetOf, slotVisualPos } from './helpers'
+import { countPngNearColor, expectToast, openPreset, presetOf, slotVisualPos } from './helpers'
 
 /**
  * T31 验收 · TC-PT-092（WP1 + WP2）· 合并/拆分的可见可用与框选
@@ -92,5 +92,85 @@ test.describe('TC-PT-092 · 框选 → 合并 → 拆分（含成功反馈与闸
     await expect(page.getByTestId('selection-split')).toBeDisabled()
     // 合并同样不可（与既有合并区部分重叠）
     await expect(page.getByTestId('selection-merge')).toBeDisabled()
+  })
+
+  test('合并区双击就地编辑：编辑框覆盖整个合并区宽度（修复前只有左上单格大小）', async ({
+    page,
+  }) => {
+    await openPreset(page, '多列对比表')
+    const inst = presetOf('compare-alpha-v1')
+
+    // 框选 R3 的 C1–C2（横向 1×2）→ 合并
+    await dragSelect(page, inst, 'row.3.val.a', 'row.3.val.b')
+    await page.getByTestId('selection-merge').click()
+    await expectToast(page, /已合并/)
+
+    // 双击合并区（点其左上格中心即可命中合并区）→ 就地编辑浮层出现
+    const box = (await page.locator('.preview-host canvas').first().boundingBox())!
+    const a = cellCenter(inst, 'row.3.val.a')
+    await page.locator('.preview-host canvas').first().dblclick({ position: { x: a.x, y: a.y } })
+    const editor = page.getByTestId('inline-editor')
+    await expect(editor).toBeVisible()
+
+    // 编辑框宽度 = 合并区两列宽之和（±3px 容差：渲染核权威几何与算术同源、取整路径不同）
+    const want = colWidthAt(inst, 1) + colWidthAt(inst, 2)
+    const got = (await editor.boundingBox())!.width
+    expect(Math.abs(got - want)).toBeLessThanOrEqual(3)
+
+    // Esc 取消，不落内容
+    await page.keyboard.press('Escape')
+    await expect(editor).toHaveCount(0)
+  })
+
+  test('合并区长文本不被锚点列宽裁剪：文本延伸到合并区右半（修复前右半无任何文字像素）', async ({
+    page,
+  }) => {
+    await openPreset(page, '多列对比表')
+    const inst = presetOf('compare-alpha-v1')
+
+    // 合并 R3 的 C1–C2 → 双击 → 输入 18 字长文本（宽度约等合并区可用宽，必然跨过锚点列右边界）
+    await dragSelect(page, inst, 'row.3.val.a', 'row.3.val.b')
+    await page.getByTestId('selection-merge').click()
+    await expectToast(page, /已合并/)
+
+    const canvas = page.locator('.preview-host canvas').first()
+    const a = cellCenter(inst, 'row.3.val.a')
+    await canvas.dblclick({ position: { x: a.x, y: a.y } })
+    const editor = page.getByTestId('inline-editor')
+    await expect(editor).toBeVisible()
+    await page.keyboard.press('Control+a')
+    await page.keyboard.type('测'.repeat(18))
+    await page.keyboard.press('Enter')
+    await expect(editor).toHaveCount(0)
+
+    // 点 A 列同行标签格，把选区工具条挪出合并区（浮层会压住右侧采样区）
+    const far = cellCenter(inst, 'row.3.label')
+    await canvas.click({ position: { x: far.x, y: far.y } })
+    await page.waitForTimeout(250)
+
+    // 采样矩形：合并区左半（锚点列 B）与右半（C 列），各内缩 2px 避开格线
+    const box = (await canvas.boundingBox())!
+    const { rowHeights } = buildVisualRows(inst)
+    const visualRow = slotVisualPos(inst, 'row.3.val.a').row
+    let yTop = 0
+    for (let r = 0; r < visualRow; r++) yTop += rowHeights[r] ?? 36
+    const h = rowHeights[visualRow] ?? 36
+    const wB = colWidthAt(inst, 1)
+    const wC = colWidthAt(inst, 2)
+    const xB = colWidthAt(inst, 0)
+
+    // 左半：文字起点所在列，必有深色笔画
+    const leftPng = await page.screenshot({
+      clip: { x: box.x + xB + 2, y: box.y + yTop + 2, width: wB - 4, height: h - 4 },
+    })
+    const leftDark = await countPngNearColor(page, new Uint8Array(leftPng), '#1a1a1a', 70)
+    expect(leftDark).toBeGreaterThan(20)
+
+    // 右半：修复前此处纯背景（文本被裁在锚点列边界），修复后应有文字笔画
+    const rightPng = await page.screenshot({
+      clip: { x: box.x + xB + wB + 2, y: box.y + yTop + 2, width: wC - 4, height: h - 4 },
+    })
+    const rightDark = await countPngNearColor(page, new Uint8Array(rightPng), '#1a1a1a', 70)
+    expect(rightDark).toBeGreaterThan(20)
   })
 })

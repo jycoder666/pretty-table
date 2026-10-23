@@ -522,9 +522,15 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
   const customMergeCell = (col: number, row: number) => {
     for (const m of merges) {
       if (row >= m.start[0] && row <= m.end[0] && col >= m.start[1] && col <= m.end[1]) {
+        // BugFix（合并区文本截断"只显示一半"）：VTable 1.26.8 渲染合并区的机制是
+        // **每个影子格各画一份完整内容**——建图后 dealWithMergeCellSize 会把每个
+        // cellGroup 的 width 收窄回该列自身宽度（clip 随之收窄），再按列偏移 dx 拼接。
+        // 因此合并区内**每个格都必须返回完整 text**：非锚点格若返回 ''，
+        // 其影子格不画内容，文本就被裁在锚点列宽内（改对齐只是重排，截断依旧）。
+        // 取值统一取锚点格 text，非锚点格仅作为拼接影子存在（编辑读写仍走锚点）。
         const text = metas[m.start[0]]?.[m.start[1]]?.text ?? ''
         return {
-          text: row === m.start[0] && col === m.start[1] ? text : '',
+          text,
           range: {
             start: { col: m.start[1], row: m.start[0] },
             end: { col: m.end[1], row: m.end[0] },
