@@ -8,6 +8,14 @@ import type { TemplateInstance } from '../types'
 
 export const LIMITS: { readonly maxRows: 20; readonly maxCols: 12 } = { maxRows: 20, maxCols: 12 }
 
+/**
+ * 最低结构守卫（增量设计 A3）：删行/删列的单点口径，执行守卫与 UI 预检同源。
+ * - STRUCTURE_MIN_ROWS = 2：1 表头行 + 1 内容行（表头行本就不可删，故只需拦「删掉最后一条内容行」）
+ * - STRUCTURE_MIN_COLS = 1：至少保留 1 列
+ */
+export const STRUCTURE_MIN_ROWS = 2
+export const STRUCTURE_MIN_COLS = 1
+
 /** 列宽钳制范围（px） */
 export const COL_WIDTH_RANGE: readonly [number, number] = [64, 360]
 

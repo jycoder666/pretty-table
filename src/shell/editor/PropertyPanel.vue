@@ -11,13 +11,9 @@ import {
   ROLE_LABELS,
   isRoleOverridden,
   roleColorOf,
-  canAddRow,
-  canAddCol,
   canSetImage,
   clampColWidth,
   colWidthAt,
-  hasContentInRow,
-  hasContentInCol,
   slotIdsInRange,
   type Align,
   type RoleColorKey,
@@ -97,22 +93,11 @@ function commitColWidth(col: number, raw: string) {
   editor.apply({ kind: 'setColWidth', col, width: clampColWidth(n) })
 }
 
-// ── 结构编辑（FR-C3）：行列增删 + 表头层级 ──
+// ── 结构编辑（增量设计 T03）：右栏只留低频设置——摘要卡常显组头，组体为表头层级/上限说明
+//    /合并拆分弱化入口/推荐列/删区块。高频的行列增删与换位入口移至画布旁行/列轨道。 ──
 const rowCount = computed(() => editor.current?.layout.slotGrid?.length ?? 0)
 const colCount = computed(() => editor.current?.layout.colCount ?? 0)
 const headerLevels = computed(() => editor.current?.layout.headerLevels ?? 1)
-const canAddRowNow = computed(() => (editor.current ? canAddRow(editor.current) : false))
-const canAddColNow = computed(() => (editor.current ? canAddCol(editor.current) : false))
-
-/** 删行/删列目标：选中格所在行/列；未选中时删最后一行/列 */
-const targetRow = computed(() => {
-  const sel = editor.selectionRange
-  return sel ? Math.min(sel.start[0], rowCount.value - 1) : rowCount.value - 1
-})
-const targetCol = computed(() => {
-  const sel = editor.selectionRange
-  return sel ? Math.min(sel.start[1], colCount.value - 1) : colCount.value - 1
-})
 
 /** 结构变化后原选区/选中槽可能已被 remap，清空防悬挂引用 */
 function applyStruct(intent: StructuralIntent): boolean {
@@ -125,86 +110,8 @@ function applyStruct(intent: StructuralIntent): boolean {
   return okApplied
 }
 
-function addRow() {
-  if (canAddRowNow.value) applyStruct({ kind: 'addRow' })
-}
-
-async function removeRow() {
-  const r = targetRow.value
-  if (r < headerLevels.value || r >= rowCount.value) return
-  // Q-9：删非空行列先二次确认（连带删除，不可恢复）；PX-05：走统一确认弹窗
-  if (hasContentInRow(editor.current!, r)) {
-    const go = await confirmAction({
-      title: `删除第 ${r + 1} 行`,
-      message: `删除第 ${r + 1} 行后，这一行的内容会一起删掉，不可恢复。确定删除？`,
-      confirmText: '删除',
-      danger: true,
-    })
-    if (!go) return
-  }
-  applyStruct({ kind: 'removeRow', row: r })
-}
-
-function addCol() {
-  if (canAddColNow.value) applyStruct({ kind: 'addCol' })
-}
-
-async function removeCol() {
-  const c = targetCol.value
-  if (c < 0 || c >= colCount.value) return
-  if (hasContentInCol(editor.current!, c)) {
-    const go = await confirmAction({
-      title: `删除第 ${c + 1} 列`,
-      message: `删除第 ${c + 1} 列后，这一列的内容会一起删掉，不可恢复。确定删除？`,
-      confirmText: '删除',
-      danger: true,
-    })
-    if (!go) return
-  }
-  applyStruct({ kind: 'removeCol', col: c })
-}
-
 function setHeaderLevels(v: number) {
   applyStruct({ kind: 'setHeaderLevel', levels: v as 1 | 2 | 3 })
-}
-
-// ── WP4：行列换位（按钮式；核内还会挡表头行/标签列/冻结边界/与合并区交错）──
-const headerLevelsNow = computed(() => editor.current?.layout.headerLevels ?? 1)
-const canMoveRowUp = computed(
-  () => !editor.pastePending && targetRow.value > headerLevelsNow.value,
-)
-const canMoveRowDown = computed(
-  () =>
-    !editor.pastePending &&
-    targetRow.value >= headerLevelsNow.value &&
-    targetRow.value < rowCount.value - 1,
-)
-/** 第一列是标签列（左栏标签块锚点 / 首列固定 / Q-004 强调规则都挂在列号上）→ 不参与换位 */
-const frozenNow = computed(() => editor.current?.layout.frozenColCount ?? 0)
-/** 冻结列与普通列不能互串（核内同样拒绝）：换位两侧的冻结属性必须一致，否则按钮别装可用 */
-function sameFrozenSide(a: number, b: number): boolean {
-  return a < frozenNow.value === b < frozenNow.value
-}
-const canMoveColLeft = computed(
-  () =>
-    !editor.pastePending && targetCol.value > 1 && sameFrozenSide(targetCol.value, targetCol.value - 1),
-)
-const canMoveColRight = computed(
-  () =>
-    !editor.pastePending &&
-    targetCol.value > 0 &&
-    targetCol.value < colCount.value - 1 &&
-    sameFrozenSide(targetCol.value, targetCol.value + 1),
-)
-
-function moveRowBy(delta: number) {
-  const from = targetRow.value
-  editor.moveRow(from, from + delta)
-}
-
-function moveColBy(delta: number) {
-  const from = targetCol.value
-  editor.moveCol(from, from + delta)
 }
 
 // ── PX-08 / WP1：合并 / 拆分按钮随选区实时置灰（与画布选区工具条共用 useMergeGates 判定）──
@@ -717,7 +624,7 @@ async function removeBlock() {
       </div>
     </section>
 
-    <!-- ── 结构组（PX-16，默认收起）：动结构 ── -->
+    <!-- ── 结构组（PX-16，默认收起）：组头摘要卡常显，组体只留低频设置（增量设计 T03）── -->
     <section class="group" data-testid="group-structure">
       <button
         type="button"
@@ -728,97 +635,16 @@ async function removeBlock() {
       >
         <i class="arrow" aria-hidden="true">{{ panelGroupOpen.structure ? '▼' : '▶' }}</i>结构
       </button>
+      <!-- 结构摘要卡：组头常显（组体收起也可见）；e2e 同步点 structure-summary -->
+      <p class="structure-summary" data-testid="structure-summary">
+        {{ rowCount }} 行 × {{ colCount }} 列 · {{ headerLevels }} 层表头
+      </p>
       <div v-show="panelGroupOpen.structure" class="group-body">
-        <!-- 结构编辑（FR-C3）：行列增删 / 表头层级；达上限置灰，删非空先确认 -->
         <div class="section">
-          <h4>结构</h4>
-          <p class="hint">删行/删列删的是选中格所在的行列；未选中时删最后一行/列。</p>
-          <div class="row">
-            <!-- E4：原裸 title 迁移到 PtTooltip（R-5 统一 tooltip） -->
-            <PtTooltip text="在表格末尾加一行">
-              <PtButton
-                variant="ghost"
-                :disabled="!canAddRowNow || editor.pastePending"
-                @click="addRow"
-              >
-                加一行
-              </PtButton>
-            </PtTooltip>
-            <PtTooltip :text="`删除第 ${targetRow + 1} 行`">
-              <PtButton
-                variant="ghost"
-                :disabled="editor.pastePending"
-                @click="removeRow"
-              >
-                删行
-              </PtButton>
-            </PtTooltip>
-          </div>
-          <div class="row">
-            <PtTooltip text="在表格末尾加一列">
-              <PtButton
-                variant="ghost"
-                :disabled="!canAddColNow || editor.pastePending"
-                @click="addCol"
-              >
-                加一列
-              </PtButton>
-            </PtTooltip>
-            <PtTooltip :text="`删除第 ${targetCol + 1} 列`">
-              <PtButton
-                variant="ghost"
-                :disabled="editor.pastePending"
-                @click="removeCol"
-              >
-                删列
-              </PtButton>
-            </PtTooltip>
-          </div>
-          <!-- WP4：行列换位（内容随行走，合并区/只读格/列宽一起重映射） -->
-          <div class="row">
-            <PtTooltip text="把选中的行和上一行换位（表头行不参与）">
-              <PtButton
-                variant="ghost"
-                data-testid="move-row-up"
-                :disabled="!canMoveRowUp"
-                @click="moveRowBy(-1)"
-              >
-                行上移
-              </PtButton>
-            </PtTooltip>
-            <PtTooltip text="把选中的行和下一行换位（表头行不参与）">
-              <PtButton
-                variant="ghost"
-                data-testid="move-row-down"
-                :disabled="!canMoveRowDown"
-                @click="moveRowBy(1)"
-              >
-                行下移
-              </PtButton>
-            </PtTooltip>
-          </div>
-          <div class="row">
-            <PtTooltip text="把选中的列和左一列换位（第一列是标签列，不参与）">
-              <PtButton
-                variant="ghost"
-                data-testid="move-col-left"
-                :disabled="!canMoveColLeft"
-                @click="moveColBy(-1)"
-              >
-                列左移
-              </PtButton>
-            </PtTooltip>
-            <PtTooltip text="把选中的列和右一列换位（第一列是标签列，不参与）">
-              <PtButton
-                variant="ghost"
-                data-testid="move-col-right"
-                :disabled="!canMoveColRight"
-                @click="moveColBy(1)"
-              >
-                列右移
-              </PtButton>
-            </PtTooltip>
-          </div>
+          <p class="hint">
+            加删行列与换位请用表格旁的行/列轨道：点序号选中整行/列，「+」插入，「…」打开菜单。
+            行列上限 20 行 × 12 列；至少保留 1 行表头 + 1 行内容、1 列。
+          </p>
           <div class="field">
             <span>表头层数</span>
             <PtSegmented
@@ -834,6 +660,7 @@ async function removeBlock() {
           </div>
         </div>
 
+        <!-- 合并/拆分弱化入口（主理人拍板保留）：主入口是画布选区浮动工具条 -->
         <div class="section">
           <h4>合并 / 拆分</h4>
           <p class="hint">
@@ -945,6 +772,12 @@ h3 {
 }
 .group-body {
   padding: 0 2px 8px;
+}
+/* T03：结构摘要卡（组头常显，组体收起也可见） */
+.structure-summary {
+  margin: 0 2px 6px;
+  font-size: 12px;
+  color: var(--pt-muted);
 }
 .section {
   margin-bottom: 16px;

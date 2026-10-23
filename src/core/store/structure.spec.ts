@@ -5,10 +5,12 @@ import {
   canAddRow,
   hasContentInCol,
   hasContentInRow,
+  previewStructuralImpact,
   type StructuralIntent,
 } from './structure'
+import { moveGate, doMoveCol, doMoveRow } from './moveOps'
 import { applyEditIntent } from './intent'
-import { LIMITS } from '../theme/layoutScales'
+import { LIMITS, STRUCTURE_MIN_COLS, STRUCTURE_MIN_ROWS } from '../theme/layoutScales'
 import { BLANK_V1, COMPARE_ALPHA_V1, cloneInstance } from '../index'
 import type { TemplateInstance } from '../types'
 
@@ -774,5 +776,165 @@ describe('intent · moveBlock（WP4 表内区块换位）', () => {
     expect(r.ok).toBe(true)
     if (!r.ok) return
     expect(r.value.blocks[0]?.slotId).toBe('gap-1')
+  })
+})
+
+// ── 增量设计 T01：最低结构守卫 + 影响预检 + 换位闸门 moveGate ──
+
+describe('structure · 最低结构守卫（STRUCTURE_MIN_ROWS/COLS，A3）', () => {
+  it('常量口径：2 行（1 表头 + 1 内容）/ 1 列', () => {
+    expect(STRUCTURE_MIN_ROWS).toBe(2)
+    expect(STRUCTURE_MIN_COLS).toBe(1)
+  })
+
+  it('rowCount ≤ 2 时删行 → STRUCTURE_MIN_ROWS 白话 fail', () => {
+    const inst = custom5x4()
+    const r1 = run(inst, { kind: 'removeRow', row: 2 })
+    expect(r1.ok).toBe(true) // 3 行 → 2 行放行
+    if (!r1.ok) return
+    const r2 = run(r1.value, { kind: 'removeRow', row: 1 })
+    expect(r2.ok).toBe(false)
+    if (r2.ok) return
+    expect(r2.error.code).toBe('STRUCTURE_MIN_ROWS')
+    expect(r2.error.message).toBe('至少保留 1 行表头和 1 行内容，不能再删了')
+  })
+
+  it('colCount ≤ 1 时删列 → STRUCTURE_MIN_COLS 白话 fail', () => {
+    let cur = custom5x4()
+    // 3 → 2 → 1 列逐次放行，删到只剩 1 列时拦截
+    for (let i = 0; i < 2; i++) {
+      const r = run(cur, { kind: 'removeCol', col: 0 })
+      expect(r.ok).toBe(true)
+      if (r.ok) cur = r.value
+    }
+    expect(cur.layout.colCount).toBe(1)
+    const r2 = run(cur, { kind: 'removeCol', col: 0 })
+    expect(r2.ok).toBe(false)
+    if (r2.ok) return
+    expect(r2.error.code).toBe('STRUCTURE_MIN_COLS')
+    expect(r2.error.message).toBe('至少保留 1 列，不能再删了')
+  })
+
+  it('表头行拒绝仍优先于最低结构（错误码与文案不变）', () => {
+    const inst = custom5x4()
+    inst.layout.rowCount = 2
+    const r = run(inst, { kind: 'removeRow', row: 0 })
+    expect(!r.ok ? r.error.code : '').toBe('TEMPLATE_INVALID')
+    expect(!r.ok ? r.error.message : '').toContain('表头行不能直接删除')
+  })
+})
+
+describe('structure · previewStructuralImpact（A3 影响预检纯函数）', () => {
+  it('空行：三计数全 0、无禁用', () => {
+    const inst = custom5x4()
+    const impact = previewStructuralImpact(inst, 'row', 2)
+    expect(impact).toEqual({ filledCellCount: 0, affectedMergeCount: 0, affectedBlockCount: 0 })
+  })
+
+  it('含内容行：filledCellCount 只数非空槽位（表头行在预检中先行拦截）', () => {
+    const inst = custom5x4()
+    // row 1 有 e='E'；row 2 全空
+    expect(previewStructuralImpact(inst, 'row', 1).filledCellCount).toBe(1)
+    expect(previewStructuralImpact(inst, 'row', 2).filledCellCount).toBe(0)
+  })
+
+  it('含区块行：affectedBlockCount 计锚定区块；删列恒为 0', () => {
+    const inst = withLeftTag()
+    expect(previewStructuralImpact(inst, 'row', 2).affectedBlockCount).toBe(1) // footer after-2
+    expect(previewStructuralImpact(inst, 'col', 1).affectedBlockCount).toBe(0)
+  })
+
+  it('跨删行合并区：merges ∪ structuralMerges 相交计数；allowedMerges 不计', () => {
+    const inst = custom5x4()
+    inst.layout.merges = [{ start: [1, 0], end: [2, 0] }]
+    inst.layout.structuralMerges = [{ start: [1, 1], end: [2, 1] }]
+    inst.layout.allowedMerges = [{ start: [1, 2], end: [2, 2] }]
+    const impact = previewStructuralImpact(inst, 'row', 2)
+    expect(impact.affectedMergeCount).toBe(2)
+  })
+
+  it('不相交的合并区仅平移不计', () => {
+    const inst = custom5x4()
+    inst.layout.merges = [{ start: [0, 0], end: [0, 1] }]
+    expect(previewStructuralImpact(inst, 'row', 2).affectedMergeCount).toBe(0)
+  })
+
+  it('表头行 → blockedReason（行轴专属）', () => {
+    const impact = previewStructuralImpact(custom5x4(), 'row', 0)
+    expect(impact.blockedReason).toBe('表头行不能删除，请下调表头层数')
+  })
+
+  it('越界 → blockedReason「这一行/列不存在」', () => {
+    expect(previewStructuralImpact(custom5x4(), 'row', 9).blockedReason).toBe('这一行不存在')
+    expect(previewStructuralImpact(custom5x4(), 'col', 9).blockedReason).toBe('这一列不存在')
+  })
+
+  it('最后一列（colCount ≤ 1）→ blockedReason 最低结构', () => {
+    const inst = custom5x4()
+    const r1 = run(inst, { kind: 'removeCol', col: 0 })
+    const one = r1.ok ? r1.value : inst
+    const r2 = run(one, { kind: 'removeCol', col: 0 })
+    const single = r2.ok ? r2.value : one
+    expect(single.layout.colCount).toBe(1)
+    const impact = previewStructuralImpact(single, 'col', 0)
+    expect(impact.blockedReason).toBe('至少保留 1 列，不能再删了')
+  })
+
+  it('blockedReason 与执行守卫同源：预检允许的删除执行必成功', () => {
+    const inst = custom5x4()
+    for (let r = 0; r < inst.layout.rowCount; r++) {
+      const impact = previewStructuralImpact(inst, 'row', r)
+      if (impact.blockedReason) continue
+      const out = run(inst, { kind: 'removeRow', row: r })
+      expect(out.ok).toBe(true)
+      break
+    }
+  })
+})
+
+describe('structure · moveGate（A3 换位预检，与执行口径零变化）', () => {
+  it('行轴：表头行拒绝，错误码/文案与 doMoveRow 完全一致', () => {
+    const inst = movable3x3()
+    const g = moveGate(inst, 0, 0, 2)
+    const d = doMoveRow(inst, 0, 2, [])
+    expect(!g.ok ? g.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!d.ok && !g.ok ? d.error.message === g.error.message : false).toBe(true)
+  })
+
+  it('行轴：合并区交错拒绝（survivesPermute 同源）', () => {
+    const inst = movable3x3()
+    inst.layout.merges = [{ start: [0, 1], end: [1, 1] }]
+    const g = moveGate(inst, 0, 1, 2)
+    expect(!g.ok ? g.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!g.ok ? g.error.message : '').toContain('合并区')
+  })
+
+  it('行轴：合法换位 → ok(true)', () => {
+    expect(moveGate(movable3x3(), 0, 2, 1).ok).toBe(true)
+  })
+
+  it('列轴：标签列拒绝（from 或 to = 0）', () => {
+    const inst = movable3x3()
+    expect(moveGate(inst, 1, 1, 0).ok).toBe(false)
+    expect(moveGate(inst, 1, 0, 2).ok).toBe(false)
+  })
+
+  it('列轴：冻结边界拒绝', () => {
+    const inst = movable3x3()
+    inst.layout.frozenColCount = 2
+    const g = moveGate(inst, 1, 1, 2)
+    expect(!g.ok ? g.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!g.ok ? g.error.message : '').toContain('冻结列')
+  })
+
+  it('列轴：越界 → TEMPLATE_INVALID（与 doMoveCol 一致）', () => {
+    const g = moveGate(movable3x3(), 1, 1, 9)
+    const d = doMoveCol(movable3x3(), 1, 9, [])
+    expect(!g.ok ? g.error.code : '').toBe('TEMPLATE_INVALID')
+    expect(!d.ok && !g.ok ? d.error.message === g.error.message : false).toBe(true)
+  })
+
+  it('列轴：合法换位 → ok(true)', () => {
+    expect(moveGate(movable3x3(), 1, 2, 1).ok).toBe(true)
   })
 })

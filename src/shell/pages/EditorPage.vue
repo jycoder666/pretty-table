@@ -8,6 +8,7 @@ import { effectivePalette } from '@/core'
 import BlockLibrary from '../editor/BlockLibrary.vue'
 import PreviewHost from '../editor/PreviewHost.vue'
 import PropertyPanel from '../editor/PropertyPanel.vue'
+import StructureRail from '../editor/StructureRail.vue'
 import EditorToolbar from '../editor/EditorToolbar.vue'
 import SaveTemplateDialog from '../editor/SaveTemplateDialog.vue'
 import ExportDrawer from '../export/ExportDrawer.vue'
@@ -19,6 +20,7 @@ import { pointerOnlySensors, readBlockDrag } from '../dnd/dndKitAdapter'
 import { usePlaceSession } from '../dnd/placeSession'
 import { BLOCK_TYPE_LABEL, computeDropTargets, estimateCellRects, resolveDrop } from '../dnd/slotDnd'
 import { shouldRedo, shouldUndo } from '../editor/undoHotkey'
+import { openLibraryRail } from '../editor/libraryRail'
 
 const editor = useEditorStore()
 const library = useLibraryStore()
@@ -116,6 +118,8 @@ function onDragStart(event: { operation: { source?: { data?: unknown } | null } 
   const payload = readBlockDrag(event.operation.source?.data)
   // R-1：把拖拽类型带进会话（SlotOverlay 按 accept 匹配高亮 / 弱化）
   session.setDragging(true, payload?.type)
+  // T03：起拖即展开左栏（窄栏态不挡拖放）
+  openLibraryRail()
   session.cancelPlace()
   ghostLabel.value = payload ? BLOCK_TYPE_LABEL[payload.type] : '区块'
   previewRef.value?.refreshTargets?.()
@@ -217,8 +221,20 @@ function onDragEnd(event: {
 
       <div class="body">
         <BlockLibrary />
+        <!-- T03 stage 布局：列轨道条（上，冻结式）+ 行轨道条（左，冻结式）+ PreviewHost；
+             轨道条在滚动容器外，几何经 railGeometry 桥同步（A4） -->
         <main class="center">
-          <PreviewHost ref="previewRef" />
+          <div class="stage">
+            <div class="col-rail-strip" data-testid="col-rail-strip">
+              <StructureRail axis="col" />
+            </div>
+            <div class="stage-body">
+              <div class="row-rail-strip" data-testid="row-rail-strip">
+                <StructureRail axis="row" />
+              </div>
+              <PreviewHost ref="previewRef" />
+            </div>
+          </div>
         </main>
         <PropertyPanel />
       </div>
@@ -279,6 +295,30 @@ function onDragEnd(event: {
   padding: 12px;
   min-width: 0;
   display: flex;
+}
+/* T03 stage 布局（A4）：轨道条冻结在滚动容器外 */
+.stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.col-rail-strip {
+  height: 28px;
+  flex-shrink: 0;
+  position: relative;
+}
+.stage-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.row-rail-strip {
+  width: 28px;
+  flex-shrink: 0;
+  position: relative;
 }
 .ghost {
   padding: 8px 12px;

@@ -35,8 +35,10 @@ useDraggable({
 })
 
 const style = () => ({
-  left: `${props.rect.left - props.hostLeft + 4}px`,
-  top: `${props.rect.top - props.hostTop + Math.max(0, (props.rect.height - 22) / 2)}px`,
+  // BugFix（T03 居中布局）：rect 原点 = .vtable-root，把手定位系 = .preview-host padding box，
+  // 换算 = rect + hostOrigin（旧布局 offset 恒 0，减号曾恰好无害，居中后双重错位）
+  left: `${props.rect.left + props.hostLeft + 4}px`,
+  top: `${props.rect.top + props.hostTop + Math.max(0, (props.rect.height - 22) / 2)}px`,
 })
 </script>
 

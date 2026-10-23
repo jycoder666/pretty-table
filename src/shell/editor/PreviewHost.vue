@@ -23,14 +23,33 @@ import {
   BLOCK_TYPE_LABEL,
   computeDropTargets,
   estimateCellRects,
+  totalContentWidth,
   type CellRect,
   type DropTarget,
 } from '../dnd/slotDnd'
 import { usePlaceSession } from '../dnd/placeSession'
 import { locateVisual } from './previewHit'
-import { expandRectSelection, selectionCellRects } from './selection'
+import { expandRectSelection, selectionCellRects, structuralRects } from './selection'
 import SelectionToolbar from './SelectionToolbar.vue'
+import StructureActionMenu from './StructureActionMenu.vue'
 import PasteEntry from '../paste/PasteEntry.vue'
+import {
+  attachRailHost,
+  resetRailGeometry,
+  setRailScrollTop,
+  syncRailGeometry,
+} from './railGeometry'
+import {
+  closeStructureMenu,
+  openStructureMenu,
+  structureMenuState,
+} from './structureMenu'
+import {
+  isExitStructuralKey,
+  isMenuKey,
+  isSelectColKey,
+  isSelectRowKey,
+} from './structureKeys'
 
 const editor = useEditorStore()
 const session = usePlaceSession()
@@ -44,6 +63,7 @@ let handle: CoreHandle | null = null
 let offViewport: (() => void) | null = null
 let offColResize: (() => void) | null = null
 let rafId = 0
+let scrollRafId = 0
 // T34：渲染核经 loadRenderCore 动态加载（VTable 独立 chunk）；卸载竞态用 disposed 收口
 let disposed = false
 
@@ -64,6 +84,7 @@ function refreshTargets() {
     cellRects.value = []
     dropTargets.value = []
     session.setCatalogTargets([])
+    syncRailGeometry([], { left: 0, top: 0, width: 0, height: 0 }, { left: 0, top: 0 }, false)
     return
   }
   // 几何坐标系原点 = .vtable-root 原点；叠加层定位系原点 = 宿主 padding box，
@@ -73,6 +94,14 @@ function refreshTargets() {
   cellRects.value = rects
   dropTargets.value = computeDropTargets(editor.current, rects)
   session.setCatalogTargets(dropTargets.value)
+  // A4：轨道几何桥整包同步（PreviewHost 是唯一写入方）；host border-box 视口矩形一并给出
+  const hr = host.value?.getBoundingClientRect()
+  syncRailGeometry(
+    rects,
+    hr ? { left: hr.left, top: hr.top, width: hr.width, height: hr.height } : { left: 0, top: 0, width: 0, height: 0 },
+    hostOrigin.value,
+    !!handle,
+  )
 }
 
 /** 滚动 / 列宽拖拽 / 重绘完成 → rAF 合帧重算（叠加层与落点跟随视口） */
@@ -96,9 +125,22 @@ onMounted(async () => {
   // PX-04 v2：视口变化跟随；列宽拖拽结束落模型（一步撤销、可刷新后保留）
   offViewport = handle.onViewportChange(scheduleRefresh)
   offColResize = handle.onColResize((_col, widths) => editor.applyCanvasColWidths(widths))
+  // A4：host 纵向 DOM 滚动不触发 VTable scroll 事件 → 独立监听写入轨道几何桥
+  // （rAF 合帧，与 scheduleRefresh 同路；passive 不阻塞滚动）
+  host.value?.addEventListener('scroll', onHostScroll, { passive: true })
+  attachRailHost(host.value)
   refreshTargets()
   window.addEventListener('resize', refreshTargets)
 })
+
+/** host 纵滚 → scrollTop 进几何桥（rAF 合帧，行轨道冻结对齐） */
+function onHostScroll() {
+  if (scrollRafId) return
+  scrollRafId = requestAnimationFrame(() => {
+    scrollRafId = 0
+    setRailScrollTop(host.value?.scrollTop ?? 0)
+  })
+}
 
 watch(
   () => editor.state?.version,
@@ -112,10 +154,14 @@ onBeforeUnmount(() => {
   disposed = true
   window.removeEventListener('resize', refreshTargets)
   if (rafId) cancelAnimationFrame(rafId)
+  if (scrollRafId) cancelAnimationFrame(scrollRafId)
+  host.value?.removeEventListener('scroll', onHostScroll)
   offViewport?.()
   offColResize?.()
   handle?.destroy()
   handle = null
+  attachRailHost(null)
+  resetRailGeometry()
 })
 
 function onClick(ev: MouseEvent) {
@@ -160,10 +206,47 @@ function onClick(ev: MouseEvent) {
   else editor.selectionRange = { start: [logical, col], end: [logical, col] }
 }
 
-// R-2：选区可视化（壳叠加层描边；几何来自渲染核视口坐标，无核回退同源算术）
+// R-2：选区可视化（壳叠加层描边；几何来自渲染核视口坐标，无核回退同源算术）。
+// BugFix（T03 居中布局）：rect 坐标系原点 = .vtable-root；叠加层定位系 = .preview-host
+// padding box——两者差 = hostOrigin（offsetLeft/Top），必须加上。旧布局 offset 恒 0 掩盖了该换算。
+function toHostRects(rects: { left: number; top: number; width: number; height: number }[]) {
+  const o = hostOrigin.value
+  return rects.map((r) => ({
+    left: r.left + o.left,
+    top: r.top + o.top,
+    width: r.width,
+    height: r.height,
+  }))
+}
+
 const selectionRects = computed(() => {
   if (!editor.current || !editor.selectionRange) return []
-  return selectionCellRects(editor.current, editor.selectionRange, cellRects.value)
+  return toHostRects(selectionCellRects(editor.current, editor.selectionRange, cellRects.value))
+})
+
+// A5：整行/整列选择高亮叠加层（浅色；几何与描边同源，随内容滚动）
+const structuralOverlay = computed(() => {
+  const inst = editor.current
+  const s = editor.structuralSelection
+  if (!inst || !s) return []
+  return toHostRects(structuralRects(inst, s.axis, s.index, cellRects.value))
+})
+
+/** e2e 确定性同步点（A6 规则 5）：'row:3' / 'col:2' / '' */
+const structuralLabel = computed(() => {
+  const s = editor.structuralSelection
+  return s ? `${s.axis}:${s.index}` : ''
+})
+
+// A13-2（假设口径）：表格窄于可用宽时 mount 元素动态宽度居中（width: min(100%, 总宽)），
+// 超宽回 100% 走 VTable 内部横滚——只改容器宽度，绝不缩放（UX-S07/S10 回归保护）。
+const mountStyle = computed(() => {
+  const inst = editor.current
+  if (!inst) return undefined
+  return {
+    width: `min(100%, ${Math.ceil(totalContentWidth(inst))}px)`,
+    margin: '0 auto',
+  }
 })
 
 /** WP1：合并/拆分成功后描边闪一次（flashKey 归零即停，可重复触发） */
@@ -219,9 +302,31 @@ const editingRect = computed<CellRect | null>(() => {
   const e = editing.value
   const inst = editor.current
   if (!e || !inst) return null
-  const vr = visualRowOfCell(inst, e.row)
-  if (vr === null) return null
-  return cellRects.value[vr]?.[e.col] ?? null
+  // BugFix（合并区就地编辑）：编辑格落在合并区上时，浮层必须覆盖**整个合并区**的外接矩形——
+  // 此前只取左上单格 rect，合并后输入框仍是原格大小、内容宽度跟着受限。
+  // 取法与选区描边同源（selectionCellRects 会把同属一个合并区的格并成一块）。
+  const merge = findMergeAt(inst.layout, e.row, e.col)
+  const parts = merge
+    ? selectionCellRects(inst, merge, cellRects.value)
+    : (() => {
+        const vr = visualRowOfCell(inst, e.row)
+        const r = vr === null ? undefined : cellRects.value[vr]?.[e.col]
+        return r ? [r] : []
+      })()
+  if (parts.length === 0) return null
+  let left = Number.POSITIVE_INFINITY
+  let top = Number.POSITIVE_INFINITY
+  let right = 0
+  let bottom = 0
+  for (const r of parts) {
+    left = Math.min(left, r.left)
+    top = Math.min(top, r.top)
+    right = Math.max(right, r.left + r.width)
+    bottom = Math.max(bottom, r.top + r.height)
+  }
+  // 与描边/工具条同源换算（rect 原点 = .vtable-root，叠加层原点 = host padding box）
+  const o = hostOrigin.value
+  return { left: left + o.left, top: top + o.top, width: right - left, height: bottom - top }
 })
 
 /** 浮层文本对齐与格内文案同源（编辑中不跳位） */
@@ -341,6 +446,52 @@ async function onKeydown(ev: KeyboardEvent) {
   if (session.overlayVisible.value || editor.pastePending) return
   const inst = editor.current
   if (!inst) return
+
+  // ── 结构快捷键（增量设计 A7）：在方向键与直接键入分支之前（Space 长 1 会撞键入分支）──
+  // ① Shift+Space → 整行选择
+  if (isSelectRowKey(ev)) {
+    ev.preventDefault()
+    editor.structuralSelection = { axis: 'row', index: editor.selectionRange?.start[0] ?? 0 }
+    return
+  }
+  // ② Ctrl/Cmd+Space → 整列选择
+  if (isSelectColKey(ev)) {
+    ev.preventDefault()
+    editor.structuralSelection = { axis: 'col', index: editor.selectionRange?.start[1] ?? 0 }
+    return
+  }
+  // ③ Shift+F10 / ContextMenu 键 → 结构菜单（无结构选择时先以当前格所在行建立整行选择）
+  if (isMenuKey(ev)) {
+    ev.preventDefault()
+    const s = editor.structuralSelection
+    if (s) {
+      openStructureMenu(s.axis, s.index)
+    } else {
+      const row = editor.selectionRange?.start[0] ?? 0
+      editor.structuralSelection = { axis: 'row', index: row }
+      openStructureMenu('row', row)
+    }
+    return
+  }
+  // ④ Esc：结构菜单开 → 关菜单；整行/列选择 → 回首格单元格选择（A6 规则 3）
+  if (isExitStructuralKey(ev)) {
+    if (structureMenuState.open) {
+      ev.preventDefault()
+      closeStructureMenu()
+      return
+    }
+    const s = editor.structuralSelection
+    if (s) {
+      ev.preventDefault()
+      editor.structuralSelection = null
+      editor.selectionRange =
+        s.axis === 'row'
+          ? { start: [s.index, 0], end: [s.index, 0] }
+          : { start: [0, s.index], end: [0, s.index] }
+      syncPanelToRange()
+      return
+    }
+  }
 
   const delta = ARROWS[ev.key]
   if (delta) {
@@ -551,6 +702,7 @@ defineExpose({
     class="preview-host"
     :class="{ 'drag-active': session.dragging.value }"
     :data-pt-selected-slot="editor.selectedSlotId ?? ''"
+    :data-pt-structural="structuralLabel"
     @click="onClick"
   >
     <!-- PX-09：悬浮粘贴按钮已并入顶部工具条（EditorPage header），预览区保持纯净 -->
@@ -559,6 +711,7 @@ defineExpose({
       class="vtable-root"
       tabindex="0"
       data-testid="preview-canvas"
+      :style="mountStyle"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
@@ -572,6 +725,18 @@ defineExpose({
       :key="`sel-${i}`"
       class="selection-cell"
       :class="{ flash: flashing }"
+      :style="{
+        left: r.left + 'px',
+        top: r.top + 'px',
+        width: r.width + 'px',
+        height: r.height + 'px',
+      }"
+    />
+    <!-- A5：整行/整列选择浅色高亮叠加层（在描边层之下） -->
+    <div
+      v-for="(r, i) in structuralOverlay"
+      :key="`stl-${i}`"
+      class="structural-cell"
       :style="{
         left: r.left + 'px',
         top: r.top + 'px',
@@ -613,6 +778,8 @@ defineExpose({
       @place="onPlace"
       @cancel="onCancelPlace"
     />
+    <!-- A2：结构菜单浮层（鼠标轨道 … 与键盘 Shift+F10 共用；关闭即卸载） -->
+    <StructureActionMenu />
     <PasteEntry />
   </div>
 </template>
@@ -648,6 +815,15 @@ defineExpose({
   box-sizing: border-box;
   border: 2px solid var(--pt-primary);
   background: color-mix(in srgb, var(--pt-primary) 10%, transparent);
+  pointer-events: none;
+}
+/* A5：整行/整列选择浅色高亮（同 overlay 机制：host 内绝对定位、随内容滚动） */
+.structural-cell {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--pt-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pt-primary) 35%, transparent);
   pointer-events: none;
 }
 /* WP4：拖拽 / 放置模式下区块把手让位（不抢指针事件，也不挡槽位落点） */

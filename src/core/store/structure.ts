@@ -1,7 +1,7 @@
 import { fail, ok, type CoreWarning, type Result } from '../errors'
 import type { BlockDesc, CellCoord, TemplateInstance } from '../types'
 import { cloneInstance } from '../schema/validate'
-import { LIMITS, visibleRowCount } from '../theme/layoutScales'
+import { LIMITS, STRUCTURE_MIN_COLS, STRUCTURE_MIN_ROWS, visibleRowCount } from '../theme/layoutScales'
 import { MARK_LABEL } from '../format/formatTokens'
 import { remapRangesInsert, remapRangesRemove } from './remap'
 import { doMoveCol, doMoveRow } from './moveOps'
@@ -359,6 +359,10 @@ export function applyStructuralIntent(
       if (row < headerLevels) {
         return fail('TEMPLATE_INVALID', '表头行不能直接删除，请下调表头层数')
       }
+      // 最低结构守卫（增量设计 A3）：表头行本就不可删，这里拦「删掉最后一条内容行」
+      if (inst.layout.rowCount <= STRUCTURE_MIN_ROWS) {
+        return fail('STRUCTURE_MIN_ROWS', '至少保留 1 行表头和 1 行内容，不能再删了')
+      }
       const next = cloneInstance(inst)
       doRemoveRowAt(next, row, warnings)
       return ok(next, warnings)
@@ -369,6 +373,10 @@ export function applyStructuralIntent(
       const col = intent.col
       if (!Number.isInteger(col) || col < 0 || col >= inst.layout.colCount) {
         return fail('TEMPLATE_INVALID', '这一列不存在')
+      }
+      // 最低结构守卫（增量设计 A3）：至少保留 1 列
+      if (inst.layout.colCount <= STRUCTURE_MIN_COLS) {
+        return fail('STRUCTURE_MIN_COLS', '至少保留 1 列，不能再删了')
       }
       const next = cloneInstance(inst)
       doRemoveCol(next, col, warnings)
@@ -414,4 +422,98 @@ export function canAddRow(inst: TemplateInstance): boolean {
 export function canAddCol(inst: TemplateInstance): boolean {
   if (!inst.layout.slotGrid) return false
   return inst.layout.colCount < LIMITS.maxCols
+}
+
+// ── 删除影响预检（增量设计 A3：UI 确认分流与确认框摘要的唯一口径）─────────────
+
+/** previewStructuralImpact 的返回：三计数与禁用原因（与执行守卫同源判定） */
+export interface StructuralImpact {
+  /** 该行/列内非空槽位数（isSlotEmpty 同口径；不含区块） */
+  filledCellCount: number
+  /**
+   * 会被调整的合并区数：merges ∪ structuralMerges 中与该行/列相交（s ≤ index ≤ e）的区间数。
+   * 仅平移不相交的区间不计——形状不变对用户无感知。allowedMerges 是兼容字段，不计。
+   */
+  affectedMergeCount: number
+  /**
+   * 会随删除移除的区块数：blockSlots 锚点（after-N / left-N 解析后）恰为该行号的已占用区块。
+   * 删列恒为 0（区块行是整行，列无关——doRemoveCol 现口径）。
+   */
+  affectedBlockCount: number
+  /** 禁用原因（白话）；undefined = 允许删除。UI 禁用不是唯一防线，core 执行时二次校验 */
+  blockedReason?: string
+}
+
+/**
+ * 删除第 index 行/列的影响预检纯函数（不碰实例）。
+ * blockedReason 判定顺序与执行守卫一致：越界 → 表头行（仅行轴）→ 最低结构。
+ */
+export function previewStructuralImpact(
+  inst: TemplateInstance,
+  axis: 'row' | 'col',
+  index: number,
+): StructuralImpact {
+  const blocked = (reason: string): StructuralImpact => ({
+    filledCellCount: 0,
+    affectedMergeCount: 0,
+    affectedBlockCount: 0,
+    blockedReason: reason,
+  })
+
+  if (axis === 'row') {
+    const rowCount = inst.layout.slotGrid?.length ?? inst.layout.rowCount
+    if (!Number.isInteger(index) || index < 0 || index >= rowCount) {
+      return blocked('这一行不存在')
+    }
+    const headerLevels = inst.layout.headerLevels ?? 1
+    if (index < headerLevels) {
+      return blocked('表头行不能删除，请下调表头层数')
+    }
+    if (rowCount <= STRUCTURE_MIN_ROWS) {
+      return blocked('至少保留 1 行表头和 1 行内容，不能再删了')
+    }
+  } else {
+    if (!Number.isInteger(index) || index < 0 || index >= inst.layout.colCount) {
+      return blocked('这一列不存在')
+    }
+    if (inst.layout.colCount <= STRUCTURE_MIN_COLS) {
+      return blocked('至少保留 1 列，不能再删了')
+    }
+  }
+
+  // 非空槽位计数
+  let filledCellCount = 0
+  const grid = inst.layout.slotGrid ?? []
+  if (axis === 'row') {
+    for (const id of grid[index] ?? []) {
+      if (id && !isSlotEmpty(inst.slots[id])) filledCellCount++
+    }
+  } else {
+    for (const row of grid) {
+      const id = row[index]
+      if (id && !isSlotEmpty(inst.slots[id])) filledCellCount++
+    }
+  }
+
+  // 相交合并区计数（merges ∪ structuralMerges；allowedMerges 为兼容字段不计）
+  let affectedMergeCount = 0
+  const sets = [inst.layout.merges, inst.layout.structuralMerges]
+  for (const set of sets) {
+    for (const r of set ?? []) {
+      const s = axis === 'row' ? r.start[0] : r.start[1]
+      const e = axis === 'row' ? r.end[0] : r.end[1]
+      if (s <= index && index <= e) affectedMergeCount++
+    }
+  }
+
+  // 连带删除的区块计数（仅行轴；锚点行号恰为该行的已占用区块）
+  let affectedBlockCount = 0
+  if (axis === 'row') {
+    for (const b of inst.blocks) {
+      const def = inst.layout.blockSlots.find((s) => s.id === b.slotId)
+      if (anchorOf(def?.rowHint) === index) affectedBlockCount++
+    }
+  }
+
+  return { filledCellCount, affectedMergeCount, affectedBlockCount }
 }

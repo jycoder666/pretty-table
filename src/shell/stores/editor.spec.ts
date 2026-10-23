@@ -142,6 +142,68 @@ describe('editor store · E3 多次撤销与重做', () => {
   })
 })
 
+describe('editor store · 结构选择态与 Toast 撤销动作（增量设计 T01 A6/A9）', () => {
+  it('写 structuralSelection 清 selectionRange/选中槽/选中区块；写 selectionRange 清 structuralSelection', async () => {
+    const store = await setup()
+    store.selectedSlotId = 'row.4.val.a'
+    store.selectionRange = { start: [3, 1], end: [3, 1] }
+    store.structuralSelection = { axis: 'row', index: 3 }
+    expect(store.selectionRange).toBeNull()
+    expect(store.selectedSlotId).toBeNull()
+    // 单元格优先原则：写选区（非 null）→ 结构选择被清
+    store.selectionRange = { start: [1, 0], end: [1, 0] }
+    expect(store.structuralSelection).toBeNull()
+    // 写 null（防悬挂清理）不升级、不清结构选择
+    store.structuralSelection = { axis: 'col', index: 2 }
+    store.selectionRange = null
+    expect(store.structuralSelection).toEqual({ axis: 'col', index: 2 })
+  })
+
+  it('showToast 带 action 默认 5000ms；新 Toast 覆盖失效；runToastAction 执行并双清', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useEditorStore()
+      store.openTemplate(cloneInstance(BLANK_V1))
+      let ran = 0
+      store.showToast('已删除第 2 行', {
+        action: { label: '撤销', run: () => ran++ },
+      })
+      expect(store.toastAction).toEqual({ label: '撤销' })
+      vi.advanceTimersByTime(4900)
+      expect(store.toast).not.toBeNull()
+      vi.advanceTimersByTime(200)
+      expect(store.toast).toBeNull()
+      expect(store.toastAction).toBeNull()
+      // 新 Toast 到来即覆盖失效（A9「取长者」实现口径）
+      store.showToast('已删除第 3 行', { action: { label: '撤销', run: () => ran++ } })
+      store.showToast('已上移')
+      expect(store.toastAction).toBeNull()
+      // 执行动作：回调运行一次 + toast/toastAction 双清
+      let ran2 = 0
+      store.showToast('已删除第 2 行', { action: { label: '撤销', run: () => ran2++ } })
+      store.runToastAction()
+      expect(ran2).toBe(1)
+      expect(store.toast).toBeNull()
+      expect(store.toastAction).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('普通 toast 维持 2600ms（主理人拍板口径）', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useEditorStore()
+      store.openTemplate(cloneInstance(BLANK_V1))
+      store.showToast('普通提示')
+      vi.advanceTimersByTime(2600)
+      expect(store.toast).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
 describe('editor store · 核内 warn 聚合 toast（T04）', () => {
   it('无 warn 的意图不弹 toast；结构损失聚合为一条白话提示', () => {
     const store = useEditorStore()

@@ -76,6 +76,8 @@ export {
 } from './theme/palettes'
 export {
   LIMITS,
+  STRUCTURE_MIN_ROWS,
+  STRUCTURE_MIN_COLS,
   COL_WIDTH_RANGE,
   ROW_HEIGHT_TIERS,
   FONT_SIZE_TIERS,
@@ -111,8 +113,11 @@ export {
   hasContentInCol,
   canAddRow,
   canAddCol,
+  previewStructuralImpact,
+  type StructuralImpact,
   type StructuralIntent,
 } from './store/structure'
+export { moveGate, doMoveRow, doMoveCol } from './store/moveOps'
 export { canMerge, canSplit, findMergeAt } from './store/mergeGuard'
 export { createStoreTxn, type StoreTxn, type StoreTxnResult } from './store/txn'
 export { parsePaste, type PasteCell, type PasteGrid } from './paste/parser'

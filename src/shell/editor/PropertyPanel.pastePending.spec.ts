@@ -107,10 +107,7 @@ describe('PropertyPanel · pastePending 禁用面系统断言（PX-15 / FR-17）
   it('粘贴预览期：结构 / 内容 / 图片各组全部置灰', async () => {
     const { editor, wrapper } = await setupWithPreview()
 
-    // 结构组：加一行 / 删行 / 加一列 / 删列 + 表头层数分段 + 合并/拆分 + 推荐列
-    for (const label of ['加一行', '删行', '加一列', '删列']) {
-      expect((btn(wrapper, label).element as HTMLButtonElement).disabled).toBe(true)
-    }
+    // 结构组：表头层数分段 + 合并/拆分 + 推荐列（高频行列增删入口已移至行/列轨道，T03）
     const headerSeg = wrapper.findAll('[role="radiogroup"]').at(-1)!
     for (const b of headerSeg.findAll('button')) {
       expect((b.element as HTMLButtonElement).disabled).toBe(true)
@@ -172,8 +169,7 @@ describe('PropertyPanel · pastePending 禁用面系统断言（PX-15 / FR-17）
     expect(
       (wrapper.find('input[aria-label="第1列宽"]').element as HTMLInputElement).disabled,
     ).toBe(false)
-    // 结构组代表：加一行 + 合并/拆分（选区命中既有合并区：WP1 收紧后合并置灰、拆分可用）
-    expect((btn(wrapper, '加一行').element as HTMLButtonElement).disabled).toBe(false)
+    // 结构组代表：合并/拆分（选区命中既有合并区：WP1 收紧后合并置灰、拆分可用）
     expect((wrapper.find('[data-testid="merge-btn"]').element as HTMLButtonElement).disabled).toBe(
       true,
     )

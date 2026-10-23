@@ -15,6 +15,9 @@ const MAP: Partial<Record<ErrorCode, string>> = {
   LIMIT_COLS: '最多 12 列',
   // WP4：行列换位被结构约束挡住（核内已给具体原因，这里兜底一句白话）
   STRUCT_MOVE_BLOCKED: '这一行/列现在挪不动，请先处理合并区或表头',
+  // 增量设计 A3：最低结构守卫（码不外露 GC-25，白话兜底）
+  STRUCTURE_MIN_ROWS: '至少保留 1 行表头和 1 行内容，不能再删了',
+  STRUCTURE_MIN_COLS: '至少保留 1 列，不能再删了',
   EXPORT_HTML_FAIL: '复制失败，请重试',
   EXPORT_PNG_FAIL: '导出失败，请重试',
   EXPORT_BLOCKED_RENDERING: '请等待表格渲染完成',

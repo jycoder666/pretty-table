@@ -40,6 +40,10 @@ import { errorCopy, warnCopy } from '../editor/errorCopy'
 
 export type PageView = 'library' | 'editor'
 
+/** 结构选择三态（增量设计 A6）：整行/整列选择不表达为 MergeRange，独立共存互斥 */
+export type StructuralAxis = 'row' | 'col'
+export type StructuralSelection = { axis: StructuralAxis; index: number }
+
 /** GC-19：调试开关构建期常量；生产构建折叠为 false，faultGate 调用被摇树 */
 const PT_DEBUG = import.meta.env.VITE_PT_DEBUG === '1' || import.meta.env.DEV
 
@@ -48,7 +52,9 @@ export const useEditorStore = defineStore('editor', () => {
   const state = ref<EditorState | null>(null)
   const selectedSlotId = ref<string | null>(null)
   const selectedBlockId = ref<string | null>(null)
-  const selectionRange = ref<MergeRange | null>(null)
+  // A6：两种选择的底层载体；对外经 selectionRange / structuralSelection 可写计算属性互斥清空
+  const _selectionRange = ref<MergeRange | null>(null)
+  const _structuralSelection = ref<StructuralSelection | null>(null)
   const toast = ref<string | null>(null)
   /**
    * toast 序号：连续两次提示同一句话时节点不会重建（v-if 只判有值），
@@ -66,6 +72,36 @@ export const useEditorStore = defineStore('editor', () => {
   // E3：撤销/重做可用性直接由核内双栈派生
   const undoEnabled = computed(() => (state.value ? canUndo(state.value) : false))
   const redoEnabled = computed(() => (state.value ? canRedo(state.value) : false))
+
+  // ── A6：选择三态互斥（双向清空，保证任一时刻至多一种选择）──
+  /**
+   * 单元格/矩形选区（既有语义）。写入时清 structuralSelection：
+   * 点击真实单元格 / 框选 / 键盘导航永不升级为整行/列（单元格优先原则）。
+   * 写 null（结构操作后防悬挂）不清结构选择——那是调用方有意保留的场景。
+   */
+  const selectionRange = computed<MergeRange | null>({
+    get: () => _selectionRange.value,
+    set: (v) => {
+      _selectionRange.value = v
+      if (v) _structuralSelection.value = null
+    },
+  })
+
+  /**
+   * 整行/整列选择（新增）。写入时清 selectionRange / selectedSlotId / selectedBlockId：
+   * SelectionToolbar（合并/拆分/清空）是单元格语义，留旧选区会误导。
+   */
+  const structuralSelection = computed<StructuralSelection | null>({
+    get: () => _structuralSelection.value,
+    set: (v) => {
+      _structuralSelection.value = v
+      if (v) {
+        _selectionRange.value = null
+        selectedSlotId.value = null
+        selectedBlockId.value = null
+      }
+    },
+  })
 
   // ── 粘贴预览（FR-16～19）──
   const pastePreview = ref<{ plan: ValidatedPastePlan; emptyCount: number } | null>(null)
@@ -164,20 +200,51 @@ export const useEditorStore = defineStore('editor', () => {
     textSessionKey = null
   }
 
-  function showToast(msg: string) {
+  /** Toast 撤销动作的展示标签（runToastAction 消费；A9） */
+  const toastAction = ref<{ label: string } | null>(null)
+  let toastActionRun: (() => void) | null = null
+
+  /**
+   * showToast（A9 扩展）：普通 toast 2600ms；带撤销动作默认 5000ms（主理人拍板口径）。
+   * 「停留 ≥5s 或至下一次结构操作（取长者）」的实现口径：5s 保底 + 新 Toast 到来即覆盖失效
+   * （每次 showToast 重置定时器并覆盖文案/动作，旧撤销入口随之消失）。
+   */
+  function showToast(
+    msg: string,
+    opts?: { action?: { label: string; run: () => void }; durationMs?: number },
+  ) {
     toast.value = msg
     toastSeq.value += 1
+    toastAction.value = opts?.action ? { label: opts.action.label } : null
+    toastActionRun = opts?.action?.run ?? null
+    const ms = opts?.durationMs ?? (opts?.action ? 5000 : 2600)
     if (lastToastTimer.value) clearTimeout(lastToastTimer.value)
     lastToastTimer.value = setTimeout(() => {
       toast.value = null
-    }, 2600)
+      toastAction.value = null
+      toastActionRun = null
+    }, ms)
+  }
+
+  /** Toast 动作按钮回调（App.vue 接线）：执行动作并立即收起 Toast */
+  function runToastAction() {
+    const run = toastActionRun
+    toast.value = null
+    toastAction.value = null
+    toastActionRun = null
+    if (lastToastTimer.value) {
+      clearTimeout(lastToastTimer.value)
+      lastToastTimer.value = null
+    }
+    run?.()
   }
 
   function openTemplate(inst: TemplateInstance) {
     state.value = createEditorState(cloneInstance(inst))
     selectedSlotId.value = null
     selectedBlockId.value = null
-    selectionRange.value = null
+    _selectionRange.value = null
+    _structuralSelection.value = null
     banner.value = null
     textSessionKey = null
     page.value = 'editor'
@@ -335,7 +402,7 @@ export const useEditorStore = defineStore('editor', () => {
    */
   function mergeSelection() {
     const inst = current.value
-    const range = selectionRange.value
+    const range = _selectionRange.value
     if (!inst || !range) return
     const cleared = countFilledSlotsInRange(inst, range, { skipTopLeft: true })
     if (!apply({ kind: 'merge', range })) return
@@ -344,7 +411,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function splitSelection() {
-    const range = selectionRange.value
+    const range = _selectionRange.value
     if (!range) return
     if (!apply({ kind: 'split', range })) return
     flashSelection()
@@ -354,7 +421,7 @@ export const useEditorStore = defineStore('editor', () => {
   /** 清空选区内容（WP1）：只清可写格；选区内本来没内容时给明确反馈，不做无声操作 */
   function clearSelection() {
     const inst = current.value
-    const range = selectionRange.value
+    const range = _selectionRange.value
     if (!inst || !range) return
     const filled = countFilledSlotsInRange(inst, range)
     if (filled === 0) {
@@ -368,7 +435,7 @@ export const useEditorStore = defineStore('editor', () => {
   // ── WP3：选区批量修改（对齐 / 强调），N 格一批 = 一步撤销 ──
   /** 选区格数（面板「已选 N 格」与「单格 vs 批量」分流口径） */
   const selectionCellCount = computed(() => {
-    const r = selectionRange.value
+    const r = _selectionRange.value
     if (!r) return 0
     return (Math.abs(r.end[0] - r.start[0]) + 1) * (Math.abs(r.end[1] - r.start[1]) + 1)
   })
@@ -376,7 +443,7 @@ export const useEditorStore = defineStore('editor', () => {
   /** 选区内可写槽位（只读格 / 无槽位格跳过；核内 slotIdsInRange 单点） */
   function writableSlotsInSelection(): string[] {
     const inst = current.value
-    const range = selectionRange.value
+    const range = _selectionRange.value
     if (!inst || !range) return []
     return slotIdsInRange(inst, range)
   }
@@ -479,17 +546,17 @@ export const useEditorStore = defineStore('editor', () => {
    * 选区跟着被挪的那一行/列走：否则用户接着点第二次按钮，挪的是「别处挪过来的那一行」。
    */
   function moveRow(from: number, to: number): boolean {
-    const sel = selectionRange.value
+    const sel = _selectionRange.value
     if (!apply({ kind: 'moveRow', from, to })) return false
-    if (sel) selectionRange.value = { start: [to, sel.start[1]], end: [to, sel.end[1]] }
+    if (sel) _selectionRange.value = { start: [to, sel.start[1]], end: [to, sel.end[1]] }
     showToast(to < from ? '已上移' : '已下移')
     return true
   }
 
   function moveCol(from: number, to: number): boolean {
-    const sel = selectionRange.value
+    const sel = _selectionRange.value
     if (!apply({ kind: 'moveCol', from, to })) return false
-    if (sel) selectionRange.value = { start: [sel.start[0], to], end: [sel.end[0], to] }
+    if (sel) _selectionRange.value = { start: [sel.start[0], to], end: [sel.end[0], to] }
     showToast(to < from ? '已左移' : '已右移')
     return true
   }
@@ -600,9 +667,12 @@ export const useEditorStore = defineStore('editor', () => {
     selectedSlotId,
     selectedBlockId,
     selectionRange,
+    structuralSelection,
     selectionCellCount,
     toast,
     toastSeq,
+    toastAction,
+    runToastAction,
     banner,
     restorePrompt,
     exporting,

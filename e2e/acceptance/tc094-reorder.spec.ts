@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { buildVisualRows, colWidthAt, type TemplateInstance } from '../../src/core/index'
-import { expectToast, openPreset, presetOf, slotVisualPos } from './helpers'
+import { clickRailItem, expectToast, openRailMenu, openPreset, presetOf, slotVisualPos } from './helpers'
 
 /**
  * T31 验收 · TC-PT-094（WP4）· 行列换位与表内区块拖动
@@ -11,11 +11,17 @@ import { expectToast, openPreset, presetOf, slotVisualPos } from './helpers'
  * 断言口径（TC-PT-094）：
  *  ① 行下移 / 行上移：内容随行走（同一视觉位置换成了原来相邻行的内容），一次一步撤销
  *  ② 列左移 / 列右移：内容随列走（点原列位置选到的是挪过来的那列）
- *  ③ 表头行与标签列不给换位：按钮置灰（核内同样拒绝，UI 不装可用）
+ *  ③ 表头行与标签列不给换位：菜单项置灰（核内同样拒绝，UI 不装可用）
  *  ④ 区块把手：拖到非槽位 → 白话提示且不动；拖到另一槽位 → 两个区块互换；一步撤销
  *  ⑤ 列宽拖拽：落模型（刷新仍在）、一次拖动一步撤销、不与框选打架（热区让位）
  *
- * 证据取法：`[data-pt-selected-slot]`（宿主属性 = 当前选中槽位）与面板 slot-headline
+ * T05 增量改写（结构操作升级）：右栏「增删行列/换位」六按钮已移除（增量 PRD Q2），
+ * 单步移动改走行/列轨道 `…` 菜单（menu-row-prev/next、menu-col-prev/next）；
+ * 结构选择同步点 = host 属性 data-pt-structural（"row:4"/"col:1"）。
+ * 列宽拖拽与区块把手两部分不受影响，原样保留。
+ *
+ * 证据取法：`[data-pt-selected-slot]`（宿主属性 = 当前选中槽位）、
+ * `[data-pt-structural]`（宿主属性 = 当前整行/列选择）与面板 slot-headline
  * （模型显示值），均为模型侧证据，不依赖 canvas 文本（canvas 没有文本节点）。
  */
 
@@ -47,20 +53,10 @@ function headline(page: import('@playwright/test').Page) {
   return page.getByTestId('slot-headline')
 }
 
-/**
- * 展开右栏「结构」组（PX-16 默认收起；行列换位按钮在这一组里）。
- * 面板组展开态是模块级记忆，同一用例内点一次即可。
- */
-async function openStructureGroup(page: import('@playwright/test').Page): Promise<void> {
-  await page.getByRole('button', { name: '结构' }).click()
-  await expect(page.getByTestId('move-row-up')).toBeVisible()
-}
-
-test.describe('TC-PT-094 · 行列换位（内容随行走 + 一步撤销）', () => {
+test.describe('TC-PT-094 · 行列换位（内容随行走 + 一步撤销；改走轨道结构菜单）', () => {
   test('行下移 / 行上移：内容随行走，撤销一步回到原样', async ({ page }) => {
     await openPreset(page, '多列对比表')
     const inst = presetOf('compare-alpha-v1')
-    await openStructureGroup(page)
 
     // 说明：选区工具条浮在选区上沿（比选区高 38px），会盖住「选区正上方那一行」。
     // 所以本用例统一「在 C3 上选行、在 C1 上验内容」——横向错开，不与工具条打架。
@@ -72,9 +68,13 @@ test.describe('TC-PT-094 · 行列换位（内容随行走 + 一步撤销）', (
     await expect(host(page)).toHaveAttribute('data-pt-selected-slot', 'row.3.val.c')
     await expect(headline(page)).toContainText('3 个工作日')
 
-    // 行下移（R3 → R4）
-    await page.getByTestId('move-row-down').click()
+    // 行下移（R3 → R4）：点行轨道第 4 行 → … 菜单 → 下移
+    await clickRailItem(page, 'row', 3)
+    await openRailMenu(page, 'row', 3)
+    await page.getByTestId('menu-row-next').click()
     await expectToast(page, '已下移')
+    // 选区跟随被移动的那一行（3 → 4）
+    await expect(host(page)).toHaveAttribute('data-pt-structural', 'row:4')
 
     // ① 内容随行走：R3 原来的位置上，现在选到的是 R4 的格子
     await cellAt('row.3.val.a')
@@ -86,8 +86,10 @@ test.describe('TC-PT-094 · 行列换位（内容随行走 + 一步撤销）', (
     await expect(host(page)).toHaveAttribute('data-pt-selected-slot', 'row.3.val.c')
     await expect(headline(page)).toContainText('3 个工作日')
 
-    // ③ 行上移：选区就在被挪的那一行上（上一步刚选中），点按钮即挪回原位
-    await page.getByTestId('move-row-up').click()
+    // ③ 行上移：先重选被挪的那一行（cellAt 验证点击会按互斥规则清掉结构选择），再走轨道菜单上移
+    await clickRailItem(page, 'row', 4)
+    await openRailMenu(page, 'row', 4)
+    await page.getByTestId('menu-row-prev').click()
     await expectToast(page, '已上移')
     await cellAt('row.3.val.a')
     await expect(host(page)).toHaveAttribute('data-pt-selected-slot', 'row.3.val.a')
@@ -102,15 +104,17 @@ test.describe('TC-PT-094 · 行列换位（内容随行走 + 一步撤销）', (
   test('列左移 / 列右移：内容随列走', async ({ page }) => {
     await openPreset(page, '多列对比表')
     const inst = presetOf('compare-alpha-v1')
-    await openStructureGroup(page)
 
-    // 选 C2 的「2 个工作日」→ 列左移（C2 → C1）
+    // 选 C2 的「2 个工作日」→ 列左移（C2 → C1）：点列轨道 B → … 菜单 → 左移
     await page.locator('.preview-host canvas').first().click({
       position: cellCenter(inst, 'row.3.val.b'),
     })
     await expect(host(page)).toHaveAttribute('data-pt-selected-slot', 'row.3.val.b')
-    await page.getByTestId('move-col-left').click()
+    await clickRailItem(page, 'col', 2)
+    await openRailMenu(page, 'col', 2)
+    await page.getByTestId('menu-col-prev').click()
     await expectToast(page, '已左移')
+    await expect(host(page)).toHaveAttribute('data-pt-structural', 'col:1')
 
     // 原 C1 的位置现在选到的是挪过来的 C2
     await page.locator('.preview-host canvas').first().click({
@@ -119,8 +123,10 @@ test.describe('TC-PT-094 · 行列换位（内容随行走 + 一步撤销）', (
     await expect(host(page)).toHaveAttribute('data-pt-selected-slot', 'row.3.val.b')
     await expect(headline(page)).toContainText('2 个工作日')
 
-    // 列右移回去：此时选中的就是 C1 上的那一列
-    await page.getByTestId('move-col-right').click()
+    // 列右移回去：先重选被挪的那一列（cellAt 验证点击清掉了结构选择），再走轨道菜单右移
+    await clickRailItem(page, 'col', 1)
+    await openRailMenu(page, 'col', 1)
+    await page.getByTestId('menu-col-next').click()
     await expectToast(page, '已右移')
     await page.locator('.preview-host canvas').first().click({
       position: cellCenter(inst, 'row.3.val.b'),
@@ -128,35 +134,35 @@ test.describe('TC-PT-094 · 行列换位（内容随行走 + 一步撤销）', (
     await expect(host(page)).toHaveAttribute('data-pt-selected-slot', 'row.3.val.b')
   })
 
-  test('表头行与标签列不给换位：按钮置灰（核内同样拒绝）', async ({ page }) => {
+  test('表头行与标签列不给换位：菜单项置灰（核内同样拒绝）', async ({ page }) => {
     await openPreset(page, '多列对比表')
-    const inst = presetOf('compare-alpha-v1')
-    await openStructureGroup(page)
 
     // 表头带（R0，落在合并区上）→ 上/下都不可
-    await page.locator('.preview-host canvas').first().click({
-      position: cellCenter(inst, 'band.1'),
-    })
-    await expect(page.getByTestId('move-row-up')).toBeDisabled()
-    await expect(page.getByTestId('move-row-down')).toBeDisabled()
+    await clickRailItem(page, 'row', 0)
+    await openRailMenu(page, 'row', 0)
+    await expect(page.getByTestId('menu-row-prev')).toBeDisabled()
+    await expect(page.getByTestId('menu-row-next')).toBeDisabled()
+    await page.keyboard.press('Escape')
 
     // 标签列（C0）→ 左/右都不可
-    await page.locator('.preview-host canvas').first().click({
-      position: cellCenter(inst, 'row.3.label'),
-    })
-    await expect(page.getByTestId('move-col-left')).toBeDisabled()
-    await expect(page.getByTestId('move-col-right')).toBeDisabled()
+    await clickRailItem(page, 'col', 0)
+    await openRailMenu(page, 'col', 0)
+    await expect(page.getByTestId('menu-col-prev')).toBeDisabled()
+    await expect(page.getByTestId('menu-col-next')).toBeDisabled()
+    await page.keyboard.press('Escape')
 
     // 数据列 C1 → 不能左移进标签列，但可以右移
-    await page.locator('.preview-host canvas').first().click({
-      position: cellCenter(inst, 'row.3.val.a'),
-    })
-    await expect(page.getByTestId('move-col-left')).toBeDisabled()
-    await expect(page.getByTestId('move-col-right')).toBeEnabled()
+    await clickRailItem(page, 'col', 1)
+    await openRailMenu(page, 'col', 1)
+    await expect(page.getByTestId('menu-col-prev')).toBeDisabled()
+    await expect(page.getByTestId('menu-col-next')).toBeEnabled()
+    await page.keyboard.press('Escape')
 
     // 数据行 R3 → 上下都可
-    await expect(page.getByTestId('move-row-up')).toBeEnabled()
-    await expect(page.getByTestId('move-row-down')).toBeEnabled()
+    await clickRailItem(page, 'row', 3)
+    await openRailMenu(page, 'row', 3)
+    await expect(page.getByTestId('menu-row-prev')).toBeEnabled()
+    await expect(page.getByTestId('menu-row-next')).toBeEnabled()
   })
 })
 
@@ -289,23 +295,32 @@ test.describe('TC-PT-094 · 表内区块拖动（把手 → 别的槽位）', ()
     const g1RowCenter = box.y + rowCenterY(inst, 'gap-g1')
     expect(Math.abs(g1.y + g1.height / 2 - g1RowCenter)).toBeLessThanOrEqual(6)
 
+    // 注意（T03 窄栏布局）：起拖瞬间组件库左栏从 44px 窄栏展开为 200px，画布整体右移，
+    // 因此每次拖拽的落点必须用**当次**的画布盒换算（复用起手前的旧盒会落在表外被组件库截获）
+    const canvasBox = () => page.locator('.preview-host canvas').first().boundingBox() as Promise<{
+      x: number
+      y: number
+    }>
+
     // ① 拖到普通数据格（不是槽位）→ 提示 + 不动
+    const box1 = await canvasBox()
     const dataCell = cellCenter(inst, 'feat.2.a')
     await drag(
       page,
       { x: g1.x + g1.width / 2, y: g1.y + g1.height / 2 },
-      { x: box.x + dataCell.x, y: box.y + dataCell.y },
+      { x: box1.x + dataCell.x, y: box1.y + dataCell.y },
     )
     await expectToast(page, '请拖到表内虚线槽位')
     expect(await handleOrder(page)).toEqual(['preset-g1', 'preset-g2'])
 
     // ② 拖到 gap-g2（已占用）→ 两个区块互换
     const target = cellCenter(inst, 'gap-g2')
+    const box2 = await canvasBox()
     const g1b = (await page.locator('[data-pt-block-id="preset-g1"]').boundingBox())!
     await drag(
       page,
       { x: g1b.x + g1b.width / 2, y: g1b.y + g1b.height / 2 },
-      { x: box.x + target.x, y: box.y + target.y },
+      { x: box2.x + target.x, y: box2.y + target.y },
     )
     await expectToast(page, '已换位')
     expect(await handleOrder(page)).toEqual(['preset-g2', 'preset-g1'])

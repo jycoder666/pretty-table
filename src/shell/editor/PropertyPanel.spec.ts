@@ -155,88 +155,33 @@ describe('PropertyPanel · 颜色自定义区（FR-C1）', () => {
   })
 })
 
-describe('PropertyPanel · 结构编辑区（FR-C3 / Q-9）', () => {
-  function bodySlot(editor: ReturnType<typeof useEditorStore>): string {
-    const grid = editor.current!.layout.slotGrid!
-    return grid[3]![1]!
-  }
-
-  it('加一行/加一列各算一步；单步撤销回到加列前', async () => {
-    const { editor, wrapper } = await setup()
-    const rowsBefore = editor.current!.layout.slotGrid!.length
-    const colsBefore = editor.current!.layout.colCount
-    await wrapper.findAll('button').find((b) => b.text() === '加一行')!.trigger('click')
-    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore + 1)
-    await wrapper.findAll('button').find((b) => b.text() === '加一列')!.trigger('click')
-    expect(editor.current!.layout.colCount).toBe(colsBefore + 1)
-    // FR-11：撤销一步 = 回到最近一次操作前（加列前），行数保留加行结果
-    editor.undo()
-    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore + 1)
-    expect(editor.current!.layout.colCount).toBe(colsBefore)
+describe('PropertyPanel · 结构组：摘要卡与低频设置（增量设计 T03）', () => {
+  it('组头摘要卡常显（组体收起也可见）：N 行 × M 列 · K 层表头', async () => {
+    const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    const summary = wrapper.find('[data-testid="structure-summary"]')
+    expect(summary.exists()).toBe(true)
+    // 组体默认收起，摘要仍渲染
+    expect(
+      wrapper.find('[data-testid="group-structure"] .group-body').attributes('style') ?? '',
+    ).toContain('display: none')
+    const rows = editor.current!.layout.slotGrid!.length
+    const cols = editor.current!.layout.colCount
+    const levels = editor.current!.layout.headerLevels ?? 1
+    expect(summary.text()).toBe(`${rows} 行 × ${cols} 列 · ${levels} 层表头`)
+    // 行列数随结构操作联动
+    editor.apply({ kind: 'addRow' })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="structure-summary"]').text()).toBe(
+      `${rows + 1} 行 × ${cols} 列 · ${levels} 层表头`,
+    )
   })
 
-  it('达上限置灰：可见行数 20 时「加一行」disabled，12 列时「加一列」disabled', async () => {
-    const { editor, wrapper } = await setup()
-    for (let i = 0; i < 15; i++) editor.apply({ kind: 'addRow' })
-    await wrapper.vm.$nextTick()
-    const addRowBtn = wrapper.findAll('button').find((b) => b.text() === '加一行')!
-    expect(addRowBtn.attributes('disabled')).toBeDefined()
-    for (let i = 0; i < 8; i++) editor.apply({ kind: 'addCol' })
-    await wrapper.vm.$nextTick()
-    const addColBtn = wrapper.findAll('button').find((b) => b.text() === '加一列')!
-    expect(addColBtn.attributes('disabled')).toBeDefined()
-  })
-
-  it('删非空行：先弹统一确认弹窗；确认后删行，取消则保留（PX-05）', async () => {
-    const { editor, wrapper } = await setup()
-    const sid = bodySlot(editor)
-    editor.setSlotText(sid, '重要数据')
-    editor.selectionRange = { start: [3, 1], end: [3, 1] }
-    const rowsBefore = editor.current!.layout.slotGrid!.length
-
-    // 取消：弹窗出现且文案照搬原文，行保留
-    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="confirm-message"]').text()).toContain('内容会一起删掉')
-    await wrapper.find('[data-testid="confirm-cancel"]').trigger('click')
-    await flushPromises()
-    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore)
-
-    // 确认：删行
-    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
-    await wrapper.vm.$nextTick()
-    await wrapper.find('[data-testid="confirm-ok"]').trigger('click')
-    await flushPromises()
-    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore - 1)
-  })
-
-  it('删空行不弹确认；删表头行被壳层拦截（不发意图）', async () => {
-    const { editor, wrapper } = await setup()
-    // 未选中 → 删最后一行（空行）→ 无确认直接删
-    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(false)
-    expect(editor.current!.layout.slotGrid!.length).toBe(4)
-    // 选中表头行 → 壳层守卫直接返回
-    editor.selectionRange = { start: [0, 0], end: [0, 0] }
-    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(false)
-    expect(editor.current!.layout.slotGrid!.length).toBe(4)
-  })
-
-  it('删列同样走 hasContentInCol 确认；确认文案含列号（PX-05）', async () => {
-    const { editor, wrapper } = await setup()
-    const sid = bodySlot(editor)
-    editor.setSlotText(sid, '列内容')
-    editor.selectionRange = { start: [3, 1], end: [3, 1] }
-    await wrapper.findAll('button').find((b) => b.text() === '删列')!.trigger('click')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find('[data-testid="confirm-message"]').text()).toContain('第 2 列')
-    await wrapper.find('[data-testid="confirm-ok"]').trigger('click')
-    await flushPromises()
-    expect(editor.current!.layout.colCount).toBe(3)
+  it('高频入口已移除：加删行列与换位按钮不再出现（入口移至行/列轨道）', async () => {
+    const { wrapper } = await setup()
+    const labels = ['加一行', '删行', '加一列', '删列', '行上移', '行下移', '列左移', '列右移']
+    for (const label of labels) {
+      expect(wrapper.findAll('button').some((b) => b.text().trim() === label)).toBe(false)
+    }
   })
 
   it('表头层数 1/2/3：setHeaderLevel 生效；结构操作后清空选区', async () => {
@@ -248,20 +193,15 @@ describe('PropertyPanel · 结构编辑区（FR-C3 / Q-9）', () => {
     expect(editor.selectionRange).toBeNull()
   })
 
-  it('删行连带删掉结构合并区 → 核内 STRUCT_LOSS warn 聚合为一条 toast', async () => {
-    const withStructMerge = cloneInstance(BLANK_V1)
-    withStructMerge.layout.structuralMerges = [{ start: [1, 0], end: [1, 1] }]
-    const { editor, wrapper } = await setup(withStructMerge)
-    // 行内有内容 → 删行前会弹统一确认弹窗（PX-05）
-    const topLeft = editor.current!.layout.slotGrid![1]![0]!
-    editor.setSlotText(topLeft, '占位')
-    editor.selectionRange = { start: [1, 0], end: [1, 0] }
-    await wrapper.findAll('button').find((b) => b.text() === '删行')!.trigger('click')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find('[data-testid="confirm-overlay"]').exists()).toBe(true)
-    await wrapper.find('[data-testid="confirm-ok"]').trigger('click')
-    await flushPromises()
-    expect(editor.toast).toContain('合并或内容')
+  it('组体只留低频设置：表头层数 / 合并拆分 / 推荐列（compare-alpha 有可推荐列）', async () => {
+    const { wrapper } = await setup(COMPARE_ALPHA_V1)
+    await wrapper.find('[data-testid="group-head-structure"]').trigger('click')
+    const body = wrapper.find('[data-testid="group-structure"] .group-body')
+    expect(body.text()).toContain('表头层数')
+    expect(body.text()).toContain('合并 / 拆分')
+    expect(body.text()).toContain('推荐列')
+    expect(body.find('[data-testid="merge-btn"]').exists()).toBe(true)
+    expect(body.find('[data-testid="split-btn"]').exists()).toBe(true)
   })
 })
 
@@ -467,13 +407,13 @@ describe('PropertyPanel · 分组折叠（PX-16）', () => {
     expect(head(wrapper2, 'content').attributes('aria-expanded')).toBe('true')
   })
 
-  it('默认收起组内的功能入口不丢失：结构组「加一行」可直接点按生效', async () => {
+  it('默认收起组内的功能入口不丢失：结构组展开后表头层数可直接点按生效', async () => {
     const { editor, wrapper } = await setup()
-    const rowsBefore = editor.current!.layout.slotGrid!.length
     // 结构组默认收起（v-show 隐藏），入口仍在文档中可操作
     expect(wrapper.find('[data-testid="group-structure"] .group-body').isVisible()).toBe(false)
-    await wrapper.findAll('button').find((b) => b.text() === '加一行')!.trigger('click')
-    expect(editor.current!.layout.slotGrid!.length).toBe(rowsBefore + 1)
+    const seg = wrapper.findAll('[role="radiogroup"]').at(-1)!
+    await seg.findAll('button')[1]!.trigger('click')
+    expect(editor.current!.layout.headerLevels).toBe(2)
   })
 
   it('删区块入口归入结构组；区块文字编辑留在内容组', async () => {
@@ -642,11 +582,9 @@ describe('PropertyPanel · 主题切换 pastePending 禁用（PX-15）', () => {
       expect(b.attributes('disabled')).toBeUndefined()
     }
     expect(wrapper.find('.zebra input[type="checkbox"]').attributes('disabled')).toBeUndefined()
-    // E4 顺带核对：结构区四个按钮迁移到 PtTooltip 后不留裸 title
-    for (const label of ['加一行', '删行', '加一列', '删列']) {
-      const btn = wrapper.findAll('button').find((b) => b.text().trim() === label)!
-      expect(btn.attributes('title')).toBeUndefined()
-    }
+    // E4 顺带核对：合并/拆分按钮不留裸 title（E2 守卫）
+    expect(wrapper.find('[data-testid="merge-btn"]').attributes('title')).toBeUndefined()
+    expect(wrapper.find('[data-testid="split-btn"]').attributes('title')).toBeUndefined()
   })
 
   it('预览期置灰原因走 PtTooltip 文案：经外层 span 触发后断言主题/斑马纹原因（P2 验收补齐）', async () => {

@@ -32,8 +32,10 @@ useDroppable({
 const style = () => {
   const r = props.target.rect
   return {
-    left: `${r.left - props.hostLeft}px`,
-    top: `${r.top - props.hostTop}px`,
+    // BugFix（T03 居中布局）：rect 原点 = .vtable-root，定位系 = .preview-host padding box，
+    // 换算 = rect + hostOrigin（与 BlockDragHandle/描边同源同号）
+    left: `${r.left + props.hostLeft}px`,
+    top: `${r.top + props.hostTop}px`,
     width: `${r.width}px`,
     height: `${Math.max(r.height, 28)}px`,
   }

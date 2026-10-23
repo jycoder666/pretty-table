@@ -84,3 +84,21 @@ export function selectionCellRects(
   }
   return [...groups.values()]
 }
+
+/**
+ * 整行/整列选择的叠加矩形（增量设计 A5）：
+ * 复用 selectionCellRects 的合并分组与逻辑→可视行映射，仅合成同轴全域选区。
+ * 整行 = 该逻辑行可视行整条；整列 = 该列所有可视行矩形并块。
+ */
+export function structuralRects(
+  inst: TemplateInstance,
+  axis: 'row' | 'col',
+  index: number,
+  cellRects: CellRect[][],
+): SelectionRect[] {
+  const range: MergeRange =
+    axis === 'row'
+      ? { start: [index, 0], end: [index, inst.layout.colCount - 1] }
+      : { start: [0, index], end: [inst.layout.rowCount - 1, index] }
+  return selectionCellRects(inst, range, cellRects)
+}

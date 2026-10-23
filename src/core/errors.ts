@@ -25,6 +25,9 @@ export type ErrorCode =
   | 'LIMIT_COLS'
   // WP4：行列换位被结构约束挡住（表头行 / 标签列 / 冻结边界 / 与合并区交错）
   | 'STRUCT_MOVE_BLOCKED'
+  // 增量设计 A3：最低结构守卫（至少 1 表头行 + 1 内容行 / 至少 1 列）
+  | 'STRUCTURE_MIN_ROWS'
+  | 'STRUCTURE_MIN_COLS'
   | 'SLOT_DROP_BLOCKED'
   | 'RENDER_FAIL'
   | 'EXPORT_HTML_FAIL'

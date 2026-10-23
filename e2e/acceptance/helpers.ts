@@ -121,6 +121,48 @@ export async function expectToast(page: Page, text: string | RegExp): Promise<vo
   await expect(page.locator('.pt-toast')).toHaveText(text)
 }
 
+// ── T05 结构轨道助手（增量设计 A2/A6；tc094 改写与 tc095 共用）──────────────────
+
+export type RailAxis = 'row' | 'col'
+
+/** 行轨道 / 列轨道条（EditorPage stage 布局：列条在上、行条在左，均 28px 冻结式） */
+export function railStrip(page: Page, axis: RailAxis) {
+  return page.locator(`[data-testid="${axis}-rail-strip"]`)
+}
+
+/**
+ * 点击轨道序号 = 选中整行/整列（structuralSelection）。
+ * 序号项 testid：rail-row-{逻辑行号 0 基} / rail-col-{列号 0 基}；
+ * 点击后 host 属性 data-pt-structural 应变为 "row:N"/"col:N"（断言交给用例，这里不替用户断）。
+ */
+export async function clickRailItem(page: Page, axis: RailAxis, index: number): Promise<void> {
+  await page.locator(`[data-testid="rail-${axis}-${index}"]`).click()
+  await expect(page.locator('.preview-host')).toHaveAttribute(
+    'data-pt-structural',
+    `${axis}:${index}`,
+  )
+}
+
+/**
+ * 打开轨道 `…` 结构菜单。前置：目标项已选中或悬停（浮现工具条含 +/… 才会渲染）。
+ * 菜单项 testid：menu-{row|col}-{before|after|remove|prev|next}。
+ */
+export async function openRailMenu(page: Page, axis: RailAxis, index: number): Promise<void> {
+  await page.locator(`[data-testid="rail-${axis}-menu-${index}"]`).click()
+  await expect(page.getByRole('menu', { name: axis === 'row' ? '行操作菜单' : '列操作菜单' }))
+    .toBeVisible()
+}
+
+/** 结构选择同步点断言（A6 规则 5：'' = 无结构选择） */
+export async function expectStructural(page: Page, label: string): Promise<void> {
+  await expect(page.locator('.preview-host')).toHaveAttribute('data-pt-structural', label)
+}
+
+/** 右栏结构摘要卡（组头常显）：「N 行 × M 列 · K 层表头」 */
+export function structureSummary(page: Page) {
+  return page.locator('[data-testid="structure-summary"]')
+}
+
 /** 粘贴预览条文本 */
 export function pasteBarText(page: Page) {
   return page.locator('[data-testid="paste-bar-text"]')
@@ -238,8 +280,15 @@ export async function countPngNearColor(
     const buf = new Uint8Array(bin.length)
     for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
     const bmp = await createImageBitmap(new Blob([buf], { type: 'image/png' }))
-    const canvas = new OffscreenCanvas(bmp.width, bmp.height)
-    const ctx = canvas.getContext('2d')!
+    // Playwright 的 WebKit 构建没有 OffscreenCanvas（ReferenceError），回退到普通 canvas
+    const canvas =
+      typeof OffscreenCanvas === 'function'
+        ? new OffscreenCanvas(bmp.width, bmp.height)
+        : Object.assign(document.createElement('canvas'), {
+            width: bmp.width,
+            height: bmp.height,
+          })
+    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
     ctx.drawImage(bmp, 0, 0)
     const r0 = parseInt(color.slice(1, 3), 16)
     const g0 = parseInt(color.slice(3, 5), 16)

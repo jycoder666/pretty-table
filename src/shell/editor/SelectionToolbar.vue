@@ -45,7 +45,10 @@ const pos = computed(() => {
   }
 })
 
-const visible = computed(() => Boolean(editor.selectionRange) && pos.value !== null)
+// A6 双保险：整行/整列选择时隐藏（工具条是单元格语义，留旧选区会误导）
+const visible = computed(
+  () => Boolean(editor.selectionRange) && !editor.structuralSelection && pos.value !== null,
+)
 </script>
 
 <template>

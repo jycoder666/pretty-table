@@ -37,6 +37,33 @@ function checkMove(
 }
 
 /**
+ * 换位可行性预检（增量设计 A3）：壳层菜单置灰与核内执行共用同一判定与文案。
+ * 判定顺序严格保持现实现：
+ * - 行轴 = 表头行 → 越界/合并区存活（原 checkMove 主体）
+ * - 列轴 = 标签列 → 越界/合并区存活 → 冻结边界
+ * doMoveRow/doMoveCol 改为内部调用本函数（行为与报错口径零变化）。
+ */
+export function moveGate(inst: TemplateInstance, axis: 0 | 1, from: number, to: number): Result<true> {
+  if (axis === 0) {
+    const headerLevels = inst.layout.headerLevels ?? 1
+    if (from < headerLevels || to < headerLevels) {
+      return fail('STRUCT_MOVE_BLOCKED', '表头行不能挪动，需要调整请用表头层数')
+    }
+    return checkMove(inst, from, to, 0, inst.layout.rowCount)
+  }
+  if (from === 0 || to === 0) {
+    return fail('STRUCT_MOVE_BLOCKED', '第一列是标签列，不能挪动')
+  }
+  const check = checkMove(inst, from, to, 1, inst.layout.colCount)
+  if (!check.ok) return check
+  const frozen = inst.layout.frozenColCount ?? 0
+  if (from < frozen !== to < frozen) {
+    return fail('STRUCT_MOVE_BLOCKED', '冻结列不能和普通列换位')
+  }
+  return ok(true)
+}
+
+/**
  * 整行换位（WP4）。只搬位置，不搬语义：
  * - 表头行不参与（表头是层级结构，挪进数据区会破坏表头语义）
  * - 内容随行走：slotGrid 行、合并区、只读格一起按置换重映射
@@ -48,12 +75,8 @@ export function doMoveRow(
   to: number,
   warnings: CoreWarning[],
 ): Result<TemplateInstance> {
-  const headerLevels = inst.layout.headerLevels ?? 1
-  if (from < headerLevels || to < headerLevels) {
-    return fail('STRUCT_MOVE_BLOCKED', '表头行不能挪动，需要调整请用表头层数')
-  }
-  const check = checkMove(inst, from, to, 0, inst.layout.rowCount)
-  if (!check.ok) return check
+  const gate = moveGate(inst, 0, from, to)
+  if (!gate.ok) return gate
   const next = cloneInstance(inst)
   if (from === to) return ok(next, warnings)
   const grid = next.layout.slotGrid!
@@ -78,15 +101,8 @@ export function doMoveCol(
   to: number,
   warnings: CoreWarning[],
 ): Result<TemplateInstance> {
-  if (from === 0 || to === 0) {
-    return fail('STRUCT_MOVE_BLOCKED', '第一列是标签列，不能挪动')
-  }
-  const check = checkMove(inst, from, to, 1, inst.layout.colCount)
-  if (!check.ok) return check
-  const frozen = inst.layout.frozenColCount ?? 0
-  if (from < frozen !== to < frozen) {
-    return fail('STRUCT_MOVE_BLOCKED', '冻结列不能和普通列换位')
-  }
+  const gate = moveGate(inst, 1, from, to)
+  if (!gate.ok) return gate
   const next = cloneInstance(inst)
   if (from === to) return ok(next, warnings)
   const grid = next.layout.slotGrid!
