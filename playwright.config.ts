@@ -2,6 +2,16 @@ import process from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
 
 /**
+ * 本机代理绕过（仅 localhost）：
+ * Windows 上 WebKit 会继承**系统代理**（本机为 Clash 127.0.0.1:7890），而 Chromium 不会。
+ * 代理会拦下 dev server 的模块请求（/src/*.vue、node_modules/.vite/deps/*），
+ * 返回**空响应体 404**，表现为 webkit 全量翻红、页面白屏（连 e2e/vue.spec.ts 的 h1 都取不到）。
+ * 只对回环地址关闭代理，不影响任何真实外网访问；已配置则不覆盖。
+ */
+process.env.NO_PROXY ??= 'localhost,127.0.0.1,::1'
+process.env.no_proxy ??= 'localhost,127.0.0.1,::1'
+
+/**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
