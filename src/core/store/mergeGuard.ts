@@ -36,9 +36,8 @@ export function canMerge(layout: LayoutSpec, range: MergeRange): Result<void> {
   if (isSingleCell(r)) {
     return fail('MERGE_NOT_ALLOWED', '单格无需合并')
   }
-  // 自定义格式设计增量 §1.4.1：合并闸放宽——allowedMerges 降级为兼容字段，不再硬闸。
-  // 交互升级 §1.1（R-2）：删除「只支持同行或同列」限制，任意 m×n 连续矩形放行；
-  // 硬闸收窄为「不碰锁定合并 + 不与现有合并区部分重叠 + 不命中 readonlyCells」。
+  // 矩形合并仍允许，但必须整段落在模板 allowedMerges 白名单内（A-5）。
+  // 硬闸：不碰锁定合并、不与现有合并区部分重叠、不命中 readonlyCells、不超出白名单。
   const structural = layout.structuralMerges ?? []
   if (structural.some((s) => sameRange(r, s))) {
     return fail('MERGE_STRUCTURAL', '这一块由模板固定，不能合并也不能拆分')
@@ -61,7 +60,32 @@ export function canMerge(layout: LayoutSpec, range: MergeRange): Result<void> {
   if (readonlyHit) {
     return fail('MERGE_NOT_ALLOWED', '此处由模板固定，不能合并')
   }
+  // A-5：必须落在模板声明的某一允许矩形内。无声明 = 不可并（禁止无模板任意合并）。
+  // 行跨度 ≤4、列跨度 ≤5：L-1 推荐 4×4，T3 顶栏白名单允许横向 5 列，取并集上限。
+  const allowed = layout.allowedMerges ?? []
+  const inside = allowed.some((a) => containsRange(normalizeRange(a), r))
+  if (!inside) {
+    return fail('MERGE_NOT_ALLOWED', '这一块不在模板允许的合并区里')
+  }
+  const spanR = r.end[0] - r.start[0] + 1
+  const spanC = r.end[1] - r.start[1] + 1
+  if (spanR > 4 || spanC > 5) {
+    return fail('MERGE_NOT_ALLOWED', '一次最多合并 4 行或 5 列')
+  }
+  const userClusters = (layout.merges ?? []).length
+  if (userClusters >= 20) {
+    return fail('MERGE_NOT_ALLOWED', '这张表的合并已经到上限')
+  }
   return ok(undefined)
+}
+
+function containsRange(outer: MergeRange, inner: MergeRange): boolean {
+  return (
+    inner.start[0] >= outer.start[0] &&
+    inner.end[0] <= outer.end[0] &&
+    inner.start[1] >= outer.start[1] &&
+    inner.end[1] <= outer.end[1]
+  )
 }
 
 /**

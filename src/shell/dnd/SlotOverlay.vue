@@ -2,41 +2,60 @@
 import { computed, nextTick, watch } from 'vue'
 import SlotHit from './SlotHit.vue'
 import { usePlaceSession } from './placeSession'
-import type { DropTarget } from './slotDnd'
+import { classifyDragSlots, type DropTarget, type SlotTone } from './slotDnd'
+import type { BlockType } from '@/core'
 
 const props = defineProps<{
   targets: DropTarget[]
   hostLeft: number
   hostTop: number
+  /** 已被区块占用的槽 */
+  occupiedSlotIds?: string[]
 }>()
 
 const emit = defineEmits<{
   place: [slotId: string]
   cancel: []
+  /** 直接点空槽：单类型立刻放入；多类型只提示去组件库选 */
+  fill: [slotId: string, type: BlockType]
+  hint: [message: string]
 }>()
 
 const session = usePlaceSession()
 
-const visibleTargets = computed(() => {
-  if (!session.overlayVisible.value) return [] as DropTarget[]
-  // R-1：拖拽进行中 → 全部槽可见（accept 匹配高亮、不匹配由 dimmed 弱化）
-  if (session.dragging.value) return props.targets
-  if (session.active.value && session.blockType.value) {
-    return props.targets.filter((t) => t.accept.includes(session.blockType.value!))
-  }
-  return props.targets.filter(
-    (t) => t.accept.includes('sectionBar') || t.accept.includes('groupHeader'),
-  )
+const occupied = computed(() => new Set(props.occupiedSlotIds ?? []))
+
+const idleTargets = computed(() =>
+  props.targets.filter((t) => {
+    if (occupied.value.has(t.blockSlotId)) return false
+    // 左栏标签贴在首列正文上，空闲时不盖一层虚框（拖入时才高亮）
+    return !(t.accept.length === 1 && t.accept[0] === 'leftTag')
+  }),
+)
+
+const dragChrome = computed(() => {
+  const type = session.dragType.value
+  if (!session.dragging.value || !type) return []
+  const marks = classifyDragSlots({
+    targets: props.targets,
+    type,
+    occupied: occupied.value,
+    hoverId: session.hoverSlotId.value,
+    relocating: session.relocating.value,
+  })
+  const byId = new Map(marks.map((m) => [m.blockSlotId, m]))
+  return props.targets
+    .filter((t) => byId.has(t.blockSlotId))
+    .map((t) => ({ target: t, ...(byId.get(t.blockSlotId)!) }))
 })
 
-/** R-1：拖拽进行中 accept 不匹配当前拖拽类型 → 弱化（低透明度虚框） */
-function dimmedFor(t: DropTarget): boolean {
-  const type = session.dragType.value
-  return session.dragging.value && !(type && t.accept.includes(type))
-}
+const placeTargets = computed(() => {
+  if (!session.active.value || !session.blockType.value) return [] as DropTarget[]
+  return props.targets.filter((t) => t.accept.includes(session.blockType.value!))
+})
 
 watch(
-  () => [session.active.value, session.focusIndex.value, visibleTargets.value.length] as const,
+  () => [session.active.value, session.focusIndex.value, placeTargets.value.length] as const,
   async ([active]) => {
     if (!active) return
     await nextTick()
@@ -74,24 +93,80 @@ function onSlotClick(slotId: string) {
   if (!session.active.value) return
   emit('place', slotId)
 }
+
+function onIdleClick(t: DropTarget) {
+  if (t.accept.length === 1) {
+    emit('fill', t.blockSlotId, t.accept[0]!)
+    return
+  }
+  emit('hint', '从左侧点选分区色条或分组标题，再点这个槽')
+}
+
+function captionFor(tone: SlotTone, accept: DropTarget['accept']): string {
+  if (tone === 'pulse' || tone === 'replace') return ''
+  if (accept.length === 1 && accept[0] === 'emphFooter') return '拖入强调注脚'
+  if (accept.length === 1 && accept[0] === 'leftTag') return '拖入左栏标签'
+  return '拖入区块'
+}
 </script>
 
 <template>
-  <div class="slot-overlay" :class="{ interactive: session.overlayVisible.value }">
+  <div
+    class="slot-overlay"
+    :class="{
+      interactive: session.active.value,
+      dragging: session.dragging.value,
+      'has-idle': !session.overlayVisible.value && idleTargets.length > 0,
+    }"
+  >
     <div class="sr-only" aria-live="polite">{{ session.liveAnnounce.value }}</div>
-    <template v-if="session.overlayVisible.value">
+
+    <template v-if="session.dragging.value">
       <SlotHit
-        v-for="(t, i) in visibleTargets"
+        v-for="item in dragChrome"
+        :key="item.target.blockSlotId"
+        :target="item.target"
+        :index="-1"
+        :focused="false"
+        :tone="item.tone"
+        :badge="item.badge"
+        :caption="captionFor(item.tone, item.target.accept)"
+        :host-left="hostLeft"
+        :host-top="hostTop"
+        :tabindex="-1"
+      />
+    </template>
+
+    <template v-else-if="session.active.value">
+      <SlotHit
+        v-for="(t, i) in placeTargets"
         :key="t.blockSlotId"
         :target="t"
         :index="i"
-        :focused="session.active.value && session.focusIndex.value === i"
-        :dimmed="dimmedFor(t)"
+        :focused="session.focusIndex.value === i"
+        tone="hot"
+        :caption="captionFor('hot', t.accept)"
         :host-left="hostLeft"
         :host-top="hostTop"
-        :tabindex="session.active.value ? 0 : -1"
-        @keydown="(e) => onSlotKeydown(e, t.blockSlotId)"
+        :tabindex="0"
+        @keydown="(e: KeyboardEvent) => onSlotKeydown(e, t.blockSlotId)"
         @click="onSlotClick(t.blockSlotId)"
+      />
+    </template>
+
+    <template v-else>
+      <SlotHit
+        v-for="t in idleTargets"
+        :key="t.blockSlotId"
+        :target="t"
+        :index="-1"
+        :focused="false"
+        tone="idle"
+        :caption="captionFor('idle', t.accept)"
+        :host-left="hostLeft"
+        :host-top="hostTop"
+        :tabindex="-1"
+        @click="onIdleClick(t)"
       />
     </template>
   </div>
@@ -104,7 +179,9 @@ function onSlotClick(slotId: string) {
   pointer-events: none;
   z-index: 2;
 }
-.slot-overlay.interactive :deep(.slot-hit) {
+.slot-overlay.interactive :deep(.slot-hit),
+.slot-overlay.dragging :deep(.slot-hit),
+.slot-overlay.has-idle :deep(.slot-hit) {
   pointer-events: auto;
 }
 .sr-only {

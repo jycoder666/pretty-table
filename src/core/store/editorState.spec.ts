@@ -188,14 +188,14 @@ describe('editorState · E3 多次撤销（快照栈 50 深 + 重做）', () => 
     expect(r4.ok).toBe(true)
     const s4 = r4.ok ? r4.value : s3
     const rows4 = s4.current.layout.slotGrid!.length
-    const r5 = dispatch(s4, { kind: 'merge', range: { start: [3, 2], end: [3, 3] } })
+    const r5 = dispatch(s4, { kind: 'merge', range: { start: [2, 1], end: [3, 1] } })
     expect(r5.ok).toBe(true)
     s = r5.ok ? r5.value : s4
-    expect(s.current.layout.merges).toContainEqual({ start: [3, 2], end: [3, 3] })
+    expect(s.current.layout.merges).toContainEqual({ start: [2, 1], end: [3, 1] })
 
     // undo 5：拆掉合并
     const u5 = undo(s)
-    expect(u5.current.layout.merges).not.toContainEqual({ start: [3, 2], end: [3, 3] })
+    expect(u5.current.layout.merges).not.toContainEqual({ start: [2, 1], end: [3, 1] })
     // undo 4：行数回退
     const u4 = undo(u5)
     expect(u4.current.layout.slotGrid!.length).toBe(rows4 - 1)

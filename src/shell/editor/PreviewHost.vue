@@ -139,6 +139,7 @@ function onHostScroll() {
   scrollRafId = requestAnimationFrame(() => {
     scrollRafId = 0
     setRailScrollTop(host.value?.scrollTop ?? 0)
+    scheduleRefresh()
   })
 }
 
@@ -257,8 +258,7 @@ const hostHeight = computed(() => el.value?.clientHeight ?? 0)
 /**
  * WP4：已占用槽位的拖动把手。位置直接用 dropTargets 的权威几何
  * （与落点判定同一份数据，拖到自己身上不会错位）。
- * 左栏标签块（rowHint left-N）不参与：它不占独立行，dropTargets 里是「停在表下」
- * 的占位矩形，拿它当把手位置会飘到表格外面——宁可没有把手，也不给错位置。
+ * 左栏标签贴在该行首列，把手跟首列走。
  */
 const blockHandles = computed(() => {
   const inst = editor.current
@@ -272,7 +272,7 @@ const blockHandles = computed(() => {
   }> = []
   for (const b of inst.blocks) {
     const def = inst.layout.blockSlots.find((d) => d.id === b.slotId)
-    if (!def || /^left-\d+$/.test(def.rowHint ?? '')) continue
+    if (!def) continue
     const t = dropTargets.value.find((x) => x.blockSlotId === b.slotId)
     if (!t) continue
     out.push({
@@ -285,6 +285,8 @@ const blockHandles = computed(() => {
   }
   return out
 })
+
+const occupiedSlotIds = computed(() => editor.current?.blocks.map((b) => b.slotId) ?? [])
 
 // ── WP3：就地编辑（双击 / 直接键入）──
 // 浮层位置来自渲染核权威几何（滚动时随 cellRects 重算跟随）；提交走既有文字会话
@@ -689,6 +691,16 @@ function onCancelPlace() {
   session.cancelPlace()
 }
 
+function onFill(slotId: string, type: import('@/core').BlockType) {
+  const occupied = editor.current?.blocks.some((b) => b.slotId === slotId)
+  editor.addBlock(type, slotId)
+  editor.showToast(occupied ? '已替换原区块' : '已放入区块')
+}
+
+function onSlotHint(message: string) {
+  editor.showToast(message)
+}
+
 defineExpose({
   getHandle: () => handle,
   getDropTargets: () => dropTargets.value,
@@ -770,13 +782,17 @@ defineExpose({
       :host-left="hostOrigin.left"
       :host-top="hostOrigin.top"
       :class="{ inert: session.overlayVisible.value }"
+      :disabled="editor.pastePending"
     />
     <SlotOverlay
       :targets="dropTargets"
+      :occupied-slot-ids="occupiedSlotIds"
       :host-left="hostOrigin.left"
       :host-top="hostOrigin.top"
       @place="onPlace"
       @cancel="onCancelPlace"
+      @fill="onFill"
+      @hint="onSlotHint"
     />
     <!-- A2：结构菜单浮层（鼠标轨道 … 与键盘 Shift+F10 共用；关闭即卸载） -->
     <StructureActionMenu />

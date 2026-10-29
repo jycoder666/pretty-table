@@ -80,7 +80,16 @@ export const COMPARE_ALPHA_V1: TemplateInstance = {
       { start: [0, 1], end: [0, 2] },
     ],
     structuralMerges: [{ start: [0, 0], end: [1, 0] }],
-    allowedMerges: [{ start: [0, 1], end: [0, 3] }],
+    // A-5 白名单：顶栏横向 T1.H.band + 表体同列纵向（不跨 G、不跨对象列）
+    allowedMerges: [
+      { start: [0, 1], end: [0, 3] },
+      { start: [2, 1], end: [5, 1] },
+      { start: [2, 2], end: [5, 2] },
+      { start: [2, 3], end: [5, 3] },
+      { start: [6, 1], end: [9, 1] },
+      { start: [6, 2], end: [9, 2] },
+      { start: [6, 3], end: [9, 3] },
+    ],
     blockSlots: [
       {
         id: 'gap-g1',

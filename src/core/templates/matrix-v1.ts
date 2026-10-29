@@ -160,7 +160,19 @@ export const MATRIX_V1: TemplateInstance = {
       { start: [0, 1], end: [0, 2] },
       { start: [0, 3], end: [0, 5] },
     ],
-    allowedMerges: [{ start: [0, 1], end: [0, 5] }],
+    // A-5：顶栏横向 + 表体同行横向（禁纵向、不跨符号区/百分比区）
+    allowedMerges: [
+      { start: [0, 1], end: [0, 5] },
+      { start: [2, 1], end: [2, 5] },
+      { start: [3, 1], end: [3, 5] },
+      { start: [4, 1], end: [4, 5] },
+      { start: [5, 1], end: [5, 5] },
+      { start: [6, 1], end: [6, 5] },
+      { start: [7, 1], end: [7, 5] },
+      { start: [8, 1], end: [8, 5] },
+      { start: [9, 1], end: [9, 5] },
+      { start: [10, 1], end: [10, 5] },
+    ],
     structuralMerges: [
       // 「条目」锁定合并 R0–R1
       { start: [0, 0], end: [1, 0] },

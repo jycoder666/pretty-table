@@ -15,6 +15,10 @@ const place = shallowRef<PlaceMode>(idlePlaceMode())
 const dragging = ref(false)
 /** R-1：拖拽进行中的区块类型（SlotOverlay 按 accept 匹配高亮/弱化） */
 const dragType = shallowRef<BlockType | null>(null)
+/** 表内换位（有 blockId）vs 从组件库拖入 */
+const relocating = ref(false)
+/** 当前指针命中的槽；表外为 null（A-D2 / A-D3） */
+const hoverSlotId = ref<string | null>(null)
 const liveAnnounce = ref('')
 const catalogTargets = shallowRef<DropTarget[]>([])
 
@@ -56,9 +60,15 @@ export function usePlaceSession() {
     return { type, slotId }
   }
 
-  function setDragging(on: boolean, type?: BlockType) {
+  function setDragging(on: boolean, type?: BlockType, move = false) {
     dragging.value = on
     dragType.value = on ? (type ?? null) : null
+    relocating.value = on && move
+    if (!on) hoverSlotId.value = null
+  }
+
+  function setHoverSlot(id: string | null) {
+    hoverSlotId.value = id
   }
 
   return {
@@ -70,6 +80,8 @@ export function usePlaceSession() {
     catalogTargets,
     dragging,
     dragType,
+    relocating,
+    hoverSlotId,
     overlayVisible,
     liveAnnounce,
     setCatalogTargets,
@@ -78,5 +90,6 @@ export function usePlaceSession() {
     stepFocus,
     takeConfirm,
     setDragging,
+    setHoverSlot,
   }
 }

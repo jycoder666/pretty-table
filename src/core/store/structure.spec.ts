@@ -35,6 +35,7 @@ function custom5x4(): TemplateInstance {
       colCount: 3,
       headerLevels: 1,
       blockSlots: [],
+      allowedMerges: [{ start: [0, 0], end: [2, 2] }],
       slotGrid: [
         ['a', 'b', 'c'],
         ['d', 'e', 'f'],

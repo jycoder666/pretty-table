@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, toRef } from 'vue'
+import { computed, ref, toRef } from 'vue'
 import { useDraggable } from '@dnd-kit/vue'
 import type { BlockType } from '@/core'
+import { usePlaceSession } from './placeSession'
 
 const props = withDefaults(
   defineProps<{
@@ -19,7 +20,11 @@ const emit = defineEmits<{
   keyPlace: []
 }>()
 
+const session = usePlaceSession()
 const el = ref<HTMLLIElement | null>(null)
+const sourceFaded = computed(
+  () => session.dragging.value && !session.relocating.value && session.dragType.value === props.type,
+)
 
 useDraggable({
   id: toRef(() => `lib-${props.type}`),
@@ -45,7 +50,7 @@ function onKeydown(e: KeyboardEvent) {
 <template>
   <li
     ref="el"
-    :class="[{ disabled: !enabled, active }]"
+    :class="[{ disabled: !enabled, active, 'source-faded': sourceFaded }]"
     :tabindex="enabled ? 0 : -1"
     role="button"
     :aria-disabled="!enabled"
@@ -93,6 +98,9 @@ li.disabled {
 li.disabled .handle {
   color: var(--pt-border);
   cursor: not-allowed;
+}
+li.source-faded {
+  opacity: 0.45;
 }
 .hint-sr {
   position: absolute;

@@ -27,6 +27,15 @@ export type StructuralIntent =
 
 type SlotRecord = TemplateInstance['slots']
 
+/** 空白表的允许区就是整张表；结构伸缩后把白名单铺回当前行列，系统模板的分带白名单不在这里改。 */
+function sealBlankWhitelist(inst: TemplateInstance) {
+  if (inst.templateId !== 'blank-v1' && inst.templateId !== 'blank-new') return
+  const rows = inst.layout.rowCount
+  const cols = inst.layout.colCount
+  if (rows < 1 || cols < 1) return
+  inst.layout.allowedMerges = [{ start: [0, 0], end: [rows - 1, cols - 1] }]
+}
+
 /** 槽位是否为空（空字符串 / 空文本 / null mark / null num / 缺省；图片槽不算空） */
 export function isSlotEmpty(v: SlotRecord[string] | undefined): boolean {
   if (v === undefined || v === null || v === '') return true
@@ -137,6 +146,7 @@ function doAddRow(inst: TemplateInstance, afterRow: number | undefined, warnings
     ([r, c]) => (r >= insertAt ? [r + 1, c] : [r, c]) as CellCoord,
   )
   next.layout.rowCount += 1
+  sealBlankWhitelist(next)
   return ok(next, warnings)
 }
 
@@ -213,6 +223,7 @@ function doAddCol(inst: TemplateInstance, afterCol: number | undefined, warnings
     next.layout.style = { ...next.layout.style, colWidths: widths }
   }
   next.layout.colCount += 1
+  sealBlankWhitelist(next)
   return ok(next, warnings)
 }
 
@@ -260,7 +271,10 @@ function doRemoveCol(next: TemplateInstance, col: number, warnings: CoreWarning[
 function doSetHeaderLevel(inst: TemplateInstance, levels: 1 | 2 | 3, warnings: CoreWarning[]): Result<TemplateInstance> {
   const cur = inst.layout.headerLevels ?? 1
   const next = cloneInstance(inst)
-  if (levels === cur) return ok(next, warnings)
+  if (levels === cur) {
+    sealBlankWhitelist(next)
+    return ok(next, warnings)
+  }
 
   if (levels > cur) {
     // 上调：顶部插 (levels − cur) 行新槽位（同加行规则，插在表头顶部）
@@ -293,7 +307,8 @@ function doSetHeaderLevel(inst: TemplateInstance, levels: 1 | 2 | 3, warnings: C
     )
     next.layout.rowCount += delta
     next.layout.headerLevels = levels
-    return ok(next, warnings)
+    sealBlankWhitelist(next)
+  return ok(next, warnings)
   }
 
   // 下调（Q-11：内容并入最底层保留表头行，放不下清除 + STRUCT_LOSS）
@@ -334,6 +349,7 @@ function doSetHeaderLevel(inst: TemplateInstance, levels: 1 | 2 | 3, warnings: C
     doRemoveRowAt(next, levels, warnings)
   }
   next.layout.headerLevels = levels
+  sealBlankWhitelist(next)
   return ok(next, warnings)
 }
 
@@ -365,7 +381,8 @@ export function applyStructuralIntent(
       }
       const next = cloneInstance(inst)
       doRemoveRowAt(next, row, warnings)
-      return ok(next, warnings)
+      sealBlankWhitelist(next)
+  return ok(next, warnings)
     }
     case 'addCol':
       return doAddCol(inst, intent.afterCol, warnings)
@@ -380,7 +397,8 @@ export function applyStructuralIntent(
       }
       const next = cloneInstance(inst)
       doRemoveCol(next, col, warnings)
-      return ok(next, warnings)
+      sealBlankWhitelist(next)
+  return ok(next, warnings)
     }
     case 'setHeaderLevel':
       return doSetHeaderLevel(inst, intent.levels, warnings)

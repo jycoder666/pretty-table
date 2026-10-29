@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { COMPARE_ALPHA_V1 } from '../templates'
 import { canMerge, canSplit } from './mergeGuard'
 import type { LayoutSpec, MergeRange } from '../types'
 
@@ -11,11 +12,25 @@ function layout(partial: Partial<LayoutSpec> = {}): LayoutSpec {
   return { rowCount: 6, colCount: 6, blockSlots: [], ...partial }
 }
 
-describe('mergeGuard · 合并闸放宽（自定义格式 §1.4.1）', () => {
-  it('allowedMerges 之外区域现在允许合并（兼容字段不再硬闸）', () => {
+describe('mergeGuard · 白名单合并（A-5）', () => {
+  it('无声明或白名单外 → 拒', () => {
+    expect(canMerge(layout(), R(0, 0, 0, 1)).ok).toBe(false)
     const l = layout({ allowedMerges: [R(0, 0, 0, 1)] })
     const r = canMerge(l, R(3, 0, 3, 2))
-    expect(r.ok).toBe(true)
+    expect(r.ok).toBe(false)
+    expect(!r.ok ? r.error.message : '').toContain('允许')
+  })
+
+  it('落在单一允许矩形内 → 放行', () => {
+    const l = layout({ allowedMerges: [R(2, 1, 5, 1)] })
+    expect(canMerge(l, R(2, 1, 4, 1)).ok).toBe(true)
+  })
+
+  it('对比表白名单：同列纵向可并，跨对象列与跨分隔槽不可并', () => {
+    const l = COMPARE_ALPHA_V1.layout
+    expect(canMerge(l, R(2, 1, 4, 1)).ok).toBe(true)
+    expect(canMerge(l, R(2, 1, 2, 2)).ok).toBe(false)
+    expect(canMerge(l, R(5, 1, 6, 1)).ok).toBe(false)
   })
 
   it('碰到锁定合并（非同区间重叠）→ MERGE_STRUCTURAL', () => {
@@ -55,14 +70,14 @@ describe('mergeGuard · 合并闸放宽（自定义格式 §1.4.1）', () => {
     expect(canMerge(l, R(1, 1, 1, 1)).ok).toBe(false)
   })
 
-  it('矩形 2×2 / 3×2 选区放行（R-2 任意矩形合并）', () => {
-    const l = layout()
+  it('白名单内的矩形放行；超出 4 行拒', () => {
+    const l = layout({ allowedMerges: [R(0, 0, 5, 2)] })
     expect(canMerge(l, R(0, 0, 1, 1)).ok).toBe(true)
-    expect(canMerge(l, R(2, 0, 4, 1)).ok).toBe(true)
+    expect(canMerge(l, R(0, 0, 4, 0)).ok).toBe(false)
   })
 
-  it('range end < start → 入口逐轴归一化后放行（防御，无错误码）', () => {
-    const l = layout()
+  it('range end < start → 入口逐轴归一化后，落在白名单内放行', () => {
+    const l = layout({ allowedMerges: [R(0, 0, 1, 1)] })
     expect(canMerge(l, { start: [1, 1], end: [0, 0] }).ok).toBe(true)
   })
 
@@ -79,8 +94,11 @@ describe('mergeGuard · 合并闸放宽（自定义格式 §1.4.1）', () => {
     expect(r.ok).toBe(false)
     expect(!r.ok ? r.error.code : '').toBe('MERGE_NOT_ALLOWED')
     expect(!r.ok ? r.error.message : '').toContain('模板固定')
-    // 不命中 readonly 的相邻矩形仍可合并
-    expect(canMerge(l, R(3, 0, 4, 2)).ok).toBe(true)
+    const open = layout({
+      readonlyCells: [[2, 1]],
+      allowedMerges: [R(3, 0, 4, 2)],
+    })
+    expect(canMerge(open, R(3, 0, 4, 2)).ok).toBe(true)
   })
 
   it('锁定合并仍禁拆（structuralMerges 硬闸保留）', () => {

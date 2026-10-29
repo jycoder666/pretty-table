@@ -20,6 +20,7 @@ const props = defineProps<{
   rect: CellRect
   hostLeft: number
   hostTop: number
+  disabled?: boolean
 }>()
 
 const el = ref<HTMLButtonElement | null>(null)
@@ -27,6 +28,7 @@ const el = ref<HTMLButtonElement | null>(null)
 useDraggable({
   id: toRef(() => `blk-${props.blockId}`),
   element: el,
+  disabled: toRef(() => !!props.disabled),
   data: toRef(() => ({
     blockType: props.type,
     blockId: props.blockId,

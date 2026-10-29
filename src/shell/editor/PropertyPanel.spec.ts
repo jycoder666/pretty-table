@@ -327,12 +327,14 @@ describe('PropertyPanel · 合并/拆分按钮随选区置灰（PX-08）', () =>
     expect(splitBtn(wrapper).attributes('disabled')).toBeUndefined()
   })
 
-  it('二维矩形选区（既不同行也不同列）：合并可用（R-2 任意矩形合并）', async () => {
+  it('对比表：同列纵向在白名单内可合并，跨对象列的二维选区不可合并', async () => {
     const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
-    // 2×2 纯矩形（不碰锁定合并 / 现有合并 / readonly）→ 闸门放行
-    editor.selectionRange = { start: [3, 1], end: [4, 2] }
+    editor.selectionRange = { start: [3, 1], end: [4, 1] }
     await wrapper.vm.$nextTick()
     expect(mergeBtn(wrapper).attributes('disabled')).toBeUndefined()
+    editor.selectionRange = { start: [3, 1], end: [4, 2] }
+    await wrapper.vm.$nextTick()
+    expect(mergeBtn(wrapper).attributes('disabled')).toBeDefined()
   })
 
   it('拆分随选区命中合并区置灰联动：普通格拆分置灰，合并格可拆', async () => {

@@ -114,15 +114,29 @@ async function discardRestore() {
   await editor.discardRestored()
 }
 
+function onBeforeDragStart(event: { preventDefault: () => void }) {
+  if (!editor.pastePending) return
+  event.preventDefault()
+  editor.showToast('请先确认或取消粘贴')
+}
+
 function onDragStart(event: { operation: { source?: { data?: unknown } | null } }) {
   const payload = readBlockDrag(event.operation.source?.data)
-  // R-1：把拖拽类型带进会话（SlotOverlay 按 accept 匹配高亮 / 弱化）
-  session.setDragging(true, payload?.type)
-  // T03：起拖即展开左栏（窄栏态不挡拖放）
+  session.setDragging(true, payload?.type, !!payload?.blockId)
   openLibraryRail()
   session.cancelPlace()
   ghostLabel.value = payload ? BLOCK_TYPE_LABEL[payload.type] : '区块'
   previewRef.value?.refreshTargets?.()
+  if (payload && editor.current) {
+    const targets = session.catalogTargets.value
+    const legal = targets.filter((t) => t.accept.includes(payload.type))
+    if (legal.length === 0) editor.showToast('当前没有可放这个区块的位置')
+  }
+}
+
+function onDragOver(event: { operation: { target?: { id?: string | number } | null } }) {
+  const id = event.operation.target?.id
+  session.setHoverSlot(id != null ? String(id) : null)
 }
 
 function onDragEnd(event: {
@@ -147,7 +161,11 @@ function onDragEnd(event: {
   // WP4：表内区块拖动（把手拖到别的槽位）——空槽移动、占用则互换，都走核内 moveBlock
   if (payload.blockId) {
     if (!hit) {
-      editor.showToast('请拖到表内虚线槽位')
+      editor.showToast('请放到表内虚线槽位')
+      return
+    }
+    if (!hit.accept.includes(type)) {
+      editor.showToast('这里不能放这个区块')
       return
     }
     if (hit.blockSlotId === payload.fromSlotId) return // 原地放下：不动也不提示
@@ -174,7 +192,9 @@ function onDragEnd(event: {
   <DragDropProvider
     v-if="editor.current"
     :sensors="pointerOnlySensors"
+    @beforeDragStart="onBeforeDragStart"
     @dragStart="onDragStart"
+    @dragOver="onDragOver"
     @dragEnd="onDragEnd"
   >
     <div class="editor">
@@ -250,7 +270,7 @@ function onDragEnd(event: {
     </div>
 
     <DragOverlay>
-      <div v-if="ghostLabel" class="ghost">{{ ghostLabel }}</div>
+      <div v-if="ghostLabel" class="drag-ghost">{{ ghostLabel }}</div>
     </DragOverlay>
   </DragDropProvider>
 </template>
@@ -320,13 +340,14 @@ function onDragEnd(event: {
   flex-shrink: 0;
   position: relative;
 }
-.ghost {
+.drag-ghost {
   padding: 8px 12px;
   border: 1px dashed var(--pt-primary);
   border-radius: 8px;
   background: #fff;
   font-size: 13px;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
-  opacity: 0.92;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 18%);
+  opacity: 0.75;
+  pointer-events: none;
 }
 </style>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { COMPARE_ALPHA_V1 } from '@/core'
 import { cloneInstance } from '@/core'
-import { computeDropTargets, estimateCellRects, resolveDrop } from './slotDnd'
+import { classifyDragSlots, computeDropTargets, estimateCellRects, resolveDrop } from './slotDnd'
 
 describe('slotDnd', () => {
   it('computeDropTargets emits blockSlots top-to-bottom with between-row gaps first', () => {
@@ -45,5 +45,52 @@ describe('slotDnd', () => {
     const totalW = cells[0]!.reduce((acc, r) => acc + r.width, 0)
     expect(footer.rect.width).toBe(totalW)
     expect(footer.rect.width).toBe(64 + 360 + 140 * (inst.layout.colCount - 2))
+    // 左栏标签贴在对应行首列，不再在表底叠整行虚框
+    const left = targets.find((t) => t.blockSlotId === 'left-r2')!
+    expect(left.rect.width).toBe(64)
+    expect(left.rect.top).toBeLessThan(footer.rect.top)
+    const lefts = targets.filter((t) => t.blockSlotId.startsWith('left-'))
+    const tops = new Set(lefts.map((t) => t.rect.top))
+    expect(tops.size).toBe(lefts.length)
+  })
+
+  it('classifyDragSlots：空槽弱引导、命中变强、占用标替换、互斥只脉动', () => {
+    const targets = [
+      { blockSlotId: 'gap-1', rect: { left: 0, top: 0, width: 10, height: 10 }, accept: ['sectionBar' as const] },
+      { blockSlotId: 'footer-1', rect: { left: 0, top: 20, width: 10, height: 10 }, accept: ['emphFooter' as const] },
+    ]
+    const noHover = classifyDragSlots({
+      targets,
+      type: 'emphFooter',
+      occupied: new Set(['gap-1']),
+      hoverId: null,
+      relocating: false,
+    })
+    expect(noHover).toEqual([{ blockSlotId: 'footer-1', tone: 'guide', badge: '' }])
+    const overEmpty = classifyDragSlots({
+      targets,
+      type: 'emphFooter',
+      occupied: new Set(),
+      hoverId: 'footer-1',
+      relocating: false,
+    })
+    expect(overEmpty).toEqual([{ blockSlotId: 'footer-1', tone: 'hot', badge: '' }])
+    const overOccupied = classifyDragSlots({
+      targets,
+      type: 'sectionBar',
+      occupied: new Set(['gap-1']),
+      hoverId: 'gap-1',
+      relocating: true,
+    })
+    expect(overOccupied).toEqual([{ blockSlotId: 'gap-1', tone: 'replace', badge: '将互换' }])
+    const reject = classifyDragSlots({
+      targets,
+      type: 'emphFooter',
+      occupied: new Set(),
+      hoverId: 'gap-1',
+      relocating: false,
+    })
+    expect(reject.find((x) => x.blockSlotId === 'gap-1')?.tone).toBe('pulse')
+    expect(reject.find((x) => x.blockSlotId === 'footer-1')?.tone).toBe('guide')
   })
 })

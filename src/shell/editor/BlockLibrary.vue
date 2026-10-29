@@ -46,7 +46,7 @@ function keyPlace(type: BlockType) {
     <template v-if="libraryRailOpen">
       <h3>组件库</h3>
       <p id="block-lib-desc" class="hint">
-        拖入表内槽位（非整页画布）。同槽再放会替换。键盘：Enter 待放置 → ↑↓ 选槽 → Enter 放入 / Esc 取消。
+        仅可放入表内槽位，不能自由摆放。同槽再放会替换。键盘：Enter 待放置 → ↑↓ 选槽 → Enter 放入 / Esc 取消。
       </p>
       <ul aria-describedby="block-lib-desc">
         <BlockDraggable

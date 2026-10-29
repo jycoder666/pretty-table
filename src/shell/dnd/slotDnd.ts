@@ -66,6 +66,26 @@ export function estimateCellRects(
   return rows
 }
 
+/**
+ * 逻辑行 → 视觉行。空注脚不插行（与 buildVisualRows 一致），左栏标签贴在该行首列上。
+ */
+function visualRowForLogical(inst: TemplateInstance, logical: number): number {
+  let visual = 0
+  const len = inst.layout.slotGrid?.length ?? inst.layout.rowCount
+  for (let r = 0; r < len; r++) {
+    if (r === logical) return visual
+    visual += 1
+    const insertsGap = inst.layout.blockSlots.some((def) => {
+      const m = /^after-(\d+)$/.exec(def.rowHint ?? '')
+      if (!m || Number(m[1]) !== r) return false
+      if (def.region === 'footer' && !inst.blocks.some((b) => b.slotId === def.id)) return false
+      return true
+    })
+    if (insertsGap) visual += 1
+  }
+  return visual
+}
+
 /** Drop targets for every `layout.blockSlots` entry, top-to-bottom by visual gap rows. */
 export function computeDropTargets(
   inst: TemplateInstance,
@@ -95,22 +115,80 @@ export function computeDropTargets(
     seen.add(slotId)
   }
 
-  // Remaining slots (footer / left-tag) — park below content so resolveDrop still works
-  let bottom = 0
-  for (const row of cellRects) {
-    for (const cell of row) bottom = Math.max(bottom, cell.top + cell.height)
-  }
+  // 左栏标签贴在对应行的首列，不再在表底下叠一排整行虚框
   for (const def of inst.layout.blockSlots) {
-    if (seen.has(def.id)) continue
+    const m = /^left-(\d+)$/.exec(def.rowHint ?? '')
+    if (!m || seen.has(def.id)) continue
+    const cell = cellRects[visualRowForLogical(inst, Number(m[1]))]?.[0]
+    if (!cell) continue
     targets.push({
       blockSlotId: def.id,
-      rect: { left: 0, top: bottom, width: totalContentWidth(inst), height: BLOCK_HEIGHT },
+      rect: { left: cell.left, top: cell.top, width: cell.width, height: cell.height },
       accept: [...def.accept],
     })
-    bottom += BLOCK_HEIGHT
+    seen.add(def.id)
+  }
+
+  // 空注脚不占表内行，只在表底留一条
+  let bottom = 0
+  let left0 = 0
+  for (const row of cellRects) {
+    for (const cell of row) {
+      bottom = Math.max(bottom, cell.top + cell.height)
+      left0 = row[0]?.left ?? left0
+    }
+  }
+  for (const def of inst.layout.blockSlots) {
+    if (seen.has(def.id) || def.region !== 'footer') continue
+    targets.push({
+      blockSlotId: def.id,
+      rect: { left: left0, top: bottom, width: totalContentWidth(inst), height: BLOCK_HEIGHT },
+      accept: [...def.accept],
+    })
+    seen.add(def.id)
   }
 
   return targets
+}
+
+export type SlotTone = 'idle' | 'guide' | 'hot' | 'replace' | 'pulse'
+
+export type DragSlotChrome = {
+  blockSlotId: string
+  tone: SlotTone
+  /** 占用槽上的弱标：将替换 / 将互换 */
+  badge: string
+}
+
+/**
+ * A 手感：拖中只给「合法空槽」弱引导；当前命中槽强高亮（同时最多 1 个）；
+ * 占用且可落 → 「将替换/将互换」；类型互斥的当前槽只红脉动，不进可落高亮。
+ */
+export function classifyDragSlots(args: {
+  targets: DropTarget[]
+  type: BlockType
+  occupied: ReadonlySet<string>
+  hoverId: string | null
+  relocating: boolean
+}): DragSlotChrome[] {
+  const out: DragSlotChrome[] = []
+  for (const t of args.targets) {
+    const ok = t.accept.includes(args.type)
+    const occ = args.occupied.has(t.blockSlotId)
+    const hover = args.hoverId === t.blockSlotId
+    if (ok && !occ) {
+      out.push({ blockSlotId: t.blockSlotId, tone: hover ? 'hot' : 'guide', badge: '' })
+    } else if (ok && occ && hover) {
+      out.push({
+        blockSlotId: t.blockSlotId,
+        tone: 'replace',
+        badge: args.relocating ? '将互换' : '将替换',
+      })
+    } else if (!ok && hover) {
+      out.push({ blockSlotId: t.blockSlotId, tone: 'pulse', badge: '' })
+    }
+  }
+  return out
 }
 
 export function resolveDrop(

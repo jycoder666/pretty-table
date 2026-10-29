@@ -64,6 +64,7 @@ export const DETAIL_ALPHA_V1: TemplateInstance = {
     headerLevels: 2,
     merges: [{ start: [0, 0], end: [0, 1] }],
     structuralMerges: [{ start: [0, 0], end: [0, 1] }],
+    // A-5：行内 C1–C2 横向 + 数据块内同列纵向（不跨 G、不并入 C0）
     allowedMerges: [
       { start: [2, 1], end: [2, 2] },
       { start: [3, 1], end: [3, 2] },
@@ -73,6 +74,10 @@ export const DETAIL_ALPHA_V1: TemplateInstance = {
       { start: [7, 1], end: [7, 2] },
       { start: [8, 1], end: [8, 2] },
       { start: [9, 1], end: [9, 2] },
+      { start: [2, 1], end: [5, 1] },
+      { start: [2, 2], end: [5, 2] },
+      { start: [6, 1], end: [9, 1] },
+      { start: [6, 2], end: [9, 2] },
     ],
     blockSlots: [
       {
