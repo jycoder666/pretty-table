@@ -189,6 +189,9 @@ export type EditIntent =
   /** WP4：整行/整列换位（内容与合并区、只读格一起走；区块锚点按位置不动） */
   | { kind: 'moveRow'; from: number; to: number }
   | { kind: 'moveCol'; from: number; to: number }
+  /** 灵活操作升级 T01：整块换位（区间一次置换一次校验，不拆单行拼批） */
+  | { kind: 'moveRowBlock'; from: number; count: number; to: number }
+  | { kind: 'moveColBlock'; from: number; count: number; to: number }
 
 /** E3 多次撤销：撤销/重做栈深上限（入栈超限裁掉最旧一条，恒定内存上界） */
 export const UNDO_LIMITS = { maxDepth: 50 } as const

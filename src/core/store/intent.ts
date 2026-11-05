@@ -276,6 +276,8 @@ export function applyEditIntent(
     case 'setHeaderLevel':
     case 'moveRow':
     case 'moveCol':
+    case 'moveRowBlock':
+    case 'moveColBlock':
       return applyStructuralIntent(inst, intent)
     case 'setTheme': {
       next.themeId = intent.themeId

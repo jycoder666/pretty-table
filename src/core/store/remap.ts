@@ -136,3 +136,70 @@ export function permuteCells(
     return (axis === 0 ? [v, c] : [r, v]) as CellCoord
   })
 }
+
+// ── 区块置换原语（编辑台灵活操作升级 T01，与单元素置换同构）──
+// 语义与执行严格同式：grid.splice(from, count) 后 splice(to, 0, …block)。
+// 即「to」是块在删除后的坐标里的落点；执行后块占 [to, to+count−1]，gap 段让位。
+
+/**
+ * 区块置换的单下标映射：块 [from, from+count) 整体搬到 [to, to+count)，
+ * 其余下标在删除后坐标里让位（to 及之后 +count）。
+ */
+export function permuteBlockIndex(idx: number, from: number, count: number, to: number): number {
+  if (idx >= from && idx < from + count) return to + (idx - from)
+  const p = idx >= from ? idx - count : idx // 不在块内：先按删除后的坐标
+  return p >= to ? p + count : p
+}
+
+/**
+ * 区间 [s, e] 在区块置换下是否仍连续（与 survivesPermute 同式：影像集 = 连续整数段）。
+ * 块内合并区整体随块走安全；跨块边界或跨插入点的区间影像会断开 → 拒绝，不悄悄拆。
+ */
+export function survivesBlockPermute(s: number, e: number, from: number, count: number, to: number): boolean {
+  if (s === e) return true
+  const img = new Set<number>()
+  for (let i = s; i <= e; i++) img.add(permuteBlockIndex(i, from, count, to))
+  const min = Math.min(...img)
+  const max = Math.max(...img)
+  return max - min + 1 === img.size
+}
+
+/** 合并区集合在某个轴上按区块置换重映射（端点影像不一定仍是新端点 → 取影像集 min/max） */
+export function permuteBlockAxisRanges(
+  ranges: MergeRange[] | undefined,
+  from: number,
+  count: number,
+  to: number,
+  axis: 0 | 1,
+): MergeRange[] | undefined {
+  if (!ranges) return ranges
+  return ranges.map((r) => {
+    const s0 = axis === 0 ? r.start[0] : r.start[1]
+    const e0 = axis === 0 ? r.end[0] : r.end[1]
+    let s = Number.POSITIVE_INFINITY
+    let e = Number.NEGATIVE_INFINITY
+    for (let i = s0; i <= e0; i++) {
+      const v = permuteBlockIndex(i, from, count, to)
+      if (v < s) s = v
+      if (v > e) e = v
+    }
+    const o0 = axis === 0 ? r.start[1] : r.start[0]
+    const o1 = axis === 0 ? r.end[1] : r.end[0]
+    return mkRange(Math.min(s, e), Math.max(s, e), o0, o1, axis)
+  })
+}
+
+/** 只读格坐标在某个轴上按区块置换重映射 */
+export function permuteBlockCells(
+  cells: CellCoord[] | undefined,
+  from: number,
+  count: number,
+  to: number,
+  axis: 0 | 1,
+): CellCoord[] | undefined {
+  if (!cells) return cells
+  return cells.map(([r, c]) => {
+    const v = permuteBlockIndex(axis === 0 ? r : c, from, count, to)
+    return (axis === 0 ? [v, c] : [r, v]) as CellCoord
+  })
+}

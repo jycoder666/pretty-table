@@ -16,6 +16,15 @@ export const LIMITS: { readonly maxRows: 20; readonly maxCols: 12 } = { maxRows:
 export const STRUCTURE_MIN_ROWS = 2
 export const STRUCTURE_MIN_COLS = 1
 
+/**
+ * 合并上限单点（GC-21 纪律；编辑台灵活操作升级 2026-11-03 拍板值 6/8/30）。
+ * mergeGuard 的跨度/数量两闸读这里，拒绝文案数字与单测边界同步；
+ * 白名单闸（allowedMerges containsRange）不受此常量影响，仍是方向红线。
+ */
+export const MERGE_MAX_SPAN_ROWS = 6
+export const MERGE_MAX_SPAN_COLS = 8
+export const MERGE_MAX_CLUSTERS = 30
+
 /** 列宽钳制范围（px） */
 export const COL_WIDTH_RANGE: readonly [number, number] = [64, 360]
 

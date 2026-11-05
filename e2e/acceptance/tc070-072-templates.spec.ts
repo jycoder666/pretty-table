@@ -109,13 +109,17 @@ test.describe('TC-PT-072 · 矩阵模板：粘贴填槽 + 导出；首列钉住'
     await page.setViewportSize({ width: 900, height: 720 })
     await openPreset(page, '功能矩阵表')
     // 预览横滚：6 列宽表（内容宽 822px）在窄视口下必然超出宿主宽度，且宿主不撑破页面
+    // 口径修正（2026-11 门禁修复）：宿主 overflow:auto 是横滚交互本体（tc091 同款权威口径）——
+    // 超宽内容的室内横滚必然 hostSw > hostCw；「不撑破」应断页面不被撑宽，而非宿主无溢出
     const scroll = await page.evaluate(() => {
       const host = document.querySelector('.preview-host')
       return host ? { hostSw: host.scrollWidth, hostCw: host.clientWidth } : null
     })
     expect(scroll).not.toBeNull()
     expect(scroll!.hostCw).toBeLessThan(822) // 宿主窄于内容宽 → 需要横滚（滚动体验目视待人工）
-    expect(scroll!.hostSw).toBeLessThanOrEqual(scroll!.hostCw + 2) // 页面/宿主不撑破
+    expect(scroll!.hostSw).toBeGreaterThanOrEqual(820) // 滚动内容就位（宿主室内横滚，不裁内容）
+    const bodySw = await page.evaluate(() => document.body.scrollWidth)
+    expect(bodySw).toBeLessThanOrEqual(902) // 页面不撑破（900 视口 + 边界容差）
     // 粘贴 2×2 符号词到 R2–R3 × C1–C2
     await clickSlot(page, inst, 'feat.1.b')
     await pasteClipboard(page, { text: '是\t否\n部分\tY' })

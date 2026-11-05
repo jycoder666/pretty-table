@@ -64,6 +64,8 @@ let offViewport: (() => void) | null = null
 let offColResize: (() => void) | null = null
 let rafId = 0
 let scrollRafId = 0
+// 缺陷②（T07）：window/祖先滚动容器的 rAF 合帧 id（与 host 内滚动的 scrollRafId 分开）
+let winScrollRafId = 0
 // T34：渲染核经 loadRenderCore 动态加载（VTable 独立 chunk）；卸载竞态用 disposed 收口
 let disposed = false
 
@@ -131,6 +133,9 @@ onMounted(async () => {
   attachRailHost(host.value)
   refreshTargets()
   window.addEventListener('resize', refreshTargets)
+  // 缺陷②（T07）：hostLeft/hostTop 是 refresh 时一次性视口坐标，页面级滚动后轨道/菜单错位。
+  // scroll 不冒泡但走捕获——capture=true 覆盖 window 与任意祖先滚动容器；passive 不阻塞滚动。
+  window.addEventListener('scroll', onWinScroll, { passive: true, capture: true })
 })
 
 /** host 纵滚 → scrollTop 进几何桥（rAF 合帧，行轨道冻结对齐） */
@@ -140,6 +145,19 @@ function onHostScroll() {
     scrollRafId = 0
     setRailScrollTop(host.value?.scrollTop ?? 0)
     scheduleRefresh()
+  })
+}
+
+/**
+ * 缺陷②（T07）：window/祖先滚动容器滚动 → rAF 合帧重算 hostRect → 轨道几何桥整包刷新。
+ * 菜单 pos 是响应式 computed（读 railGeometry），几何刷新即自动重锚；
+ * 与 onHostScroll 各持独立 rAF id，host 内滚动路径不受影响（setRailScrollTop 语义不变）。
+ */
+function onWinScroll() {
+  if (winScrollRafId) return
+  winScrollRafId = requestAnimationFrame(() => {
+    winScrollRafId = 0
+    refreshTargets()
   })
 }
 
@@ -154,8 +172,10 @@ watch(
 onBeforeUnmount(() => {
   disposed = true
   window.removeEventListener('resize', refreshTargets)
+  window.removeEventListener('scroll', onWinScroll, { capture: true })
   if (rafId) cancelAnimationFrame(rafId)
   if (scrollRafId) cancelAnimationFrame(scrollRafId)
+  if (winScrollRafId) cancelAnimationFrame(winScrollRafId)
   host.value?.removeEventListener('scroll', onHostScroll)
   offViewport?.()
   offColResize?.()
@@ -225,18 +245,24 @@ const selectionRects = computed(() => {
   return toHostRects(selectionCellRects(editor.current, editor.selectionRange, cellRects.value))
 })
 
-// A5：整行/整列选择高亮叠加层（浅色；几何与描边同源，随内容滚动）
+// A5：整行/整列选择高亮叠加层（浅色；几何与描边同源，随内容滚动）。
+// T02：rangeEnd 存在时高亮整段区间（区间内跨行合并区照常并块）
 const structuralOverlay = computed(() => {
   const inst = editor.current
   const s = editor.structuralSelection
   if (!inst || !s) return []
-  return toHostRects(structuralRects(inst, s.axis, s.index, cellRects.value))
+  return toHostRects(structuralRects(inst, s.axis, s.index, cellRects.value, s.rangeEnd))
 })
 
-/** e2e 确定性同步点（A6 规则 5）：'row:3' / 'col:2' / '' */
+/**
+ * e2e 确定性同步点（A6 规则 5 / T02 区间扩展）：单选 'row:3' / 'col:2'（格式不变），
+ * 区间 'row:1-3'（0 基 [index, rangeEnd]），无选择 ''。
+ */
 const structuralLabel = computed(() => {
   const s = editor.structuralSelection
-  return s ? `${s.axis}:${s.index}` : ''
+  if (!s) return ''
+  if (s.rangeEnd !== undefined && s.rangeEnd !== s.index) return `${s.axis}:${s.index}-${s.rangeEnd}`
+  return `${s.axis}:${s.index}`
 })
 
 // A13-2（假设口径）：表格窄于可用宽时 mount 元素动态宽度居中（width: min(100%, 总宽)），
@@ -300,6 +326,11 @@ interface EditState {
 }
 const editing = ref<EditState | null>(null)
 
+// T04（灵活操作升级 A6）：图片格双击替换的隐藏文件选择器。
+// fileInputSlot 记录唤起时的目标槽（change 时用，避免中途选中态漂移改错格）。
+const canvasImageInput = ref<HTMLInputElement | null>(null)
+let fileInputSlot: string | null = null
+
 const editingRect = computed<CellRect | null>(() => {
   const e = editing.value
   const inst = editor.current
@@ -340,8 +371,14 @@ const editableAlign = computed(() => {
   return t.kind === 'text' ? t.align : ('left' as const)
 })
 
-/** 打开就地编辑：把「不可编辑」的三类原因用白话讲清，不做无声忽略 */
-function openEditor(row: number, col: number, typedChar?: string): boolean {
+/**
+ * 打开就地编辑：把「不可编辑」的三类原因用白话讲清，不做无声忽略。
+ * T04（灵活操作升级 A6）：image 分支按来源分流——指针双击（viaKeyboard=false）选中该格并
+ * 唤起隐藏文件选择器（写入链复用 store.uploadImage 三连闸，零新逻辑）；键盘来源
+ * （Enter / 直接键入，viaKeyboard=true）保留白话 toast、不弹系统弹窗
+ * （评审拍板 A12-6：文件选择只在指针双击手势内，键盘用户换图走右栏或双击）。
+ */
+function openEditor(row: number, col: number, typedChar?: string, viaKeyboard = false): boolean {
   const inst = editor.current
   if (!inst) return false
   const target = editableCellAt(inst, row, col)
@@ -350,8 +387,18 @@ function openEditor(row: number, col: number, typedChar?: string): boolean {
     return false
   }
   if (target.kind === 'image') {
-    editor.showToast('图片格请在右栏换图')
-    return false
+    // 图片槽 id 与 cellNav.editableCellAt 同源取锚点格（合并区落左上）
+    const merge = findMergeAt(inst.layout, row, col)
+    const sid = inst.layout.slotGrid?.[merge ? merge.start[0] : row]?.[merge ? merge.start[1] : col]
+    if (viaKeyboard || !sid) {
+      editor.showToast('图片格请在右栏换图')
+      return false
+    }
+    editor.selectedSlotId = sid
+    editor.selectedBlockId = null
+    fileInputSlot = sid
+    canvasImageInput.value?.click()
+    return true
   }
   if (target.kind === 'typed') {
     editor.showToast('这一格请在右栏改数值或标记')
@@ -411,6 +458,21 @@ function onCancelEdit() {
   focusCanvas()
 }
 
+/**
+ * T04：隐藏文件选择器 change → store.uploadImage（核内 canSetImage / validateImageDataUrl /
+ * checkImageBudget 三连闸 + errorCopy 白话 toast，一次 setSlot 意图一张快照）。
+ * 读走即清空 input.value：同一文件连续替换两次也能再次触发 change。
+ */
+function onCanvasImageChange(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  input.value = ''
+  const sid = fileInputSlot
+  fileInputSlot = null
+  if (!file || !sid) return
+  void editor.uploadImage(sid, file)
+}
+
 function onDblClick(ev: MouseEvent) {
   if (session.overlayVisible.value || editor.pastePending) return
   if (!editor.current || !el.value) return
@@ -467,7 +529,7 @@ async function onKeydown(ev: KeyboardEvent) {
     ev.preventDefault()
     const s = editor.structuralSelection
     if (s) {
-      openStructureMenu(s.axis, s.index)
+      openStructureMenu(s.axis, s.index, s.rangeEnd ?? null)
     } else {
       const row = editor.selectionRange?.start[0] ?? 0
       editor.structuralSelection = { axis: 'row', index: row }
@@ -524,7 +586,8 @@ async function onKeydown(ev: KeyboardEvent) {
     ev.preventDefault()
     const sel = editor.selectionRange ?? { start: [0, 0], end: [0, 0] }
     editor.selectionRange = sel
-    openEditor(sel.start[0], sel.start[1])
+    // 键盘来源（T04 A12-6）：图片格保留白话 toast，不弹系统文件选择器
+    openEditor(sel.start[0], sel.start[1], undefined, true)
     return
   }
 
@@ -577,7 +640,8 @@ async function onKeydown(ev: KeyboardEvent) {
   // 直接键入进编辑（TH-C1）：可打印单字符 + 无修饰键
   if (!ev.ctrlKey && !ev.metaKey && !ev.altKey && ev.key.length === 1 && editor.selectionRange) {
     ev.preventDefault()
-    openEditor(editor.selectionRange.start[0], editor.selectionRange.start[1], ev.key)
+    // 键盘来源（T04 A12-6）：图片格保留白话 toast，不弹系统文件选择器
+    openEditor(editor.selectionRange.start[0], editor.selectionRange.start[1], ev.key, true)
   }
 }
 
@@ -797,6 +861,15 @@ defineExpose({
     <!-- A2：结构菜单浮层（鼠标轨道 … 与键盘 Shift+F10 共用；关闭即卸载） -->
     <StructureActionMenu />
     <PasteEntry />
+    <!-- T04：图片格双击替换的隐藏文件选择器（视觉隐藏，裁剪范式同 PropertyPanel .file-btn input） -->
+    <input
+      ref="canvasImageInput"
+      class="canvas-image-input"
+      type="file"
+      accept="image/jpeg,image/png,image/webp,image/gif"
+      data-testid="canvas-image-input"
+      @change="onCanvasImageChange"
+    />
   </div>
 </template>
 
@@ -815,11 +888,19 @@ defineExpose({
   width: 100%;
   min-height: 400px;
   transition: opacity 200ms ease;
-  outline: none;
 }
-/* WP3：键盘操作要求画布可聚焦——只给键盘用户可见的焦点圈（:focus-visible） */
+/* T04：隐藏文件选择器（1px clip 裁剪，视觉零占位；点击由 openEditor image 分支程序化触发） */
+.canvas-image-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+/* WP3：键盘操作要求画布可聚焦——焦点环色/宽走 main.css 全局单点；画布外描边会被
+   .canvas-shell 的 overflow 裁剪，故仅把 offset 取负让环画在画布内 */
 .vtable-root:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--pt-primary);
+  outline-offset: -3px;
 }
 /* R-1：拖拽进行中非目标区弱化（低透明度），松手恢复 */
 .preview-host.drag-active .vtable-root {
@@ -827,7 +908,7 @@ defineExpose({
 }
 .selection-cell {
   position: absolute;
-  z-index: 3;
+  z-index: var(--pt-z-overlay);
   box-sizing: border-box;
   border: 2px solid var(--pt-primary);
   background: color-mix(in srgb, var(--pt-primary) 10%, transparent);
@@ -836,7 +917,7 @@ defineExpose({
 /* A5：整行/整列选择浅色高亮（同 overlay 机制：host 内绝对定位、随内容滚动） */
 .structural-cell {
   position: absolute;
-  z-index: 2;
+  z-index: var(--pt-z-content);
   box-sizing: border-box;
   background: color-mix(in srgb, var(--pt-primary) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--pt-primary) 35%, transparent);

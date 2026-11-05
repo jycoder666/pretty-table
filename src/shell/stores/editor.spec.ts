@@ -142,6 +142,79 @@ describe('editor store · E3 多次撤销与重做', () => {
   })
 })
 
+describe('editor store · 区间选择与整块移动（灵活操作升级 T02）', () => {
+  it('区间写入归一化：index=min / rangeEnd=max；单选不携带 rangeEnd 字段', async () => {
+    const store = await setup()
+    // 倒序写入（点 4 再 Shift+点 2）→ 归一化为 [2,4]
+    store.structuralSelection = { axis: 'row', index: 4, rangeEnd: 2 }
+    expect(store.structuralSelection).toEqual({ axis: 'row', index: 2, rangeEnd: 4 })
+    // rangeEnd 等于 index → 退化为单选形状
+    store.structuralSelection = { axis: 'col', index: 3, rangeEnd: 3 }
+    expect(store.structuralSelection).toEqual({ axis: 'col', index: 3 })
+    // 既有单选写入形状不变
+    store.structuralSelection = { axis: 'col', index: 2 }
+    expect(store.structuralSelection).toEqual({ axis: 'col', index: 2 })
+  })
+
+  it('区间选择同样与单元格选区互斥双向清空（既有规则扩展）', async () => {
+    const store = await setup()
+    store.selectionRange = { start: [3, 1], end: [3, 1] }
+    store.structuralSelection = { axis: 'row', index: 1, rangeEnd: 3 }
+    expect(store.selectionRange).toBeNull()
+    expect(store.selectedSlotId).toBeNull()
+    store.selectionRange = { start: [1, 0], end: [1, 0] }
+    expect(store.structuralSelection).toBeNull()
+  })
+
+  it('moveRowBlock：单条意图一次置换、选区跟块走、一步撤销', () => {
+    const store = useEditorStore()
+    store.openTemplate(cloneInstance(BLANK_V1))
+    // 块 [2,3] 下移一格 → 落在 [3,4]
+    expect(store.moveRowBlock(2, 2, 3)).toBe(true)
+    const grid = store.current!.layout.slotGrid!
+    expect(grid.map((r) => r.join())).toEqual([
+      'u1,u2,u3,u4',
+      'u5,u6,u7,u8',
+      'u17,u18,u19,u20',
+      'u9,u10,u11,u12',
+      'u13,u14,u15,u16',
+    ])
+    expect(store.structuralSelection).toEqual({ axis: 'row', index: 3, rangeEnd: 4 })
+    expect(store.toast).toBe('已下移')
+    // 一步撤销完全复原
+    store.undo()
+    expect(store.current!.layout.slotGrid![2]!.join()).toBe('u9,u10,u11,u12')
+  })
+
+  it('moveColBlock：列块一次置换、列宽/合并区随列走、一步撤销', () => {
+    const store = useEditorStore()
+    store.openTemplate(cloneInstance(BLANK_V1))
+    store.apply({ kind: 'setColWidth', col: 1, width: 120 })
+    // 列块 [1,2] 右移一格 → 落在 [2,3]：splice(1,2) 后插到 2 → [u5,u8,u6,u7]
+    expect(store.moveColBlock(1, 2, 2)).toBe(true)
+    const grid = store.current!.layout.slotGrid!
+    expect(grid[1]!.join()).toBe('u5,u8,u6,u7')
+    expect(store.structuralSelection).toEqual({ axis: 'col', index: 2, rangeEnd: 3 })
+    expect(store.toast).toBe('已右移')
+    store.undo()
+    // 一步撤销回到原几何（列序与列宽都复原）
+    expect(store.current!.layout.slotGrid![1]!.join()).toBe('u5,u6,u7,u8')
+    const widths = store.current!.layout.style?.colWidths
+    expect(widths?.[1]).toBe(120)
+  })
+
+  it('moveRowBlock 被合并区挡住：返回 false + 核内白话 toast，store 不变', () => {
+    const store = useEditorStore()
+    store.openTemplate(cloneInstance(BLANK_V1))
+    // 行 1–2 的合并区横跨块 [2,3] 的上边界 → 下移会拆散
+    store.apply({ kind: 'merge', range: { start: [1, 0], end: [2, 3] } })
+    const before = JSON.stringify(store.current)
+    expect(store.moveRowBlock(2, 2, 3)).toBe(false)
+    expect(store.toast).toContain('合并区交错')
+    expect(JSON.stringify(store.current)).toBe(before)
+  })
+})
+
 describe('editor store · 结构选择态与 Toast 撤销动作（增量设计 T01 A6/A9）', () => {
   it('写 structuralSelection 清 selectionRange/选中槽/选中区块；写 selectionRange 清 structuralSelection', async () => {
     const store = await setup()

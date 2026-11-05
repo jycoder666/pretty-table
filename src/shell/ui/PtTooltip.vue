@@ -39,7 +39,7 @@ const delay = () => props.delayDuration ?? 300
   display: inline-flex;
 }
 .pt-tooltip-content {
-  z-index: 70;
+  z-index: var(--pt-z-tooltip);
   max-width: 240px;
   padding: 6px 10px;
   border-radius: 8px;

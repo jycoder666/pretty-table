@@ -121,9 +121,18 @@ ul {
   padding: 10px 6px;
   font-size: 12px;
   cursor: pointer;
+  /* T10：hover 轻反馈具名过渡（120~150ms，禁 all） */
+  transition: border-color 130ms ease, color 130ms ease;
 }
-.rail-open:hover {
-  border-color: var(--pt-primary);
-  color: var(--pt-primary);
+@media (hover: hover) {
+  .rail-open:hover {
+    border-color: var(--pt-primary);
+    color: var(--pt-primary);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rail-open {
+    transition: none;
+  }
 }
 </style>

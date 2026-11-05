@@ -341,6 +341,8 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* T10：卡面数字位（保存时间等）对齐不跳（属性式） */
+  font-variant-numeric: tabular-nums;
 }
 .card h3 {
   margin: 0;
@@ -378,6 +380,8 @@ h2 {
   border: 1px solid var(--pt-border);
   border-radius: 6px;
   padding: 4px 6px;
+  /* T10：数值输入（行数/列数/层级）对齐（属性式） */
+  font-variant-numeric: tabular-nums;
   font: inherit;
 }
 .chip {

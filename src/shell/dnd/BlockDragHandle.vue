@@ -63,7 +63,7 @@ const style = () => ({
 <style scoped>
 .block-handle-wrap {
   position: absolute;
-  z-index: 3;
+  z-index: var(--pt-z-overlay);
 }
 .block-handle {
   width: 22px;
@@ -82,11 +82,22 @@ const style = () => ({
   cursor: grab;
   user-select: none;
   touch-action: none;
+  /* T10：hover 轻反馈具名过渡（120~150ms，禁 all） */
+  transition: border-color 130ms ease, color 130ms ease;
 }
-.block-handle:hover,
+@media (hover: hover) {
+  .block-handle:hover {
+    border-color: var(--pt-primary);
+    color: var(--pt-primary);
+  }
+}
 .block-handle:focus-visible {
   border-color: var(--pt-primary);
   color: var(--pt-primary);
-  outline: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .block-handle {
+    transition: none;
+  }
 }
 </style>

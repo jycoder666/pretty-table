@@ -49,6 +49,24 @@ const dragChrome = computed(() => {
     .map((t) => ({ target: t, ...(byId.get(t.blockSlotId)!) }))
 })
 
+/**
+ * BugFix（2026-11 全量门禁修复，tc094 复现 + diag 实证）：已占用可互换槽位的 droppable
+ * 此前只在 hover 命中后才渲染——鸡生蛋死锁：dnd-kit 碰撞检测测不到未注册的 droppable，「拖到
+ * 占用槽互换」在真实指针路径上永远 miss（dragChrome mid-drag 恒空 → operation.target 恒 null）。
+ * 修复：占用且接受该类型的槽位在拖拽期间以隐形 hit 注册 droppable（视觉零变化），
+ * hover 命中后由既有 chrome（replace 态「将互换」）承接可见高亮。
+ */
+const dragGhostTargets = computed(() => {
+  const type = session.dragType.value
+  if (!session.dragging.value || !type) return []
+  return props.targets.filter(
+    (t) =>
+      t.accept.includes(type) &&
+      occupied.value.has(t.blockSlotId) &&
+      session.hoverSlotId.value !== t.blockSlotId,
+  )
+})
+
 const placeTargets = computed(() => {
   if (!session.active.value || !session.blockType.value) return [] as DropTarget[]
   return props.targets.filter((t) => t.accept.includes(session.blockType.value!))
@@ -135,6 +153,21 @@ function captionFor(tone: SlotTone, accept: DropTarget['accept']): string {
         :host-top="hostTop"
         :tabindex="-1"
       />
+      <!-- BugFix（tc094）：占用槽位隐形 droppable——只为碰撞判定注册，不接管指针、无视觉 -->
+      <SlotHit
+        v-for="t in dragGhostTargets"
+        :key="`ghost-${t.blockSlotId}`"
+        :target="t"
+        :index="-1"
+        :focused="false"
+        tone="guide"
+        ghost
+        :badge="''"
+        :caption="''"
+        :host-left="hostLeft"
+        :host-top="hostTop"
+        :tabindex="-1"
+      />
     </template>
 
     <template v-else-if="session.active.value">
@@ -177,7 +210,7 @@ function captionFor(tone: SlotTone, accept: DropTarget['accept']): string {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
+  z-index: var(--pt-z-content);
 }
 .slot-overlay.interactive :deep(.slot-hit),
 .slot-overlay.dragging :deep(.slot-hit),

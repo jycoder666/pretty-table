@@ -95,7 +95,7 @@ const visible = computed(
 <style scoped>
 .selection-bar {
   position: absolute;
-  z-index: 4;
+  z-index: var(--pt-z-overlay);
   display: flex;
   gap: 2px;
   padding: 3px 6px;

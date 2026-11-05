@@ -105,7 +105,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWinKey))
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 35%);
-  z-index: 60;
+  z-index: var(--pt-z-toolbar);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,10 +136,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWinKey))
   padding: 8px;
   font: inherit;
   margin-bottom: 16px;
-}
-.rename-input:focus-visible {
-  outline: 2px solid var(--pt-primary);
-  outline-offset: 1px;
 }
 .actions {
   display: flex;

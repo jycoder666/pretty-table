@@ -116,7 +116,7 @@ function onKeydown(ev: KeyboardEvent) {
 <style scoped>
 .inline-editor {
   position: absolute;
-  z-index: 5;
+  z-index: var(--pt-z-float);
   box-sizing: border-box;
   margin: 0;
   padding: 0 8px;

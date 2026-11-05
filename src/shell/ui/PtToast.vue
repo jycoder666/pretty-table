@@ -46,9 +46,11 @@ const emit = defineEmits<{ action: [] }>()
   padding: 10px 18px;
   border-radius: 8px;
   font-size: 14px;
-  z-index: 80;
+  z-index: var(--pt-z-toast);
   box-shadow: 0 6px 20px rgb(0 0 0 / 16%);
   animation: in 150ms ease;
+  /* T10：提示语里的行号/计数对齐（属性式） */
+  font-variant-numeric: tabular-nums;
 }
 /* 撤销按钮：主色底上保持可读（token 合成，无新色值） */
 .pt-toast :deep(.pt-toast-action) {

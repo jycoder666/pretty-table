@@ -310,7 +310,7 @@ test.describe('TC-PT-094 · 表内区块拖动（把手 → 别的槽位）', ()
       { x: g1.x + g1.width / 2, y: g1.y + g1.height / 2 },
       { x: box1.x + dataCell.x, y: box1.y + dataCell.y },
     )
-    await expectToast(page, '请拖到表内虚线槽位')
+    await expectToast(page, '请放到表内虚线槽位')
     expect(await handleOrder(page)).toEqual(['preset-g1', 'preset-g2'])
 
     // ② 拖到 gap-g2（已占用）→ 两个区块互换

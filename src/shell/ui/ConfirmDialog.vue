@@ -73,7 +73,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 35%);
-  z-index: 60;
+  z-index: var(--pt-z-toolbar);
   display: flex;
   align-items: center;
   justify-content: center;

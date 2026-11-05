@@ -14,8 +14,10 @@ const props = withDefaults(
     hostLeft: number
     hostTop: number
     tabindex: number
+    /** BugFix（tc094）：隐形 droppable——只为 dnd-kit 碰撞判定注册，无视觉、不接管指针 */
+    ghost?: boolean
   }>(),
-  { tone: 'guide', badge: '', caption: '' },
+  { tone: 'guide', badge: '', caption: '', ghost: false },
 )
 
 defineEmits<{
@@ -56,7 +58,7 @@ const aria = () => {
     ref="el"
     type="button"
     class="slot-hit"
-    :class="[tone, { focused }]"
+    :class="[tone, { focused, ghost }]"
     role="button"
     :tabindex="tabindex"
     :data-pt-slot-index="index"
@@ -94,6 +96,11 @@ const aria = () => {
   color: #8b95a5;
   background: color-mix(in srgb, var(--pt-paper, #fff) 55%, transparent);
 }
+/* BugFix（tc094）：隐形 droppable 只服务碰撞判定——彻底不可见、不挡真 pointer 操作 */
+.slot-hit.ghost {
+  opacity: 0;
+  pointer-events: none;
+}
 .slot-hit.guide {
   border-color: var(--pt-border, #c5d0de);
   background: color-mix(in srgb, var(--pt-primary, #2f5b9a) 6%, transparent);
@@ -103,7 +110,6 @@ const aria = () => {
 .slot-hit:focus-visible {
   border-color: var(--pt-primary, #2f5b9a);
   background: color-mix(in srgb, var(--pt-primary, #2f5b9a) 18%, transparent);
-  outline: none;
 }
 .slot-hit.replace {
   border-color: var(--pt-primary, #2f5b9a);

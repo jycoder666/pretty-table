@@ -78,7 +78,7 @@ function onManualClose() {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 60;
+  z-index: var(--pt-z-toolbar);
   display: flex;
   flex-direction: column;
   gap: 8px;

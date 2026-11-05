@@ -10,6 +10,7 @@ import {
   pasteBarText,
   pasteCells,
   pasteClipboard,
+  pasteNativeText,
   presetOf,
 } from './helpers'
 
@@ -17,6 +18,13 @@ import {
  * T30 验收 · TC-PT-051～058（粘贴填槽基础链路）
  * Excel/WPS 来源一律以「模拟剪贴板」（TSV 载荷注入 paste 事件）等价执行；
  * 外部应用真实复制路径标注「待人工复测」。
+ *
+ * T08 ×10 连跑加固（2026-11-04 复现实证，error-context 存档）：本文件剪贴板链路依赖
+ * 两个进程级全局单例——OS 剪贴板与（headed 模式下的）窗口焦点，默认多 worker 并行时
+ * 互相污染（TC-056 读回并行 TC-052 的导出；TC-054 原生 Ctrl+V 在失焦窗口不触发）。
+ * 隔离手段落在用例层（默认 worker 数下也要稳，不依赖 --workers=1 旗标）：
+ * - 导出读回走 helpers 的 clipboard.write 捕获基座（openPreset 安装，见 helpers.ts）；
+ * - TC-054 原生粘贴前 bringToFront 压前台，粘不上/粘错全选重按重试。
  */
 
 test.beforeEach(async ({ context, browserName }) => {
@@ -24,6 +32,9 @@ test.beforeEach(async ({ context, browserName }) => {
 })
 
 const COMPARE = 'compare-alpha-v1'
+// TC-056 剪贴板哨兵：取预设「多列对比表」自带表头文案（compare-alpha-v1.ts band.2 =「进阶档」），
+// 取消路径永远不改它——读回不含它即说明读到了空串/旧串（Chromium 多风味写入竞态），helpers 自动重读
+const SENTINEL = '进阶档'
 const TSV_3X4 = 'R1C1\tR1C2\tR1C3\tR1C4\nR2C1\tR2C2\tR2C3\tR2C4\nR3C1\tR3C2\tR3C3\tR3C4'
 
 test.describe('TC-PT-051 · Excel 3×4 按位置粘贴填 12 槽（模拟剪贴板）', () => {
@@ -129,9 +140,10 @@ test.describe('TC-PT-054 · 输入态粘贴多格内容只进当前格', () => {
     // 输入态 = 右栏槽位文案编辑框（本应用无双击画布进入输入态的交互，偏差见报告）
     const textarea = page.locator('.props .section textarea').first()
     await textarea.click()
-    // 真实剪贴板 + Ctrl+V（输入态原生粘贴）
-    await page.evaluate(() => navigator.clipboard.writeText('X1\tX2\nX3\tX4'))
-    await textarea.press('Control+V')
+    // 真实剪贴板 + Ctrl+V（输入态原生粘贴）。原生粘贴默认动作依赖窗口焦点，headed
+    // 多 worker 下会静默不触发（×10 实证：值停留「1 个工作日」）——压前台 + 全选重按
+    // 重试在助手内（helpers.pasteNativeText），粘不上/粘错由本断言收口
+    await pasteNativeText(page, textarea, 'X1\tX2\nX3\tX4')
     // 不走填槽：无预览条
     await expect(pasteBarText(page)).toHaveCount(0)
     // 按普通文字粘进该格（含制表符/换行原样）
@@ -163,27 +175,32 @@ test.describe('TC-PT-056 · 预览落位后取消：无任何变化', () => {
   test('取消按钮 / Esc / 点表外 三种方式均无痕迹、撤销栈不新增', async ({ page }) => {
     const inst = presetOf(COMPARE)
     await openPreset(page, '多列对比表')
-    const before = await exportedHtml(page)
-    // 撤销按钮初始禁用（无可撤销操作）
+    // 主判据：撤销按钮始终禁用——粘贴提交必入快照（undo 可用），始终禁用即核内「无写入」的强证据（T08）
     const undoBtn = page.getByRole('button', { name: '撤销' })
     await expect(undoBtn).toBeDisabled()
+    // 辅助：剪贴板前后对比。读回基座 = 本 context 捕获的 clipboard.write 载荷
+    // （helpers openPreset 安装，与 OS 写入同源同字节，并行 worker 污染不了）；
+    // 哨兵「进阶档」仍校验，helpers 内 OS 基座退回时自动重复制重读 ≤2 次
+    const before = await exportedHtml(page, SENTINEL)
     // 方式 1：取消按钮
     await clickSlot(page, inst, 'row.3.label')
     await pasteClipboard(page, { text: TSV_3X4 })
     await cancelPaste(page)
     await expect(pasteBarText(page)).toHaveCount(0)
+    await expect(undoBtn).toBeDisabled()
     // 方式 2：Esc
     await pasteClipboard(page, { text: TSV_3X4 })
     await page.keyboard.press('Escape')
     await expect(pasteBarText(page)).toHaveCount(0)
+    await expect(undoBtn).toBeDisabled()
     // 方式 3：点表外（守卫层）
     await pasteClipboard(page, { text: TSV_3X4 })
     await page.locator('[data-testid="paste-guard"]').click({ position: { x: 10, y: 10 } })
     await expect(pasteBarText(page)).toHaveCount(0)
-    // before/after 完全一致；撤销栈未新增（撤销按钮仍禁用）
-    const after = await exportedHtml(page)
-    expect(after).toBe(before)
+    // 主判据收口：三种方式后撤销仍禁用；辅助断言：前后快照完全一致
     await expect(undoBtn).toBeDisabled()
+    const after = await exportedHtml(page, SENTINEL)
+    expect(after).toBe(before)
   })
 })
 

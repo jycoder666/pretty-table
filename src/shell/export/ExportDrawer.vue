@@ -238,7 +238,7 @@ async function downloadPng() {
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 35%);
-  z-index: 40;
+  z-index: var(--pt-z-drawer);
 }
 .drawer {
   position: fixed;
@@ -248,7 +248,7 @@ async function downloadPng() {
   width: min(360px, 92vw);
   background: #fff;
   padding: 24px;
-  z-index: 50;
+  z-index: var(--pt-z-dialog);
   border-left: 1px solid var(--pt-border);
 }
 .png-opts {
@@ -281,6 +281,8 @@ async function downloadPng() {
   padding: 6px 14px;
   font-size: 13px;
   cursor: pointer;
+  /* T10：倍率数字对齐（属性式） */
+  font-variant-numeric: tabular-nums;
 }
 .seg-btn + .seg-btn {
   border-left: 1px solid var(--pt-border);
@@ -307,6 +309,8 @@ async function downloadPng() {
   margin: 0;
   font-size: 12px;
   color: var(--pt-muted);
+  /* T10：导出尺寸数字对齐（属性式） */
+  font-variant-numeric: tabular-nums;
 }
 .actions {
   display: flex;
@@ -329,12 +333,12 @@ async function downloadPng() {
   padding: 8px;
   resize: vertical;
 }
-/* PX-14：HTML 效果预览小窗（叠在抽屉之上） */
+/* PX-14：HTML 效果预览小窗（叠在抽屉之上；60 档无 dialog 语义命中，取 toolbar 档保序，见设计 A8 登记） */
 .preview-overlay {
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 35%);
-  z-index: 60;
+  z-index: var(--pt-z-toolbar);
   display: flex;
   align-items: center;
   justify-content: center;

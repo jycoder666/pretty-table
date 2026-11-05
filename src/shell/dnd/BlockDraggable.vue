@@ -75,10 +75,6 @@ li {
   cursor: grab;
   background: var(--pt-paper);
   list-style: none;
-  outline: none;
-}
-li:focus-visible {
-  box-shadow: 0 0 0 2px var(--pt-primary);
 }
 li.active {
   border-color: var(--pt-primary);

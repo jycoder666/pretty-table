@@ -178,13 +178,13 @@ const previewBarText = computed(() => {
 .paste-guard {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: var(--pt-z-drawer);
   background: transparent;
   cursor: default;
 }
 .paste-cell {
   position: absolute;
-  z-index: 30;
+  z-index: var(--pt-z-float);
   box-sizing: border-box;
   border: 1px dashed var(--pt-primary);
   background: var(--pt-tag);
@@ -229,7 +229,7 @@ const previewBarText = computed(() => {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: var(--pt-z-dialog);
   display: flex;
   align-items: center;
   gap: 10px;

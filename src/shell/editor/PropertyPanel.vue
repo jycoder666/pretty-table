@@ -6,6 +6,9 @@ import {
   PALETTES,
   MARK_GLYPH,
   MARK_LABEL,
+  MERGE_MAX_SPAN_ROWS,
+  MERGE_MAX_SPAN_COLS,
+  MERGE_MAX_CLUSTERS,
   RECOMMEND_BADGE_TEXT,
   ROLE_KEYS,
   ROLE_LABELS,
@@ -26,7 +29,6 @@ import {
 import PtButton from '../ui/PtButton.vue'
 import PtTooltip from '../ui/PtTooltip.vue'
 import PtSegmented from '../ui/PtSegmented.vue'
-import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import { confirmAction } from '../ui/confirm'
 import { panelGroupOpen, togglePanelGroup } from './panelGroups'
 import { useMergeGates } from './useMergeGates'
@@ -663,8 +665,11 @@ async function removeBlock() {
         <!-- 合并/拆分弱化入口（主理人拍板保留）：主入口是画布选区浮动工具条 -->
         <div class="section">
           <h4>合并 / 拆分</h4>
+          <!-- 上限数字读 layoutScales 常量单点（GC-21），随拍板值 6/8/30 同步；白名单口径按 PRD §5.5 -->
           <p class="hint">
-            选中格子后也可用画布上的浮动工具条；模板固定的合并区不能动，拆分要选中整个合并区。
+            选中格子后也可用画布上的浮动工具条；一次最多合并 {{ MERGE_MAX_SPAN_ROWS }} 行或
+            {{ MERGE_MAX_SPAN_COLS }} 列、每表最多 {{ MERGE_MAX_CLUSTERS }} 处，合并须在模板允许区内。
+            模板固定的合并区不能动，拆分要选中整个合并区。
           </p>
           <div class="row">
             <PtTooltip :text="mergeGate.reason || '合并当前选区的格子'">
@@ -719,9 +724,6 @@ async function removeBlock() {
         </div>
       </div>
     </section>
-
-    <!-- PX-05：统一确认弹窗（删区块 / 删非空行列） -->
-    <ConfirmDialog />
   </aside>
 </template>
 
@@ -778,6 +780,8 @@ h3 {
   margin: 0 2px 6px;
   font-size: 12px;
   color: var(--pt-muted);
+  /* T10：行列层数计数对齐（属性式） */
+  font-variant-numeric: tabular-nums;
 }
 .section {
   margin-bottom: 16px;
@@ -874,6 +878,8 @@ textarea {
   padding: 3px 6px;
   font: inherit;
   font-size: 12px;
+  /* T10：数值输入对齐（属性式） */
+  font-variant-numeric: tabular-nums;
 }
 .row :deep(.on),
 .on {
@@ -887,6 +893,8 @@ textarea {
   border-radius: 8px;
   padding: 8px;
   font: inherit;
+  /* T10：数值输入对齐（属性式） */
+  font-variant-numeric: tabular-nums;
 }
 .headline {
   margin: 0 0 6px;
@@ -915,6 +923,8 @@ textarea {
   font-size: 13px;
   cursor: pointer;
   background: var(--pt-paper);
+  /* T10：hover 轻反馈具名过渡（120~150ms，禁 all） */
+  transition: border-color 130ms ease;
 }
 .file-btn input[type='file'] {
   position: absolute;
@@ -923,8 +933,15 @@ textarea {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
 }
-.file-btn:hover {
-  border-color: var(--pt-primary);
+@media (hover: hover) {
+  .file-btn:hover {
+    border-color: var(--pt-primary);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .file-btn {
+    transition: none;
+  }
 }
 .hint {
   font-size: 12px;

@@ -14,6 +14,8 @@ import {
 import { applyThemeCssVars } from '../theme/applyCssVars'
 import { useEditorStore } from '../stores/editor'
 import { panelGroupOpen } from './panelGroups'
+import { confirmState, settleConfirm } from '../ui/confirm'
+import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import PropertyPanel from './PropertyPanel.vue'
 
 // 组件测试不碰真实 IndexedDB：草稿读写 mock 为空操作，避免异步失败覆盖 toast 断言
@@ -66,6 +68,8 @@ beforeEach(() => {
   panelGroupOpen.content = true
   panelGroupOpen.style = false
   panelGroupOpen.structure = false
+  // 确认框同为模块级单例（T06）：有未决请求时按「取消」收场，避免跨用例泄漏
+  if (confirmState.open) settleConfirm(false)
 })
 
 describe('PropertyPanel · 颜色自定义区（FR-C1）', () => {
@@ -427,6 +431,33 @@ describe('PropertyPanel · 分组折叠（PX-16）', () => {
     expect(contentBody.text()).toContain('区块')
     expect(contentBody.find('textarea').exists()).toBe(true)
     expect(structureBody.text()).toContain('删除区块')
+  })
+
+  // ── 灵活操作升级 T06：ConfirmDialog 单挂载收口（PropertyPanel 不再挂载，弹窗由 EditorPage 单点渲染）──
+  it('删区块确认路径：面板不再挂 ConfirmDialog；确认走模块级 confirmState 单例，取消不删、确认才删', async () => {
+    const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    editor.selectedBlockId = 'preset-g1'
+    await wrapper.vm.$nextTick()
+    const before = editor.current!.blocks.length
+    // 面板树内无 ConfirmDialog 实例（T06 收口后编辑台单点在 EditorPage）
+    expect(wrapper.findComponent(ConfirmDialog).exists()).toBe(false)
+
+    const btn = wrapper.findAll('button').find((b) => b.text().trim() === '删除区块')!
+    // 取消：confirmState 打开（模块级单例）→ settle(false) → 区块不动、选择保留
+    await btn.trigger('click')
+    expect(confirmState.open).toBe(true)
+    expect(confirmState.title).toBe('删除区块')
+    settleConfirm(false)
+    await flushPromises()
+    expect(editor.current!.blocks.length).toBe(before)
+    expect(editor.selectedBlockId).toBe('preset-g1')
+
+    // 确认：settle(true) → removeSelectedBlock 生效（blocks 少一处）
+    await btn.trigger('click')
+    expect(confirmState.open).toBe(true)
+    settleConfirm(true)
+    await flushPromises()
+    expect(editor.current!.blocks.length).toBe(before - 1)
   })
 })
 

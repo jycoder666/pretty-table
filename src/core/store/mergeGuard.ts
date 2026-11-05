@@ -1,5 +1,6 @@
 import { fail, ok, type Result } from '../errors'
 import type { LayoutSpec, MergeRange } from '../types'
+import { MERGE_MAX_CLUSTERS, MERGE_MAX_SPAN_COLS, MERGE_MAX_SPAN_ROWS } from '../theme/layoutScales'
 
 function rangeKey(r: MergeRange): string {
   return `${r.start[0]},${r.start[1]}-${r.end[0]},${r.end[1]}`
@@ -61,7 +62,7 @@ export function canMerge(layout: LayoutSpec, range: MergeRange): Result<void> {
     return fail('MERGE_NOT_ALLOWED', '此处由模板固定，不能合并')
   }
   // A-5：必须落在模板声明的某一允许矩形内。无声明 = 不可并（禁止无模板任意合并）。
-  // 行跨度 ≤4、列跨度 ≤5：L-1 推荐 4×4，T3 顶栏白名单允许横向 5 列，取并集上限。
+  // 跨度/数量两闸读 layoutScales 常量单点（2026-11-03 拍板 6/8/30）；白名单闸原样保留（方向 B 红线）。
   const allowed = layout.allowedMerges ?? []
   const inside = allowed.some((a) => containsRange(normalizeRange(a), r))
   if (!inside) {
@@ -69,11 +70,11 @@ export function canMerge(layout: LayoutSpec, range: MergeRange): Result<void> {
   }
   const spanR = r.end[0] - r.start[0] + 1
   const spanC = r.end[1] - r.start[1] + 1
-  if (spanR > 4 || spanC > 5) {
-    return fail('MERGE_NOT_ALLOWED', '一次最多合并 4 行或 5 列')
+  if (spanR > MERGE_MAX_SPAN_ROWS || spanC > MERGE_MAX_SPAN_COLS) {
+    return fail('MERGE_NOT_ALLOWED', `一次最多合并 ${MERGE_MAX_SPAN_ROWS} 行或 ${MERGE_MAX_SPAN_COLS} 列`)
   }
   const userClusters = (layout.merges ?? []).length
-  if (userClusters >= 20) {
+  if (userClusters >= MERGE_MAX_CLUSTERS) {
     return fail('MERGE_NOT_ALLOWED', '这张表的合并已经到上限')
   }
   return ok(undefined)

@@ -11,6 +11,16 @@
   --pt-tag: #e8eef6;
   --pt-tag-text: #2f5b9a;
   --pt-muted: #6b7280;
+  /* T09 z-index 阶梯（九档，壳层一律引变量、不写散值；同档并列时由 DOM 顺序决定） */
+  --pt-z-content: 2;
+  --pt-z-overlay: 3;
+  --pt-z-float: 30;
+  --pt-z-drawer: 40;
+  --pt-z-dialog: 50;
+  --pt-z-toolbar: 60;
+  --pt-z-tooltip: 70;
+  --pt-z-toast: 80;
+  --pt-z-debug: 90;
   font-family:
     'PingFang SC',
     'Microsoft YaHei',
@@ -30,6 +40,12 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+/* T09 全局键盘焦点环：色/宽单点在此，组件不得再散写（特例仅允许调 outline-offset） */
+:focus-visible {
+  outline: 2px solid var(--pt-primary);
+  outline-offset: 2px;
 }
 
 body {

@@ -26,6 +26,6 @@ const editor = useEditorStore()
   padding: 8px 10px;
   border-radius: 8px;
   opacity: 0.85;
-  z-index: 90;
+  z-index: var(--pt-z-debug);
 }
 </style>

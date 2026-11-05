@@ -78,6 +78,9 @@ export {
   LIMITS,
   STRUCTURE_MIN_ROWS,
   STRUCTURE_MIN_COLS,
+  MERGE_MAX_SPAN_ROWS,
+  MERGE_MAX_SPAN_COLS,
+  MERGE_MAX_CLUSTERS,
   COL_WIDTH_RANGE,
   ROW_HEIGHT_TIERS,
   FONT_SIZE_TIERS,
@@ -114,10 +117,11 @@ export {
   canAddRow,
   canAddCol,
   previewStructuralImpact,
+  previewStructuralRange,
   type StructuralImpact,
   type StructuralIntent,
 } from './store/structure'
-export { moveGate, doMoveRow, doMoveCol } from './store/moveOps'
+export { moveGate, moveBlockGate, doMoveRow, doMoveCol, doMoveBlockRow, doMoveBlockCol } from './store/moveOps'
 export { canMerge, canSplit, findMergeAt } from './store/mergeGuard'
 export { createStoreTxn, type StoreTxn, type StoreTxnResult } from './store/txn'
 export { parsePaste, type PasteCell, type PasteGrid } from './paste/parser'

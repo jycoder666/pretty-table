@@ -41,8 +41,24 @@ import { errorCopy, warnCopy } from '../editor/errorCopy'
 export type PageView = 'library' | 'editor'
 
 /** 结构选择三态（增量设计 A6）：整行/整列选择不表达为 MergeRange，独立共存互斥 */
-export type StructuralAxis = 'row' | 'col'
-export type StructuralSelection = { axis: StructuralAxis; index: number }
+export type StructuralAxis = 'row' | 'col'/**
+ * 结构选择（灵活操作升级 T02 扩展）：
+ * index = 锚点（既有语义不变）；rangeEnd 存在且 ≠ index 时为区间选择 [index, rangeEnd]。
+ * 写入时归一化（index = min / rangeEnd = max），消费方（高亮 / data-pt-structural / 菜单）
+ * 可直接按 [index, rangeEnd] 读；单选不写 rangeEnd，既有调用与断言零变化。
+ */
+export type StructuralSelection = { axis: StructuralAxis; index: number; rangeEnd?: number }
+
+/** T02：区间选择归一化——rangeEnd 有效时 index=min / rangeEnd=max；单选不携带 rangeEnd 字段 */
+function normalizeStructural(v: StructuralSelection | null): StructuralSelection | null {
+  if (!v) return null
+  if (v.rangeEnd === undefined || v.rangeEnd === v.index) return { axis: v.axis, index: v.index }
+  return {
+    axis: v.axis,
+    index: Math.min(v.index, v.rangeEnd),
+    rangeEnd: Math.max(v.index, v.rangeEnd),
+  }
+}
 
 /** GC-19：调试开关构建期常量；生产构建折叠为 false，faultGate 调用被摇树 */
 const PT_DEBUG = import.meta.env.VITE_PT_DEBUG === '1' || import.meta.env.DEV
@@ -94,7 +110,8 @@ export const useEditorStore = defineStore('editor', () => {
   const structuralSelection = computed<StructuralSelection | null>({
     get: () => _structuralSelection.value,
     set: (v) => {
-      _structuralSelection.value = v
+      // T02：区间写入归一化（index=min / rangeEnd=max）；单选保持既有形状（无 rangeEnd 字段）
+      _structuralSelection.value = normalizeStructural(v)
       if (v) {
         _selectionRange.value = null
         selectedSlotId.value = null
@@ -561,6 +578,25 @@ export const useEditorStore = defineStore('editor', () => {
     return true
   }
 
+  /**
+   * 整块行/列换位（灵活操作升级 T02）：单条 moveRowBlock/moveColBlock 意图 = 一次置换一张快照
+   * （核内 moveBlockGate 全量预检，禁止拼批）。成功后结构选择跟块走（[to, to+count−1]），
+   * Toast 复用既有「已上移/已下移」口径；失败 apply 内已给核内白话 toast。
+   */
+  function moveRowBlock(from: number, count: number, to: number): boolean {
+    if (!apply({ kind: 'moveRowBlock', from, count, to })) return false
+    _structuralSelection.value = { axis: 'row', index: to, rangeEnd: to + count - 1 }
+    showToast(to < from ? '已上移' : '已下移')
+    return true
+  }
+
+  function moveColBlock(from: number, count: number, to: number): boolean {
+    if (!apply({ kind: 'moveColBlock', from, count, to })) return false
+    _structuralSelection.value = { axis: 'col', index: to, rangeEnd: to + count - 1 }
+    showToast(to < from ? '已左移' : '已右移')
+    return true
+  }
+
   // ── R-3 图片写入（交互升级 T04）：上传 / 粘贴同一入口 ──
 
   /** File → data URL（壳层唯一读取点；校验全部在核内三连闸） */
@@ -708,6 +744,8 @@ export const useEditorStore = defineStore('editor', () => {
     moveBlock,
     moveRow,
     moveCol,
+    moveRowBlock,
+    moveColBlock,
     updateBlockText,
     uploadImage,
     setImageDataUrl,

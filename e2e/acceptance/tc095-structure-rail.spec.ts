@@ -259,43 +259,51 @@ test.describe('UX-S06 · 移动带合并区的行/列', () => {
   test('合法：合并区随行走、选择跟随、一步撤销；打散合并区的移动禁用并说明', async ({
     page,
   }) => {
-    await openPreset(page, '多列对比表')
-    const inst = presetOf('compare-alpha-v1')
+    // ①② 素材约束（A-5 白名单红线不动）：compare 内容行只有纵向单列白名单矩形，
+    // 「单行内横向合并区随行走」在白名单内造不出来 → 用空白表（白名单 = 全表）造样本
+    await openPreset(page, '新建空白表')
+    const inst = presetOf('blank-v1')
     const clickCell = (slotId: string) =>
       page.locator('.preview-host canvas').first().click({ position: cellCenter(inst, slotId) })
 
-    // ① 合法移动：R3（响应时效，逻辑行 3）造单行合并区后下移 → 内容与选择一同移动
-    await dragSelect(page, inst, 'row.3.val.a', 'row.3.val.b')
+    // ① 合法移动：R2（逻辑行 1）造单行合并区后下移 → 内容与选择一同移动
+    await dragSelect(page, inst, 'u6', 'u7')
     await page.getByTestId('selection-merge').click()
-    await expect(toastMsg(page)).toHaveText('已合并（清除了 1 格内容）')
-    await clickRailItem(page, 'row', 3)
-    await openRailMenu(page, 'row', 3)
+    await expect(toastMsg(page)).toHaveText('已合并')
+    await clickRailItem(page, 'row', 1)
+    await openRailMenu(page, 'row', 1)
     await page.getByTestId('menu-row-next').click()
     await expect(toastMsg(page)).toHaveText('已下移')
-    // 选区跟随被移动的那一行（3 → 4）
-    await expectStructural(page, 'row:4')
-    // 合并区跟行走：R4 原来的位置上现在选到的是 R3 的合并格
-    await clickCell('row.4.val.a')
-    await expect(page.locator('.preview-host')).toHaveAttribute('data-pt-selected-slot', 'row.3.val.a')
+    // 选区跟随被移动的那一行（1 → 2）
+    await expectStructural(page, 'row:2')
+    // 合并区跟行走：R3 原来的位置（u10 原坐标）现在选到的是 R2 的合并格
+    await clickCell('u10')
+    await expect(page.locator('.preview-host')).toHaveAttribute('data-pt-selected-slot', 'u6')
     // 一步撤销：撤移动、撤合并（恢复原几何供 ② 使用）
     await page.keyboard.press('Control+z')
     await page.keyboard.press('Control+z')
-    // 撤销会恢复此前选区（合并前的 2 格），其浮动工具条恰好压在 row.3.val.a 上，
-    // 会吞掉 ② 框选的 mouse.down —— 先点一个远端格子把选区挪开
-    await clickCell('row.8.val.c')
+    // 撤销会恢复此前选区（合并前 2 格高亮），其浮动工具条会吞掉 ② 框选的 mouse.down
+    // ——先点一个远端格子把选区挪开
+    await clickCell('u13')
 
-    // ② 打散合并区的移动禁用：跨 R3–R4 的纵向合并区，R4 下移会拆散 → 置灰并说明
-    await dragSelect(page, inst, 'row.3.val.a', 'row.4.val.a')
+    // ② 打散合并区的移动禁用：跨 R2–R3 的纵向合并区（u6–u10），移下缘行 R3 会把它拆散 → 置灰
+    // （并排两端换位会被 remap 视为整体存活，移动下缘行出块才是真打散，moveGate 单点口径）
+    await dragSelect(page, inst, 'u6', 'u10')
     await page.getByTestId('selection-merge').click()
-    await expect(toastMsg(page)).toHaveText('已合并（清除了 1 格内容）')
-    await clickRailItem(page, 'row', 4)
-    await openRailMenu(page, 'row', 4)
+    await expect(toastMsg(page)).toHaveText('已合并')
+    await clickRailItem(page, 'row', 2)
+    await openRailMenu(page, 'row', 2)
     const rowNext = page.getByTestId('menu-row-next')
     await expect(rowNext).toBeDisabled()
     await expect(rowNext).toHaveAttribute('aria-label', /合并区交错/)
     await page.keyboard.press('Escape')
+  })
 
-    // ③ 列轴：表头档位合并区（R0:C1–C2），C2 右移拆散 → 禁用；C1 左移进标签列 → 禁用
+  test('列轴：标签列与表头档位合并区上的移动禁用并说明', async ({ page }) => {
+    // 独立 test（单次 openPreset）：二次进入模板在 webkit 上有卡片 detach 竞态（门禁实查），
+    // 每个 test 只进一次模板
+    await openPreset(page, '多列对比表')
+    // C1 左移进标签列 → 禁用；表头档位合并区（R0:C1–C2）C2 右移拆散 → 禁用
     await clickRailItem(page, 'col', 1)
     await openRailMenu(page, 'col', 1)
     await expect(page.getByTestId('menu-col-prev')).toBeDisabled()

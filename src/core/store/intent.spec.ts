@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyEditIntent } from './intent'
-import { createEditorState, dispatch, undo } from './editorState'
+import { canUndo, createEditorState, dispatch, undo } from './editorState'
 import { COMPARE_ALPHA_V1 } from '../templates'
 import { cloneInstance } from '../schema/validate'
 import type { TemplateInstance } from '../types'
@@ -243,5 +243,90 @@ describe('addBlock · 二期区块启用（R-4）', () => {
     })
     expect(r.ok).toBe(false)
     expect(!r.ok ? r.error.code : '').toBe('BLOCK_TYPE_REJECT')
+  })
+})
+
+// ── 灵活操作升级 T01⑤：moveRowBlock / moveColBlock 意图通道（防 default 分支静默失效）──
+
+/** 5 行 4 列单层表头：意图通道精确断言用最小夹具 */
+function blockFixture(): TemplateInstance {
+  const grid: string[][] = []
+  const slots: Record<string, string> = {}
+  for (let r = 0; r < 5; r++) {
+    const row: string[] = []
+    for (let c = 0; c < 4; c++) {
+      const id = `x${r}${c}`
+      row.push(id)
+      slots[id] = ''
+    }
+    grid.push(row)
+  }
+  return {
+    schemaVersion: '1.2',
+    templateId: 'spec-intent-block',
+    themeId: 'T-A',
+    slots,
+    blocks: [],
+    layout: {
+      rowCount: 5,
+      colCount: 4,
+      headerLevels: 1,
+      blockSlots: [],
+      allowedMerges: [{ start: [0, 0], end: [4, 3] }],
+      slotGrid: grid,
+    },
+  }
+}
+
+describe('intent · moveRowBlock / moveColBlock（灵活操作 T01⑤ 意图通道）', () => {
+  it('applyEditIntent 执行 moveRowBlock 成功且状态联动正确（漏列 case 会走 default 静默失效）', () => {
+    const inst = blockFixture()
+    const r = applyEditIntent(inst, { kind: 'moveRowBlock', from: 1, count: 2, to: 3 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.slotGrid).toEqual([
+      ['x00', 'x01', 'x02', 'x03'],
+      ['x30', 'x31', 'x32', 'x33'],
+      ['x40', 'x41', 'x42', 'x43'],
+      ['x10', 'x11', 'x12', 'x13'],
+      ['x20', 'x21', 'x22', 'x23'],
+    ])
+    expect(r.value.layout.rowCount).toBe(5)
+  })
+
+  it('非法块移动 → STRUCT_MOVE_BLOCKED 白话失败（不是 default「未知编辑意图」）', () => {
+    const r = applyEditIntent(blockFixture(), { kind: 'moveRowBlock', from: 0, count: 2, to: 2 })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.error.code).toBe('STRUCT_MOVE_BLOCKED')
+    expect(r.error.message).toContain('表头')
+  })
+
+  it('dispatch 一条 moveRowBlock = 一张快照：undo 一步复原（一动作一历史）', () => {
+    const s0 = createEditorState(cloneInstance(blockFixture()))
+    const r = dispatch(s0, { kind: 'moveRowBlock', from: 1, count: 2, to: 3 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.undoStack).toHaveLength(1)
+    const u = undo(r.value)
+    expect(u.current.layout.slotGrid).toEqual(s0.current.layout.slotGrid)
+    expect(canUndo(u)).toBe(false)
+  })
+
+  it('moveColBlock 同构执行 + 一步撤销', () => {
+    const s0 = createEditorState(cloneInstance(blockFixture()))
+    const r = dispatch(s0, { kind: 'moveColBlock', from: 1, count: 2, to: 2 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.current.layout.slotGrid![0]).toEqual(['x00', 'x03', 'x01', 'x02'])
+    const u = undo(r.value)
+    expect(u.current.layout.slotGrid).toEqual(s0.current.layout.slotGrid)
+  })
+
+  it('applyStructuralIntent 直连通道（structure switch 接线）同样可执行', () => {
+    const r = applyEditIntent(blockFixture(), { kind: 'moveRowBlock', from: 2, count: 1, to: 0 })
+    expect(r.ok).toBe(false) // to=0 落表头区 → 拦截，证明走到了结构核而非 default
+    const okR = applyEditIntent(blockFixture(), { kind: 'moveRowBlock', from: 2, count: 1, to: 3 })
+    expect(okR.ok).toBe(true)
   })
 })

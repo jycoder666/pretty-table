@@ -4,7 +4,7 @@ import { cloneInstance } from '../schema/validate'
 import { LIMITS, STRUCTURE_MIN_COLS, STRUCTURE_MIN_ROWS, visibleRowCount } from '../theme/layoutScales'
 import { MARK_LABEL } from '../format/formatTokens'
 import { remapRangesInsert, remapRangesRemove } from './remap'
-import { doMoveCol, doMoveRow } from './moveOps'
+import { doMoveBlockCol, doMoveBlockRow, doMoveCol, doMoveRow } from './moveOps'
 
 /**
  * 结构编辑核（自定义格式设计增量 §1.4，FR-C3）。
@@ -24,6 +24,10 @@ export type StructuralIntent =
   | { kind: 'moveRow'; from: number; to: number }
   /** WP4：整列换位 */
   | { kind: 'moveCol'; from: number; to: number }
+  /** 灵活操作升级 T01：整块行换位（块 [from, from+count−1] 一次搬到 to，不拼批） */
+  | { kind: 'moveRowBlock'; from: number; count: number; to: number }
+  /** 灵活操作升级 T01：整块列换位（与 moveRowBlock 同构） */
+  | { kind: 'moveColBlock'; from: number; count: number; to: number }
 
 type SlotRecord = TemplateInstance['slots']
 
@@ -406,6 +410,10 @@ export function applyStructuralIntent(
       return doMoveRow(inst, intent.from, intent.to, warnings)
     case 'moveCol':
       return doMoveCol(inst, intent.from, intent.to, warnings)
+    case 'moveRowBlock':
+      return doMoveBlockRow(inst, intent.from, intent.count, intent.to, warnings)
+    case 'moveColBlock':
+      return doMoveBlockCol(inst, intent.from, intent.count, intent.to, warnings)
   }
 }
 
@@ -530,6 +538,97 @@ export function previewStructuralImpact(
     for (const b of inst.blocks) {
       const def = inst.layout.blockSlots.find((s) => s.id === b.slotId)
       if (anchorOf(def?.rowHint) === index) affectedBlockCount++
+    }
+  }
+
+  return { filledCellCount, affectedMergeCount, affectedBlockCount }
+}
+
+/**
+ * 区间删除影响预检（灵活操作升级 A3：确认框摘要与菜单置灰的唯一区间口径，与执行守卫同源）。
+ * 聚合口径（与单 index 版 previewStructuralImpact 的差别）：
+ * - filledCellCount = 区间内各行/列非空槽位「求和」；
+ * - affectedMergeCount = merges ∪ structuralMerges 中与区间「相交的区间数」——跨多行的同一
+ *   合并区只计一次，不是逐行求和；allowedMerges 是兼容字段不计（与单点版同口径）；
+ * - affectedBlockCount = 仅行轴，锚点（after-N / left-N）落在区间内的已占用区块数
+ *   （与降序删除执行语义逐点核对过：区间外锚点平移保留、区间内锚点连带删除）。
+ * blockedReason 判定顺序与执行守卫一致：越界 → 区间含表头行（仅行轴）→ 最低结构。
+ * from > to 时内部归一化；不改单 index 版（既有调用与用例不动）。
+ */
+export function previewStructuralRange(
+  inst: TemplateInstance,
+  axis: 'row' | 'col',
+  from: number,
+  to: number,
+): StructuralImpact {
+  const blocked = (reason: string): StructuralImpact => ({
+    filledCellCount: 0,
+    affectedMergeCount: 0,
+    affectedBlockCount: 0,
+    blockedReason: reason,
+  })
+
+  const lo = Math.min(from, to)
+  const hi = Math.max(from, to)
+  const length = hi - lo + 1
+
+  if (axis === 'row') {
+    const rowCount = inst.layout.slotGrid?.length ?? inst.layout.rowCount
+    if (!Number.isInteger(from) || !Number.isInteger(to) || lo < 0 || hi >= rowCount) {
+      return blocked('所选的行不存在')
+    }
+    const headerLevels = inst.layout.headerLevels ?? 1
+    if (lo < headerLevels) {
+      return blocked('所选范围含表头行，不能删除')
+    }
+    if (rowCount - length < STRUCTURE_MIN_ROWS) {
+      return blocked('至少保留 1 行表头和 1 行内容，不能再删了')
+    }
+  } else {
+    if (!Number.isInteger(from) || !Number.isInteger(to) || lo < 0 || hi >= inst.layout.colCount) {
+      return blocked('所选的列不存在')
+    }
+    if (inst.layout.colCount - length < STRUCTURE_MIN_COLS) {
+      return blocked('至少保留 1 列，不能再删了')
+    }
+  }
+
+  // 非空槽位计数：区间内各行/列求和
+  let filledCellCount = 0
+  const grid = inst.layout.slotGrid ?? []
+  if (axis === 'row') {
+    for (let r = lo; r <= hi; r++) {
+      for (const id of grid[r] ?? []) {
+        if (id && !isSlotEmpty(inst.slots[id])) filledCellCount++
+      }
+    }
+  } else {
+    for (const row of grid) {
+      for (let c = lo; c <= hi; c++) {
+        const id = row[c]
+        if (id && !isSlotEmpty(inst.slots[id])) filledCellCount++
+      }
+    }
+  }
+
+  // 相交合并区计数：跨区间的同一合并区只计一次
+  let affectedMergeCount = 0
+  const sets = [inst.layout.merges, inst.layout.structuralMerges]
+  for (const set of sets) {
+    for (const r of set ?? []) {
+      const s = axis === 'row' ? r.start[0] : r.start[1]
+      const e = axis === 'row' ? r.end[0] : r.end[1]
+      if (e >= lo && s <= hi) affectedMergeCount++
+    }
+  }
+
+  // 连带删除的区块计数（仅行轴；锚点行号落在区间内的已占用区块）
+  let affectedBlockCount = 0
+  if (axis === 'row') {
+    for (const b of inst.blocks) {
+      const def = inst.layout.blockSlots.find((s) => s.id === b.slotId)
+      const a = anchorOf(def?.rowHint)
+      if (a !== null && a >= lo && a <= hi) affectedBlockCount++
     }
   }
 

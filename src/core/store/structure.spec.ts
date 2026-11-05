@@ -6,9 +6,11 @@ import {
   hasContentInCol,
   hasContentInRow,
   previewStructuralImpact,
+  previewStructuralRange,
   type StructuralIntent,
 } from './structure'
-import { moveGate, doMoveCol, doMoveRow } from './moveOps'
+import { moveGate, moveBlockGate, doMoveCol, doMoveRow, doMoveBlockRow, doMoveBlockCol } from './moveOps'
+import { permuteBlockIndex, permuteIndex, survivesBlockPermute } from './remap'
 import { applyEditIntent } from './intent'
 import { LIMITS, STRUCTURE_MIN_COLS, STRUCTURE_MIN_ROWS } from '../theme/layoutScales'
 import { BLANK_V1, COMPARE_ALPHA_V1, cloneInstance } from '../index'
@@ -937,5 +939,331 @@ describe('structure · moveGate（A3 换位预检，与执行口径零变化）'
 
   it('列轴：合法换位 → ok(true)', () => {
     expect(moveGate(movable3x3(), 1, 2, 1).ok).toBe(true)
+  })
+})
+
+// ── 灵活操作升级 T01①：区间影响预检 previewStructuralRange ──
+
+describe('structure · previewStructuralRange（灵活操作 T01① 区间聚合口径）', () => {
+  it('filled 求和：区间内各行/列非空槽位相加', () => {
+    const inst = block6x4()
+    inst.slots['x10'] = 'A'
+    inst.slots['x20'] = 'B'
+    expect(previewStructuralRange(inst, 'row', 1, 2).filledCellCount).toBe(2)
+    expect(previewStructuralRange(inst, 'row', 1, 1).filledCellCount).toBe(1)
+    // 列轴（3 列删 2 列合法）：col0 = a('A0') 1 格 + col1 = e('E') 1 格
+    expect(previewStructuralRange(custom5x4(), 'col', 0, 1).filledCellCount).toBe(2)
+  })
+
+  it('跨区间合并区只计一次：同一合并区跨多行只算一个（不是逐行求和）', () => {
+    const inst = block6x4() // 6 行，区间 [1,3] 可删（6−3=3 ≥ 最低结构）
+    inst.layout.merges = [{ start: [1, 0], end: [3, 2] }] // 恰好跨满区间
+    const impact = previewStructuralRange(inst, 'row', 1, 3)
+    expect(impact.blockedReason).toBeUndefined()
+    expect(impact.affectedMergeCount).toBe(1)
+    // merges ∪ structuralMerges 两个不同区间各计一次
+    const two = block6x4()
+    two.layout.merges = [{ start: [1, 0], end: [3, 0] }]
+    two.layout.structuralMerges = [{ start: [1, 1], end: [2, 1] }]
+    expect(previewStructuralRange(two, 'row', 1, 3).affectedMergeCount).toBe(2)
+  })
+
+  it('不相交的合并区不计；allowedMerges 是兼容字段不计（与单点版同口径）', () => {
+    const inst = block6x4()
+    inst.layout.merges = [{ start: [0, 0], end: [0, 1] }] // 表头带状区间，与 [1,3] 不相交
+    const impact = previewStructuralRange(inst, 'row', 1, 3)
+    expect(impact.blockedReason).toBeUndefined()
+    expect(impact.affectedMergeCount).toBe(0)
+    const compat = block6x4()
+    compat.layout.allowedMerges = [{ start: [1, 0], end: [3, 2] }]
+    expect(previewStructuralRange(compat, 'row', 1, 3).affectedMergeCount).toBe(0)
+  })
+
+  it('行轴区块锚点计数：锚点落在区间内的已占用区块（left-N / after-N 都算）；列轴恒 0', () => {
+    const inst = withLeftTag() // 3 行表只能单行删：tag-1@left-1（行1）、foot-1@after-2（行2）
+    expect(previewStructuralRange(inst, 'row', 1, 1).affectedBlockCount).toBe(1)
+    expect(previewStructuralRange(inst, 'row', 2, 2).affectedBlockCount).toBe(1)
+    // 多锚点同落一个区间：只计区间内的，区间外锚点不计
+    const wide = block6x4()
+    wide.layout.blockSlots = [
+      { id: 'left-a', accept: ['leftTag'], region: 'left-tag', rowHint: 'left-1' },
+      { id: 'gap-b', accept: ['groupHeader'], rowHint: 'after-2' },
+      { id: 'gap-c', accept: ['groupHeader'], rowHint: 'after-4' },
+    ]
+    wide.blocks = [
+      { id: 'tag-a', type: 'leftTag', slotId: 'left-a', props: {} },
+      { id: 'bar-b', type: 'groupHeader', slotId: 'gap-b', props: {} },
+    ]
+    expect(previewStructuralRange(wide, 'row', 1, 3).affectedBlockCount).toBe(2)
+    expect(previewStructuralRange(wide, 'row', 4, 4).affectedBlockCount).toBe(0)
+    expect(previewStructuralRange(wide, 'col', 0, 1).affectedBlockCount).toBe(0)
+  })
+
+  it('blockedReason 三级顺序：越界 → 含表头行 → 最低结构（与执行守卫同序）', () => {
+    const inst = custom5x4() // 3 行 3 列，headerLevels 1
+    // 1) 越界最优先
+    expect(previewStructuralRange(inst, 'row', 1, 9).blockedReason).toBe('所选的行不存在')
+    expect(previewStructuralRange(inst, 'col', 1, 9).blockedReason).toBe('所选的列不存在')
+    // 2) 区间含表头行
+    expect(previewStructuralRange(inst, 'row', 0, 2).blockedReason).toBe('所选范围含表头行，不能删除')
+    // 3) 最低结构：3 行删 2 → 剩 1 < 2
+    expect(previewStructuralRange(inst, 'row', 1, 2).blockedReason).toBe('至少保留 1 行表头和 1 行内容，不能再删了')
+    // 表头优先于最低结构：2 行表删 [0,1] 两级同时命中 → 报表头
+    const r1 = run(inst, { kind: 'removeRow', row: 2 })
+    const two = r1.ok ? r1.value : inst
+    expect(previewStructuralRange(two, 'row', 0, 1).blockedReason).toBe('所选范围含表头行，不能删除')
+    // 列轴无表头检查：3 列删 3 列 → 最低结构
+    expect(previewStructuralRange(inst, 'col', 0, 2).blockedReason).toBe('至少保留 1 列，不能再删了')
+  })
+
+  it('from > to 内部归一化；blocked 时三计数为 0', () => {
+    const inst = blank() // 5 行全空槽
+    inst.slots['u9'] = 'X' // index 2 行首格有内容
+    expect(previewStructuralRange(inst, 'row', 3, 2)).toEqual(previewStructuralRange(inst, 'row', 2, 3))
+    expect(previewStructuralRange(inst, 'row', 3, 2).filledCellCount).toBe(1)
+    expect(previewStructuralRange(inst, 'row', 0, 9)).toEqual({
+      filledCellCount: 0,
+      affectedMergeCount: 0,
+      affectedBlockCount: 0,
+      blockedReason: '所选的行不存在',
+    })
+  })
+
+  it('与执行守卫同源：预检允许的区间降序删必成功；预检拦截的执行必失败', () => {
+    const inst = blank() // 5 行 1 表头
+    expect(previewStructuralRange(inst, 'row', 2, 3).blockedReason).toBeUndefined()
+    let cur = inst
+    for (let r = 3; r >= 2; r--) {
+      const out = run(cur, { kind: 'removeRow', row: r })
+      expect(out.ok).toBe(true)
+      if (out.ok) cur = out.value
+    }
+    expect(cur.layout.rowCount).toBe(3)
+    expect(previewStructuralRange(inst, 'row', 0, 1).blockedReason).toBe('所选范围含表头行，不能删除')
+    expect(run(inst, { kind: 'removeRow', row: 0 }).ok).toBe(false)
+  })
+})
+
+// ── 灵活操作升级 T01②：整块换位（remap 原语 + gate + 执行全字段联动）──
+
+/** 6 行 4 列单层表头（块移动夹具）：整块置换全字段精确断言 */
+function block6x4(): TemplateInstance {
+  const grid: string[][] = []
+  const slots: Record<string, string> = {}
+  for (let r = 0; r < 6; r++) {
+    const row: string[] = []
+    for (let c = 0; c < 4; c++) {
+      const id = `x${r}${c}`
+      row.push(id)
+      slots[id] = r === 0 ? `H${c}` : ''
+    }
+    grid.push(row)
+  }
+  return {
+    schemaVersion: '1.2',
+    templateId: 'spec-block-6x4',
+    themeId: 'T-A',
+    slots,
+    blocks: [],
+    layout: {
+      rowCount: 6,
+      colCount: 4,
+      headerLevels: 1,
+      blockSlots: [],
+      allowedMerges: [{ start: [0, 0], end: [5, 3] }],
+      slotGrid: grid,
+    },
+  } as TemplateInstance
+}
+
+describe('remap · 区块置换原语（灵活操作 T01②：与单元素置换同构）', () => {
+  it('permuteBlockIndex：count=1 时与 permuteIndex 逐点一致（上移/下移全覆盖）', () => {
+    for (const [from, to] of [
+      [0, 4],
+      [4, 0],
+      [1, 4],
+      [4, 1],
+      [2, 3],
+      [2, 2],
+    ] as const) {
+      for (let i = 0; i < 6; i++) {
+        expect(permuteBlockIndex(i, from, 1, to)).toBe(permuteIndex(i, from, to))
+      }
+    }
+  })
+
+  it('permuteBlockIndex：整块搬移 + gap 让位（与执行 splice(from,count)/splice(to,0) 同式）', () => {
+    // 6 个位置，块 [1,3) 搬到 4 → 结果序 [0, 3, 4, 5, 1, 2]
+    expect([0, 1, 2, 3, 4, 5].map((i) => permuteBlockIndex(i, 1, 2, 4))).toEqual([0, 4, 5, 1, 2, 3])
+  })
+
+  it('permuteBlockIndex：from === to 恒等映射', () => {
+    expect([0, 1, 2, 3, 4, 5].map((i) => permuteBlockIndex(i, 2, 3, 2))).toEqual([0, 1, 2, 3, 4, 5])
+  })
+
+  it('survivesBlockPermute：块内区间安全；跨块边界影像断开', () => {
+    expect(survivesBlockPermute(1, 2, 1, 2, 4)).toBe(true) // 恰为块本身
+    expect(survivesBlockPermute(3, 4, 1, 2, 4)).toBe(true) // gap 段整体让位仍连续
+    expect(survivesBlockPermute(2, 3, 1, 2, 4)).toBe(false) // 跨块下边界
+    expect(survivesBlockPermute(0, 1, 1, 2, 4)).toBe(false) // 跨块上边界
+  })
+})
+
+describe('structure · moveRowBlock（灵活操作 T01② 整块行换位）', () => {
+  it('块内合并区随块走：一次置换 slotGrid / 三集合 / readonlyCells 全字段联动', () => {
+    const inst = block6x4()
+    inst.layout.merges = [{ start: [1, 1], end: [2, 2] }]
+    inst.layout.structuralMerges = [{ start: [0, 0], end: [0, 3] }]
+    inst.layout.readonlyCells = [
+      [1, 0],
+      [2, 3],
+    ]
+    const r = run(inst, { kind: 'moveRowBlock', from: 1, count: 2, to: 4 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.slotGrid).toEqual([
+      ['x00', 'x01', 'x02', 'x03'],
+      ['x30', 'x31', 'x32', 'x33'],
+      ['x40', 'x41', 'x42', 'x43'],
+      ['x50', 'x51', 'x52', 'x53'],
+      ['x10', 'x11', 'x12', 'x13'],
+      ['x20', 'x21', 'x22', 'x23'],
+    ])
+    expect(r.value.layout.merges).toEqual([{ start: [4, 1], end: [5, 2] }])
+    expect(r.value.layout.structuralMerges).toEqual([{ start: [0, 0], end: [0, 3] }])
+    expect(r.value.layout.allowedMerges).toEqual([{ start: [0, 0], end: [5, 3] }])
+    expect(r.value.layout.readonlyCells).toEqual([
+      [4, 0],
+      [5, 3],
+    ])
+    expect(r.value.slots.x10).toBe('')
+  })
+
+  it('跨块边界的合并区拦截（STRUCT_MOVE_BLOCKED，区间表述文案）', () => {
+    const inst = block6x4()
+    inst.layout.merges = [{ start: [2, 1], end: [3, 1] }] // 跨块 [1,2] 下边界
+    const r = run(inst, { kind: 'moveRowBlock', from: 1, count: 2, to: 4 })
+    expect(!r.ok ? r.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!r.ok ? r.error.message : '').toContain('这一段和合并区交错')
+  })
+
+  it('跨插入点（gap 段）的合并区拦截', () => {
+    const inst = block6x4()
+    // 块 [3,4] 上移到 1：合并区 [2,0]-[3,0] 横跨块上边界与插入点
+    inst.layout.merges = [{ start: [2, 0], end: [3, 0] }]
+    const r = run(inst, { kind: 'moveRowBlock', from: 3, count: 2, to: 1 })
+    expect(!r.ok ? r.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+  })
+
+  it('表头行拦截：from 或 to 落在表头区 → 表头白话文案', () => {
+    const a = run(block6x4(), { kind: 'moveRowBlock', from: 0, count: 1, to: 2 })
+    expect(!a.ok ? a.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!a.ok ? a.error.message : '').toContain('表头')
+    const b = run(block6x4(), { kind: 'moveRowBlock', from: 2, count: 1, to: 0 })
+    expect(!b.ok ? b.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!b.ok ? b.error.message : '').toContain('表头')
+  })
+
+  it('越界：块出界 → TEMPLATE_INVALID「这一段行不存在」', () => {
+    expect(run(block6x4(), { kind: 'moveRowBlock', from: 4, count: 3, to: 0 }).ok).toBe(false)
+    const r = run(block6x4(), { kind: 'moveRowBlock', from: 1, count: 2, to: 5 })
+    expect(!r.ok ? r.error.code : '').toBe('TEMPLATE_INVALID')
+    expect(!r.ok ? r.error.message : '').toBe('这一段行不存在')
+  })
+
+  it('from === to → 原样返回（空操作合法）', () => {
+    const inst = block6x4()
+    const r = run(inst, { kind: 'moveRowBlock', from: 1, count: 2, to: 1 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.slotGrid).toEqual(inst.layout.slotGrid)
+  })
+
+  it('区块锚点 rowHint 是位置语义：块移动不动锚点（与单行换位口径一致）', () => {
+    const inst = block6x4()
+    inst.layout.blockSlots = [{ id: 'gap-1', accept: ['sectionBar'], rowHint: 'after-2' }]
+    inst.blocks = [{ id: 'bar-1', type: 'sectionBar', slotId: 'gap-1', props: {} }]
+    const r = run(inst, { kind: 'moveRowBlock', from: 3, count: 2, to: 1 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value.layout.blockSlots[0]?.rowHint).toBe('after-2')
+    expect(r.value.blocks[0]?.slotId).toBe('gap-1')
+  })
+
+  it('gate 与执行同源：moveBlockGate 允许的 doMoveBlockRow 必成功', () => {
+    const inst = block6x4()
+    const g = moveBlockGate(inst, 0, 1, 2, 4)
+    const d = doMoveBlockRow(inst, 1, 2, 4, [])
+    expect(g.ok).toBe(true)
+    expect(d.ok).toBe(true)
+    // gate 拦截的执行同样拦截（表头）
+    const gb = moveBlockGate(inst, 0, 0, 1, 2)
+    const db = doMoveBlockRow(inst, 0, 1, 2, [])
+    expect(!gb.ok ? gb.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    expect(!db.ok && !gb.ok ? db.error.message === gb.error.message : false).toBe(true)
+  })
+})
+
+describe('structure · moveColBlock（灵活操作 T01② 整块列换位：列宽/推荐列跟随）', () => {
+  it('块内合并区随块走 + slotGrid/三集合/readonlyCells/列宽/推荐列全字段联动', () => {
+    const inst = block6x4()
+    inst.layout.frozenColCount = 0
+    inst.layout.merges = [{ start: [1, 1], end: [2, 2] }] // 恰在块 [1,3) 列内
+    inst.layout.readonlyCells = [
+      [1, 1],
+      [3, 2],
+    ]
+    inst.layout.recommendableCols = [1, 2]
+    inst.highlight = { recommendCol: 2 }
+    inst.layout.style = { colWidths: [100, 200, 300, 400] }
+    const r = doMoveBlockCol(inst, 1, 2, 2, [])
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    // splice(1,2) 后 [c0,c3]，插回 2 → [c0,c3,c1,c2]
+    expect(r.value.layout.slotGrid![0]).toEqual(['x00', 'x03', 'x01', 'x02'])
+    expect(r.value.layout.merges).toEqual([{ start: [1, 2], end: [2, 3] }])
+    expect(r.value.layout.readonlyCells).toEqual([
+      [1, 2],
+      [3, 3],
+    ])
+    expect(r.value.layout.style?.colWidths).toEqual([100, 400, 200, 300])
+    expect(r.value.layout.recommendableCols).toEqual([2, 3])
+    expect(r.value.highlight?.recommendCol).toBe(3)
+  })
+
+  it('标签列拦截：from 或 to = 0 → 标签列白话文案', () => {
+    const inst = block6x4()
+    const a = run(inst, { kind: 'moveColBlock', from: 0, count: 1, to: 2 })
+    expect(!a.ok ? a.error.code : '').toBe('STRUCT_MOVE_BLOCKED')
+    const b = run(inst, { kind: 'moveColBlock', from: 1, count: 2, to: 0 })
+    expect(!b.ok ? b.error.message : '').toContain('标签列')
+  })
+
+  it('冻结边界拦截：跨冻结边界的带、两侧互串都拒；同侧整体挪动放行', () => {
+    const inst = block6x4()
+    inst.layout.frozenColCount = 2
+    // 源带 [1,3) 横跨冻结边界（第 0、1 列冻结）
+    expect(run(inst, { kind: 'moveColBlock', from: 1, count: 2, to: 2 }).ok).toBe(false)
+    // 源在冻结区、目标在普通区 → 互串
+    const cross = run(inst, { kind: 'moveColBlock', from: 1, count: 1, to: 3 })
+    expect(!cross.ok ? cross.error.message : '').toContain('冻结列')
+    // 整块普通列区内部挪动放行（frozen=0，块 [1,3) → 2）
+    const normal = block6x4()
+    expect(run(normal, { kind: 'moveColBlock', from: 1, count: 2, to: 2 }).ok).toBe(true)
+  })
+
+  it('越界 → TEMPLATE_INVALID「这一段列不存在」', () => {
+    const r = run(block6x4(), { kind: 'moveColBlock', from: 2, count: 3, to: 1 })
+    expect(!r.ok ? r.error.code : '').toBe('TEMPLATE_INVALID')
+    expect(!r.ok ? r.error.message : '').toBe('这一段列不存在')
+  })
+
+  it('列轴合并区存活：块内合法、跨块左边界拦截', () => {
+    const okInst = block6x4()
+    okInst.layout.merges = [{ start: [2, 1], end: [2, 2] }]
+    expect(run(okInst, { kind: 'moveColBlock', from: 1, count: 2, to: 2 }).ok).toBe(true)
+    const badInst = block6x4()
+    badInst.layout.merges = [{ start: [2, 0], end: [2, 1] }] // 跨块左边界（col 0 不动、col 1 在块内）
+    expect(run(badInst, { kind: 'moveColBlock', from: 1, count: 2, to: 2 }).ok).toBe(false)
   })
 })

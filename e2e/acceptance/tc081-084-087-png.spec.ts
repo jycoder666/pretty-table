@@ -100,14 +100,20 @@ test.describe('TC-PT-084 · PNG 生成中：选项禁用、失败恢复（Q-014 
     await openExportDrawer(page)
     await page.locator('.seg-btn', { hasText: '3×' }).click()
     await page.getByRole('button', { name: '导出 PNG' }).click()
-    // 生成中：选项禁用（偏差：复制 HTML 亦被禁用，规格要求生成中可用；toast「正在生成图片…」短暂即逝）
+    // 生成中：选项禁用（偏差：复制 HTML 亦被禁用，规格要求生成中可用；toast「正在生成图片…」短暂即逝）。
+    // 两断言同源（editor.exporting）必须同拍捕获：窗口稍纵即逝，先 poll 到透明底再断复制 HTML
+    // 会在窗口关闭后永远等不到（全量门禁实查挂点：received enabled）。
     await expect
-      .poll(async () => page.getByRole('checkbox', { name: '透明底（表格外留白透明）' }).isDisabled(), {
-        timeout: 3000,
-        intervals: [25, 50, 100],
-      })
-      .toBe(true)
-    await expect(page.getByRole('button', { name: '复制 HTML' })).toBeDisabled()
+      .poll(
+        async () => ({
+          transparent: await page
+            .getByRole('checkbox', { name: '透明底（表格外留白透明）' })
+            .isDisabled(),
+          copyHtml: await page.getByRole('button', { name: '复制 HTML' }).isDisabled(),
+        }),
+        { timeout: 3000, intervals: [25, 50, 100] },
+      )
+      .toEqual({ transparent: true, copyHtml: true })
     // 成功后恢复
     await expectToast(page, 'PNG 已下载')
     await expect(page.getByRole('checkbox', { name: '透明底（表格外留白透明）' })).toBeEnabled()

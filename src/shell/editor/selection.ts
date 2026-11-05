@@ -89,16 +89,21 @@ export function selectionCellRects(
  * 整行/整列选择的叠加矩形（增量设计 A5）：
  * 复用 selectionCellRects 的合并分组与逻辑→可视行映射，仅合成同轴全域选区。
  * 整行 = 该逻辑行可视行整条；整列 = 该列所有可视行矩形并块。
+ * T02：可选 rangeEnd——存在且 ≠ index 时为区间选择 [min(index,rangeEnd), max(index,rangeEnd)]，
+ * 区间整段逐行/列合成高亮矩形（跨行合并区在区间内照常并块）；缺省时行为与既有单值完全一致。
  */
 export function structuralRects(
   inst: TemplateInstance,
   axis: 'row' | 'col',
   index: number,
   cellRects: CellRect[][],
+  rangeEnd?: number,
 ): SelectionRect[] {
+  const lo = rangeEnd === undefined ? index : Math.min(index, rangeEnd)
+  const hi = rangeEnd === undefined ? index : Math.max(index, rangeEnd)
   const range: MergeRange =
     axis === 'row'
-      ? { start: [index, 0], end: [index, inst.layout.colCount - 1] }
-      : { start: [0, index], end: [inst.layout.rowCount - 1, index] }
+      ? { start: [lo, 0], end: [hi, inst.layout.colCount - 1] }
+      : { start: [lo, index], end: [hi, index] }
   return selectionCellRects(inst, range, cellRects)
 }

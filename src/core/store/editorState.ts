@@ -48,6 +48,12 @@ const PASTE_BLOCKED_INTENTS: ReadonlySet<EditIntent['kind']> = new Set([
   'addCol',
   'removeCol',
   'setHeaderLevel',
+  // 灵活操作升级 T01 防线补齐：换位/块移动此前漏列（壳层 pastePending 期本就禁用，
+  // 此处是核内第二道防线，保持「结构意图在粘贴预览期一律互斥」口径完整）
+  'moveRow',
+  'moveCol',
+  'moveRowBlock',
+  'moveColBlock',
 ])
 
 /**

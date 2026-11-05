@@ -48,7 +48,7 @@ function submit() {
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 35%);
-  z-index: 40;
+  z-index: var(--pt-z-drawer);
 }
 .dialog {
   position: fixed;
@@ -59,7 +59,7 @@ function submit() {
   border-radius: 12px;
   padding: 20px;
   width: min(400px, 92vw);
-  z-index: 50;
+  z-index: var(--pt-z-dialog);
   border: 1px solid var(--pt-border);
 }
 label {

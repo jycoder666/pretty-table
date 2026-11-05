@@ -402,6 +402,25 @@ describe('editorState · 自定义格式新意图（pastePending 互斥 + 一步
     expect(dispatch(s, { kind: 'removeCol', col: 1 }).ok).toBe(false)
   })
 
+  it('pastePending 期间：moveRow/moveCol/moveRowBlock/moveColBlock 被拒（T01 防线补齐）', () => {
+    const s = blankState()
+    s.pastePending = true
+    for (const intent of [
+      { kind: 'moveRow', from: 1, to: 2 },
+      { kind: 'moveCol', from: 1, to: 2 },
+      { kind: 'moveRowBlock', from: 1, count: 2, to: 3 },
+      { kind: 'moveColBlock', from: 1, count: 2, to: 2 },
+    ] as import('../types').EditIntent[]) {
+      const r = dispatch(s, intent)
+      expect(r.ok).toBe(false)
+      expect(!r.ok ? r.error.code : '').toBe('SLOT_DROP_BLOCKED')
+    }
+    // 非粘贴期同一意图正常放行（拦截只发生在 pastePending）
+    const normal = blankState()
+    expect(dispatch(normal, { kind: 'moveRow', from: 1, to: 2 }).ok).toBe(true)
+    expect(dispatch(normal, { kind: 'moveRowBlock', from: 1, count: 2, to: 3 }).ok).toBe(true)
+  })
+
   it('每个新意图 undo 一步复原（FR-C7）', () => {
     for (const intent of VALID_INTENTS) {
       const s = blankState()
