@@ -5,7 +5,8 @@ import type { TemplateRepo } from './templateRepo'
 import { kvStore } from './kvStore'
 import { faultGate } from '../debug/fault'
 
-const PREFIX = 'tpl:'
+/** 「我的模板」存储键前缀（seedTemplates 播种复用，避免两处魔法字符串漂移） */
+export const TPL_KEY_PREFIX = 'tpl:'
 
 /** GC-19：调试开关构建期常量；生产构建折叠为 false，faultGate 调用被摇树 */
 const PT_DEBUG = import.meta.env.VITE_PT_DEBUG === '1' || import.meta.env.DEV
@@ -28,7 +29,7 @@ export function createIdbTemplateRepo(): TemplateRepo {
       const ks = (await keys(kvStore)) as string[]
       const out: TemplateInstance[] = []
       for (const k of ks) {
-        if (typeof k !== 'string' || !k.startsWith(PREFIX)) continue
+        if (typeof k !== 'string' || !k.startsWith(TPL_KEY_PREFIX)) continue
         const v = await get(k, kvStore)
         const inst = readInstance(v)
         if (inst) out.push(inst)
@@ -38,7 +39,7 @@ export function createIdbTemplateRepo(): TemplateRepo {
       )
     },
     async get(templateId: string) {
-      const v = await get(PREFIX + templateId, kvStore)
+      const v = await get(TPL_KEY_PREFIX + templateId, kvStore)
       if (!v) return null
       return readInstance(v)
     },
@@ -47,14 +48,14 @@ export function createIdbTemplateRepo(): TemplateRepo {
         throw { code: 'TEMPLATE_SAVE_FAIL', message: 'save fail', details: { reason: 'io' } }
       }
       const plain = JSON.parse(JSON.stringify(inst)) as TemplateInstance
-      await set(PREFIX + plain.templateId, plain, kvStore)
+      await set(TPL_KEY_PREFIX + plain.templateId, plain, kvStore)
     },
     async remove(templateId: string) {
       // 故障注入（GC-19 / PX-01）：?pt-fault=TEMPLATE_DELETE_FAIL → 删除失败
       if (PT_DEBUG && faultGate('TEMPLATE_DELETE_FAIL')) {
         throw { code: 'TEMPLATE_DELETE_FAIL', message: 'remove fail', details: { reason: 'io' } }
       }
-      await del(PREFIX + templateId, kvStore)
+      await del(TPL_KEY_PREFIX + templateId, kvStore)
     },
   }
 }

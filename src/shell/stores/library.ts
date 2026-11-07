@@ -6,6 +6,7 @@ import {
   cloneInstance,
 } from '@/core'
 import { createIdbTemplateRepo } from '../repo/idbTemplateRepo'
+import { ensureSeeded } from '../repo/seedTemplates'
 
 const repo = createIdbTemplateRepo()
 
@@ -19,6 +20,13 @@ export const useLibraryStore = defineStore('library', () => {
     loading.value = true
     listError.value = null
     try {
+      // 内置需求表播种（tables/*.json →「我的模板」，幂等）：先种后列，
+      // 保证库页任意时刻进入都能看到种子；播种失败不阻塞列表（注册键未写，下次刷新重试）
+      try {
+        await ensureSeeded()
+      } catch {
+        /* noop */
+      }
       mine.value = await repo.list()
     } catch {
       listError.value = '我的模板加载失败，请重试'
