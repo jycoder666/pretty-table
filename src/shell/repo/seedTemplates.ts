@@ -9,10 +9,9 @@ import { TPL_KEY_PREFIX } from './idbTemplateRepo'
  * - tables/ 下 8 张中文命名 JSON 经 import.meta.glob 构建期收为内置种子，
  *   文件名去扩展名即显示名（与 meta.displayName 原值无关，以后者为准会被覆盖）。
  * - 幂等策略：每张种子设注册键 seed:<templateId> 追踪是否已种过——
- *   注册键存在 → 跳过（含用户删除后：removeTemplate 只删 tpl: 键不删注册键，故不复活）；
- *   注册键不存在但 tpl:<templateId> 已有值（用户跨机导入过同 id 模板）→ 不覆盖用户数据，
- *   只补登记注册键，此后不再尝试；
- *   两者皆无 → 写 tpl:<templateId>（displayName=文件名、savedAt=播种时刻）+ 注册键。
+ *   注册键存在 → 跳过（用户删除后 removeTemplate 只删 tpl: 键不删注册键，故不复活）；
+ *   注册键不存在 → 写 tpl:<templateId> 覆盖同 id 旧数据 + 落注册键
+ *   （首次播种即视为用户手动初创建，覆盖旧同名条目——用户 2026-11-08 拍板）。
  * - 跨标签页同时首播的竞态窗口内可能同键重复写同内容，最终幂等无重复卡，可接受。
  */
 
@@ -70,13 +69,9 @@ async function runSeed(): Promise<void> {
   for (const { fileName, instance } of SEED_TEMPLATES) {
     const seedKey = SEED_KEY_PREFIX + instance.templateId
     if (await get(seedKey, kvStore)) continue
+    // 注册键不存在：覆盖写入（等同用户手动初创建，2026-11-08 拍板）；
+    // 深拷贝避免污染 glob eager 的模块级单例
     const tplKey = TPL_KEY_PREFIX + instance.templateId
-    if (await get(tplKey, kvStore)) {
-      // 用户库已有同 id 模板（跨机导入等）：不覆盖，仅登记注册键
-      await set(seedKey, fileName, kvStore)
-      continue
-    }
-    // 深拷贝后写库，避免污染 glob eager 的模块级单例
     const inst: TemplateInstance = JSON.parse(JSON.stringify(instance))
     inst.meta = { ...inst.meta, displayName: fileName, savedAt: now }
     await set(tplKey, inst, kvStore)

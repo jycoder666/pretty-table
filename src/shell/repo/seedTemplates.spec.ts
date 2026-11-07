@@ -71,6 +71,7 @@ function userTemplate(id: string, name: string): TemplateInstance {
 
 beforeEach(() => {
   mem.clear()
+  memOf(kvStore).clear()
   vi.clearAllMocks()
 })
 
@@ -121,20 +122,21 @@ describe('seedTemplates · 内置需求表自动播种', () => {
     expect(list.map((t) => t.meta?.displayName)).not.toContain(target.fileName)
   })
 
-  it('不覆盖用户同 id 模板：跨机导入的同 id 实例保真，仅登记注册键不再尝试', async () => {
+  it('首次播种覆盖同 id 旧模板：等同用户手动初创建，此后注册键保护用户编辑/删除', async () => {
     const target = SEED_TEMPLATES[1]!
     const foreign = userTemplate(target.instance.templateId, '我的跨机导入版')
     memOf(kvStore).set('tpl:' + foreign.templateId, foreign)
     await ensureSeeded()
     const repo = createIdbTemplateRepo()
+    // 覆盖为种子内容（用户拍板 2026-11-08：首次播种等同手动初创建）
     const got = await repo.get(target.instance.templateId)
-    expect(got?.meta?.displayName).toBe('我的跨机导入版')
-    expect(got?.meta?.origin).toBe('user')
-    // 注册键已登记：后续 ensureSeeded 不再碰这张（保持用户版本）
+    expect(got?.meta?.displayName).toBe(target.fileName)
+    expect(seedKeys()).toContain('seed:' + target.instance.templateId)
+    // 注册键落地：后续 ensureSeeded 零写入，用户编辑/删除不受影响
     const writesAfterFirst = vi.mocked(idbSet).mock.calls.length
     await ensureSeeded()
     expect(vi.mocked(idbSet).mock.calls.length).toBe(writesAfterFirst)
     const again = await repo.get(target.instance.templateId)
-    expect(again?.meta?.displayName).toBe('我的跨机导入版')
+    expect(again?.meta?.displayName).toBe(target.fileName)
   })
 })
