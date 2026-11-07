@@ -429,6 +429,8 @@ const dropLine = computed<{ left: number; top: number; width: number; height: nu
   background: transparent;
   font-size: 11px;
   color: var(--pt-muted);
+  /* 序号数字等宽对齐（ui-skills：数据用 tabular-nums） */
+  font-variant-numeric: tabular-nums;
   /* 序号项即换位把手（PRD §5.3：悬停显示抓取光标） */
   cursor: grab;
   padding: 0;

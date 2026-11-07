@@ -2,6 +2,7 @@ import { fail, ok, type CoreWarning, type Result } from '../errors'
 import type { SlotDef, TemplateDefinition, TemplateInstance, TemplateType } from '../types'
 import { sanitizeHex } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
+import { sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
 
 /**
  * Schema migration (增强期 §3.3/§3.4 + 自定义格式设计增量 §1.5):
@@ -132,6 +133,24 @@ export function migrateInstance(
     }
     // 借不到 → 保持缺省：实例照常可编辑、可导出，仅粘贴不可用（PASTE_UNSUPPORTED）
   }
+
+  // detail 旧文档表头第二行回填（编辑台二轮）：toOption 硬编码「项目/说明/备注」已槽位化，
+  // 旧存量（第二行全 null）按原渲染文案补槽，照常渲染且从此可编辑
+  if (
+    inst.meta.templateType === 'detail' &&
+    layout.slotGrid &&
+    (layout.headerLevels ?? 1) >= 2 &&
+    Array.isArray(layout.slotGrid[1]) &&
+    layout.slotGrid[1]!.length >= 3 &&
+    layout.slotGrid[1]!.every((id) => id === null || id === undefined)
+  ) {
+    layout.slotGrid[1] = layout.slotGrid[1]!.map((_, c) => {
+      const id = `head.c${c}`
+      inst.slots[id] = c === 0 ? '项目' : c === 1 ? '说明' : '备注'
+      slotDefs[id] = { kind: 'text' }
+      return id
+    })
+  }
   inst.slotDefs = slotDefs
 
   // 槽值清洗：mark 不在三值 → null + warn；num 非数字 → null
@@ -163,7 +182,18 @@ export function migrateInstance(
         })
       }
     }
+    // Schema 1.2 扩展：bar 格式清洗（ratio 非法删键；color 非法 hex 回主题默认，宽容不拒）
+    if ('bar' in obj) {
+      const cleaned = sanitizeBar(obj.bar)
+      if (!cleaned) delete (obj as Record<string, unknown>).bar
+      else (obj as Record<string, unknown>).bar = cleaned
+    }
   }
+
+  // Schema 1.2 扩展：kpiCards 清洗（非数组删字段；项级清洗与截断在 sanitizeKpiCards 内）
+  const kpiClean = sanitizeKpiCards(inst.kpiCards)
+  if (kpiClean === null) delete inst.kpiCards
+  else inst.kpiCards = kpiClean
 
   // recommendCol 必须在 recommendableCols 内，否则置 null + warn
   const recs = Array.isArray(layout.recommendableCols)

@@ -18,6 +18,12 @@ import {
   clampColWidth,
   colWidthAt,
   slotIdsInRange,
+  effectiveKpiCards,
+  KPI_CARD_MAX,
+  captionText as captionTextOf,
+  groupRowBlocks,
+  SOFT_BLOCK_COLORS,
+  type KpiCard,
   type Align,
   type RoleColorKey,
   type StructuralIntent,
@@ -200,12 +206,15 @@ const blockHeadline = computed<string>(() => {
   if (text) return `当前内容：${text}`
   // 空区块 → 人话位置：优先查 slotGrid，再退回区块槽 rowHint（QA Low 修复：
   // after-N 的 N 是 0 基锚点行，区块行插在该行之后 → 1 基展示为第 N+2 行，
-  // 与 core/adapter/toOption.ts buildVisualRows 的可视行插入位置同源）
+  // 与 core/adapter/toOption.ts buildVisualRows 的可视行插入位置同源；
+  // left-N（左栏标签）为 1 基第 N+1 行）
   const pos = b ? slotPosOf(b.slotId) : null
   if (pos) return `区块 · 第 ${pos[0] + 1} 行`
   const hint = editor.current.layout.blockSlots.find((s) => s.id === b?.slotId)?.rowHint
-  const m = typeof hint === 'string' ? /^after-(\d+)$/.exec(hint) : null
-  return m ? `区块 · 第 ${Number(m[1]) + 2} 行` : '区块'
+  const mAfter = typeof hint === 'string' ? /^after-(\d+)$/.exec(hint) : null
+  if (mAfter) return `区块 · 第 ${Number(mAfter[1]) + 2} 行`
+  const mLeft = typeof hint === 'string' ? /^left-(\d+)$/.exec(hint) : null
+  return mLeft ? `区块 · 第 ${Number(mLeft[1]) + 1} 行` : '区块'
 })
 
 const slotText = computed({
@@ -323,6 +332,110 @@ function setBlockTier(v: number) {
   editor.apply({ kind: 'updateBlock', blockId: b.id, props: { styleTier: v as 1 | 2 } })
 }
 
+// ── 表名（caption）编辑（编辑台二轮）：captionSlot 槽优先（预览首行/导出同源）──
+const captionValue = computed(() => (editor.current ? captionTextOf(editor.current) : ''))
+
+const captionViaSlot = computed(() => {
+  const inst = editor.current
+  const sid = inst?.layout.captionSlot
+  if (!inst || !sid) return false
+  return sid in inst.slots || Boolean(inst.layout.slotGrid?.some((row) => row?.includes(sid)))
+})
+
+function commitCaption(raw: string) {
+  editor.setCaptionText(raw)
+}
+
+// ── 分组行动态化（编辑台二轮）：插入 / 上下移动 / 整行删除 ──
+const groups = computed(() => (editor.current ? groupRowBlocks(editor.current) : []))
+
+/** 面板当前锚定的正文行（结构行选择优先，其次单元格选区首行） */
+const selectedLogicalRow = computed<number | null>(() => {
+  const s = editor.structuralSelection
+  if (s && s.axis === 'row') return s.index
+  const r = editor.selectionRange
+  return r ? r.start[0] : null
+})
+
+const canInsertGroupAbove = computed(() => {
+  const inst = editor.current
+  const row = selectedLogicalRow.value
+  if (!inst || row === null || editor.pastePending) return false
+  const headerLevels = inst.layout.headerLevels ?? 1
+  const rowCount = inst.layout.slotGrid?.length ?? inst.layout.rowCount
+  return row >= headerLevels && row <= rowCount - 1
+})
+
+function insertGroupRow(type: 'groupHeader' | 'sectionBar') {
+  const row = selectedLogicalRow.value
+  if (row === null) return
+  if (editor.apply({ kind: 'addBlockRow', aboveRow: row, type })) {
+    editor.showToast(
+      type === 'groupHeader' ? '已在选中行上方插入分组标题' : '已在选中行上方插入分区色条',
+    )
+  }
+}
+
+function moveGroupRow(blockId: string, dir: -1 | 1) {
+  editor.apply({ kind: 'moveBlockRow', blockId, dir })
+}
+
+async function removeGroupRow() {
+  const b = selectedBlock.value
+  if (!b) return
+  const go = await confirmAction({
+    title: '删除分组行',
+    message: '该分组行（连同槽位）会整行移除，预览与导出同步更新，确定删除？',
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!go) return
+  if (editor.apply({ kind: 'removeBlockRow', blockId: b.id })) {
+    editor.selectedBlockId = null
+  }
+}
+
+function selectGroup(blockId: string) {
+  editor.selectedBlockId = blockId
+  editor.selectedSlotId = null
+  editor.selectionRange = null
+}
+
+/** 选中区块是否落在 between-rows 分组槽（决定上移/下移/删除分组行的可见性） */
+const selectedBlockInGroupRow = computed(() => {
+  const b = selectedBlock.value
+  if (!b || !editor.current) return false
+  const def = editor.current.layout.blockSlots.find((s) => s.id === b.slotId)
+  return def?.region === 'between-rows'
+})
+
+// ── 分组行 / 分区条区块级底色（默认跟主题 primary，文字色按亮度自动黑白）──
+const blockColorVisible = computed(() => {
+  const b = selectedBlock.value
+  return b !== null && (b.type === 'groupHeader' || b.type === 'sectionBar')
+})
+
+const SOFT_COLOR_LABELS = ['杏橙', '豆绿', '雾蓝', '浅紫'] as const
+const blockColorPresets = SOFT_BLOCK_COLORS.map((hex, i) => ({
+  hex,
+  label: SOFT_COLOR_LABELS[i] ?? '预设',
+}))
+
+const selectedBlockColor = computed(() => {
+  const c = selectedBlock.value?.props?.color
+  return typeof c === 'string' && c ? c : null
+})
+
+function commitBlockColor(hex: string | null) {
+  const b = selectedBlock.value
+  if (!b) return
+  editor.apply({ kind: 'updateBlock', blockId: b.id, props: { color: hex ?? undefined } })
+}
+
+const blockColorValue = computed(
+  () => selectedBlockColor.value ?? roleColorOf(editor.current, 'primary'),
+)
+
 const multiSelect = computed(() => editor.selectionCellCount > 1)
 
 const canEmphasize = computed(() => {
@@ -369,6 +482,102 @@ async function removeBlock() {
   if (!go) return
   editor.removeSelectedBlock()
 }
+
+// ── KPI 统计卡（schema 1.2 扩展）：表外 hero 区卡片的增删改与上移下移 ──
+const kpiCards = computed<KpiCard[]>(() =>
+  editor.current ? effectiveKpiCards(editor.current) : [],
+)
+
+const kpiFull = computed(() => kpiCards.value.length >= KPI_CARD_MAX)
+
+function addKpiCard() {
+  editor.apply({
+    kind: 'addKpiCard',
+    card: { id: `kpi-${Date.now()}`, label: '指标名', value: '0' },
+  })
+}
+
+function patchKpi(cardId: string, patch: Partial<Omit<KpiCard, 'id'>>) {
+  editor.apply({ kind: 'updateKpiCard', cardId, patch })
+}
+
+/** 文案/数值输入（change 提交，与列宽输入同口径）；数值纯数字时存 number */
+function commitKpiText(cardId: string, field: 'label' | 'value' | 'unit', raw: string) {
+  const t = raw.trim()
+  if (field === 'value') {
+    const n = Number(t)
+    patchKpi(cardId, { value: t !== '' && Number.isFinite(n) ? n : t })
+  } else if (field === 'unit') {
+    patchKpi(cardId, { unit: t === '' ? undefined : t })
+  } else {
+    patchKpi(cardId, { label: raw })
+  }
+}
+
+function removeKpi(cardId: string) {
+  editor.apply({ kind: 'removeKpiCard', cardId })
+}
+
+function moveKpi(cardId: string, dir: -1 | 1) {
+  editor.apply({ kind: 'moveKpiCard', cardId, dir })
+}
+
+// ── 单元格条形（schema 1.2 扩展）：数据格横条开关 + 比例 + 颜色 ──
+/** 选中槽当前的 bar 格式（无 = null） */
+const selectedBar = computed(() => {
+  const sid = editor.selectedSlotId
+  const v = sid && editor.current ? editor.current.slots[sid] : undefined
+  return v && typeof v === 'object' && 'bar' in v && v.bar && typeof v.bar === 'object' ? v.bar : null
+})
+
+/** 条形能力闸：可写数据格（复用强调闸门口径：只读格/首列标签列不开）；mark/图片格无条形语义 */
+const canBar = computed(() => {
+  const inst = editor.current
+  const sid = editor.selectedSlotId
+  if (!inst || !sid || editor.pastePending) return false
+  const v = inst.slots[sid]
+  if (v && typeof v === 'object' && ('mark' in v || 'image' in v)) return false
+  return isEmphasizable(inst, sid)
+})
+
+/** 开 = 默认 66% 主题色；关 = 清除恢复纯文本格 */
+function toggleBar(on: boolean) {
+  const sid = editor.selectedSlotId
+  if (!sid) return
+  editor.apply({ kind: 'setSlotBar', slotId: sid, bar: on ? { ratio: 0.66 } : null })
+}
+
+function commitBarRatio(raw: string) {
+  const sid = editor.selectedSlotId
+  const cur = selectedBar.value
+  if (!sid || !cur) return
+  const n = Number(raw)
+  if (raw.trim() === '' || !Number.isFinite(n)) {
+    editor.showToast('比例请填 0～100 的数字')
+    return
+  }
+  const ratio = Math.min(1, Math.max(0, n / 100))
+  editor.apply({
+    kind: 'setSlotBar',
+    slotId: sid,
+    bar: { ratio, ...(cur.color ? { color: cur.color } : {}) },
+  })
+}
+
+/** 条色：hex 覆盖 / null 恢复主题 primary */
+function commitBarColor(hex: string | null) {
+  const sid = editor.selectedSlotId
+  const cur = selectedBar.value
+  if (!sid || !cur) return
+  editor.apply({
+    kind: 'setSlotBar',
+    slotId: sid,
+    bar: hex ? { ratio: cur.ratio, color: hex } : { ratio: cur.ratio },
+  })
+}
+
+/** 条形颜色控件当前值（无自定义 = 主题 primary，取色器初始色） */
+const barColorValue = computed(() => selectedBar.value?.color ?? roleColorOf(editor.current, 'primary'))
 </script>
 
 <template>
@@ -388,6 +597,24 @@ async function removeBlock() {
         <i class="arrow" aria-hidden="true">{{ panelGroupOpen.content ? '▼' : '▶' }}</i>内容
       </button>
       <div v-show="panelGroupOpen.content" class="group-body">
+        <!-- 表名（caption）：有 captionSlot 的模板预览首行与导出同步；无槽模板写导出标题 -->
+        <div class="section">
+          <h4>表名</h4>
+          <input
+            class="caption-input"
+            type="text"
+            data-testid="caption-input"
+            :value="captionValue"
+            :disabled="editor.pastePending"
+            placeholder="表格标题"
+            aria-label="表名"
+            @change="commitCaption(($event.target as HTMLInputElement).value)"
+          />
+          <p class="hint">
+            {{ captionViaSlot ? '表格首行标题与导出标题同步更新' : '写入导出 HTML / PNG 的标题（本模板预览无标题行）' }}
+          </p>
+        </div>
+
         <div v-if="editor.selectedSlotId" class="section">
           <h4>槽位文案</h4>
           <!-- PX-07：人话标题（内容摘要 / 行列位置），不露内部 ID -->
@@ -487,6 +714,55 @@ async function removeBlock() {
             </PtTooltip>
           </div>
           <p v-if="!canEmphasize && !multiSelect" class="hint">此处由模板固定，不能强调</p>
+          <!-- 单元格条形（schema 1.2 扩展）：数据格横条开关 + 比例 0~100 + 颜色 -->
+          <div v-if="canBar" class="bar-area" data-testid="bar-area">
+            <label class="zebra">
+              <input
+                type="checkbox"
+                :checked="!!selectedBar"
+                :disabled="editor.pastePending"
+                data-testid="bar-toggle"
+                @change="toggleBar(($event.target as HTMLInputElement).checked)"
+              />
+              条形
+            </label>
+            <template v-if="selectedBar">
+              <div class="field">
+                <span>比例</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  :value="Math.round(selectedBar.ratio * 100)"
+                  :disabled="editor.pastePending"
+                  aria-label="条形比例百分数"
+                  data-testid="bar-ratio"
+                  @change="commitBarRatio(($event.target as HTMLInputElement).value)"
+                />
+              </div>
+              <div class="field">
+                <span>条色</span>
+                <input
+                  type="color"
+                  :value="barColorValue"
+                  :disabled="editor.pastePending"
+                  aria-label="条形颜色"
+                  data-testid="bar-color"
+                  @change="commitBarColor(($event.target as HTMLInputElement).value)"
+                />
+                <PtButton
+                  v-if="selectedBar.color"
+                  variant="ghost"
+                  :disabled="editor.pastePending"
+                  data-testid="bar-color-reset"
+                  @click="commitBarColor(null)"
+                >
+                  恢复主题色
+                </PtButton>
+              </div>
+              <p class="hint">条宽 = 比例 × 格子内容宽，颜色默认跟主题。</p>
+            </template>
+          </div>
         </div>
 
         <div v-if="editor.selectedBlockId" class="section">
@@ -507,7 +783,149 @@ async function removeBlock() {
               />
             </PtTooltip>
           </div>
+          <!-- 分组行 / 分区条底色：柔彩预设 + 自定义 hex；缺省跟主题表头色 -->
+          <div v-if="blockColorVisible" class="block-color" data-testid="block-color">
+            <span class="lbl">底色</span>
+            <div class="swatches">
+              <PtTooltip v-for="p in blockColorPresets" :key="p.hex" :text="`底色换成${p.label}`">
+                <button
+                  type="button"
+                  class="swatch"
+                  :class="{ on: selectedBlockColor === p.hex }"
+                  :style="{ background: p.hex }"
+                  :data-testid="`block-color-${p.label}`"
+                  :disabled="editor.pastePending"
+                  :aria-label="`${p.label}底色`"
+                  @click="commitBlockColor(p.hex)"
+                />
+              </PtTooltip>
+              <label class="custom-color">
+                <input
+                  type="color"
+                  :value="blockColorValue"
+                  :disabled="editor.pastePending"
+                  aria-label="自定义底色"
+                  data-testid="block-color-custom"
+                  @change="commitBlockColor(($event.target as HTMLInputElement).value)"
+                />
+                自定义
+              </label>
+              <PtButton
+                v-if="selectedBlockColor"
+                variant="ghost"
+                :disabled="editor.pastePending"
+                data-testid="block-color-reset"
+                @click="commitBlockColor(null)"
+              >
+                跟主题
+              </PtButton>
+            </div>
+            <p class="hint">文字色按底色亮度自动黑白；导出 HTML / PNG 同步。</p>
+          </div>
+          <!-- 分组行操作：上移 / 下移（改锚点）；整行删除见下方「删除分组行」 -->
+          <div v-if="selectedBlockInGroupRow" class="row" data-testid="group-row-ops">
+            <PtTooltip text="分组行上移一格">
+              <PtButton variant="ghost" :disabled="editor.pastePending" data-testid="block-move-up" @click="selectedBlock && moveGroupRow(selectedBlock.id, -1)">上移</PtButton>
+            </PtTooltip>
+            <PtTooltip text="分组行下移一格">
+              <PtButton variant="ghost" :disabled="editor.pastePending" data-testid="block-move-down" @click="selectedBlock && moveGroupRow(selectedBlock.id, 1)">下移</PtButton>
+            </PtTooltip>
+            <PtTooltip text="整行删除该分组（连同槽位）">
+              <PtButton variant="danger" :disabled="editor.pastePending" data-testid="block-remove-row" @click="removeGroupRow">删除分组行</PtButton>
+            </PtTooltip>
+          </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ── 统计卡组（schema 1.2 扩展，默认收起）：表外 KPI 卡片增删改与排序 ── -->
+    <section class="group" data-testid="group-kpi">
+      <button
+        type="button"
+        class="group-head"
+        data-testid="group-head-kpi"
+        :aria-expanded="panelGroupOpen.kpi"
+        @click="togglePanelGroup('kpi')"
+      >
+        <i class="arrow" aria-hidden="true">{{ panelGroupOpen.kpi ? '▼' : '▶' }}</i>统计卡
+      </button>
+      <!-- 组头摘要卡常显：N/6 张 -->
+      <p class="structure-summary" data-testid="kpi-summary">
+        {{ kpiCards.length }}/{{ KPI_CARD_MAX }} 张 · 表格上方一排展示
+      </p>
+      <div v-show="panelGroupOpen.kpi" class="group-body">
+        <p class="hint">统计卡显示在表格上方，导出 HTML / PNG 一并带上；最多 {{ KPI_CARD_MAX }} 张。</p>
+        <div v-for="(card, i) in kpiCards" :key="card.id" class="kpi-item" :data-testid="`kpi-item-${i}`">
+          <div class="kpi-item-head">
+            <span class="kpi-item-name">第 {{ i + 1 }} 张</span>
+            <div class="kpi-item-ops">
+              <PtTooltip text="与上一张互换位置">
+                <PtButton variant="ghost" :disabled="editor.pastePending || i === 0" :data-testid="`kpi-up-${i}`" @click="moveKpi(card.id, -1)">上移</PtButton>
+              </PtTooltip>
+              <PtTooltip text="与下一张互换位置">
+                <PtButton variant="ghost" :disabled="editor.pastePending || i === kpiCards.length - 1" :data-testid="`kpi-down-${i}`" @click="moveKpi(card.id, 1)">下移</PtButton>
+              </PtTooltip>
+              <PtTooltip text="删除这张统计卡">
+                <PtButton variant="ghost" :disabled="editor.pastePending" :data-testid="`kpi-del-${i}`" @click="removeKpi(card.id)">删除</PtButton>
+              </PtTooltip>
+            </div>
+          </div>
+          <label class="kpi-field">
+            文案
+            <input
+              type="text"
+              :value="card.label"
+              :disabled="editor.pastePending"
+              :aria-label="`第${i + 1}张统计卡文案`"
+              :data-testid="`kpi-label-${i}`"
+              @change="commitKpiText(card.id, 'label', ($event.target as HTMLInputElement).value)"
+            />
+          </label>
+          <div class="kpi-row">
+            <label class="kpi-field">
+              数值
+              <input
+                type="text"
+                inputmode="decimal"
+                :value="String(card.value)"
+                :disabled="editor.pastePending"
+                :aria-label="`第${i + 1}张统计卡数值`"
+                :data-testid="`kpi-value-${i}`"
+                @change="commitKpiText(card.id, 'value', ($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <label class="kpi-field kpi-unit">
+              单位
+              <input
+                type="text"
+                :value="card.unit ?? ''"
+                placeholder="元 / %"
+                :disabled="editor.pastePending"
+                :aria-label="`第${i + 1}张统计卡单位`"
+                :data-testid="`kpi-unit-${i}`"
+                @change="commitKpiText(card.id, 'unit', ($event.target as HTMLInputElement).value)"
+              />
+            </label>
+          </div>
+          <label class="zebra">
+            <input
+              type="checkbox"
+              :checked="!!card.accent"
+              :disabled="editor.pastePending"
+              :data-testid="`kpi-accent-${i}`"
+              @change="patchKpi(card.id, { accent: ($event.target as HTMLInputElement).checked || undefined })"
+            />
+            强调卡（强调色描边）
+          </label>
+        </div>
+        <PtButton
+          variant="ghost"
+          :disabled="kpiFull || editor.pastePending"
+          data-testid="kpi-add"
+          @click="addKpiCard"
+        >
+          添加统计卡
+        </PtButton>
       </div>
     </section>
 
@@ -662,6 +1080,51 @@ async function removeBlock() {
           </div>
         </div>
 
+        <!-- 分组行动态化（编辑台二轮）：选中正文行 → 上方插入分组；清单点选 / 上移下移 / 整行删除 -->
+        <div class="section">
+          <h4>分组行</h4>
+          <p class="hint">
+            选中一个正文行后，可在它上方插入分组标题或分区色条（上限受 20 行约束）；
+            已有分组行可上下移动或整行删除，也可以直接拖动画布上的区块把手换位。
+          </p>
+          <div class="row">
+            <PtTooltip :text="canInsertGroupAbove ? '在选中行上方插入分组标题行' : '先在表格里选中一个正文行'">
+              <PtButton
+                variant="ghost"
+                :disabled="!canInsertGroupAbove"
+                data-testid="group-add"
+                @click="insertGroupRow('groupHeader')"
+              >
+                插入分组标题
+              </PtButton>
+            </PtTooltip>
+            <PtTooltip :text="canInsertGroupAbove ? '在选中行上方插入分区色条' : '先在表格里选中一个正文行'">
+              <PtButton
+                variant="ghost"
+                :disabled="!canInsertGroupAbove"
+                data-testid="section-add"
+                @click="insertGroupRow('sectionBar')"
+              >
+                插入分区色条
+              </PtButton>
+            </PtTooltip>
+          </div>
+          <div v-if="groups.length" class="group-list" data-testid="group-list">
+            <button
+              v-for="(g, i) in groups"
+              :key="g.blockId"
+              type="button"
+              class="group-item"
+              :class="{ on: editor.selectedBlockId === g.blockId }"
+              :data-testid="`group-item-${i}`"
+              @click="selectGroup(g.blockId)"
+            >
+              <span class="g-name">{{ g.text || (g.type === 'groupHeader' ? '分组标题' : '分区') }}</span>
+              <span class="g-pos">第 {{ g.anchorRow + 2 }} 行上方</span>
+            </button>
+          </div>
+        </div>
+
         <!-- 合并/拆分弱化入口（主理人拍板保留）：主入口是画布选区浮动工具条 -->
         <div class="section">
           <h4>合并 / 拆分</h4>
@@ -717,8 +1180,9 @@ async function removeBlock() {
           </div>
         </div>
 
-        <!-- 删区块（动结构）从内容组拆出：编辑文字在「内容」，删除入口在这里 -->
-        <div v-if="editor.selectedBlockId" class="section">
+        <!-- 删区块（动结构）从内容组拆出：编辑文字在「内容」，删除入口在这里。
+             分组行区块走「删除分组行」（连槽位整行删，见内容组区块区），此处不再重复给入口 -->
+        <div v-if="editor.selectedBlockId && !selectedBlockInGroupRow" class="section">
           <h4>区块操作</h4>
           <PtButton variant="danger" :disabled="editor.pastePending" @click="removeBlock">删除区块</PtButton>
         </div>
@@ -946,5 +1410,181 @@ textarea {
 .hint {
   font-size: 12px;
   color: #6b7280;
+}
+/* ── 编辑台二轮：表名输入 / 分组行底色 / 分组行清单 ── */
+.caption-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--pt-border);
+  border-radius: 8px;
+  padding: 8px;
+  font: inherit;
+}
+.caption-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.block-color {
+  margin-top: 10px;
+}
+.block-color .lbl {
+  display: block;
+  font-size: 12px;
+  color: var(--pt-muted);
+  margin-bottom: 6px;
+}
+.swatches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--pt-border);
+  cursor: pointer;
+  padding: 0;
+}
+.swatch.on {
+  outline: 2px solid var(--pt-primary);
+  outline-offset: 1px;
+}
+.swatch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.custom-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--pt-muted);
+}
+.custom-color input[type='color'] {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--pt-border);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+.group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.group-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px solid var(--pt-border);
+  border-radius: 8px;
+  background: var(--pt-paper);
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.group-item.on {
+  border-color: var(--pt-primary);
+  background: var(--pt-tag);
+}
+.g-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.g-pos {
+  color: var(--pt-muted);
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+/* ── schema 1.2 扩展：单元格条形区 ── */
+.bar-area {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--pt-border);
+}
+.bar-area .field {
+  margin-top: 6px;
+}
+.bar-area .field > span {
+  width: 40px;
+}
+.bar-area input[type='number'] {
+  width: 72px;
+  border: 1px solid var(--pt-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.bar-area input[type='color'] {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--pt-border);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+/* ── schema 1.2 扩展：KPI 统计卡列表 ── */
+.kpi-item {
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid var(--pt-border);
+  border-radius: 8px;
+}
+.kpi-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.kpi-item-name {
+  font-size: 12px;
+  color: var(--pt-muted);
+  flex-shrink: 0;
+}
+.kpi-item-ops {
+  display: flex;
+  gap: 4px;
+}
+.kpi-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--pt-muted);
+  margin-top: 6px;
+}
+.kpi-field input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--pt-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-row {
+  display: flex;
+  gap: 6px;
+}
+.kpi-row .kpi-field {
+  flex: 1;
+}
+.kpi-row .kpi-unit {
+  flex: none;
+  width: 40%;
 }
 </style>

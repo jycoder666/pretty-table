@@ -83,6 +83,32 @@ export function sanitizeHex(v: string): string | null {
   return null
 }
 
+/**
+ * 分组行 / 分区条柔彩预设（编辑台二轮 2026-11-07）：区块级底色可选值单点。
+ * 仅 hex 清单在此（G-2：色值只准出现在 core/theme 下）；界面用词（杏橙/豆绿/…）由壳层配。
+ */
+export const SOFT_BLOCK_COLORS: readonly string[] = [
+  '#f7e3d2', // 杏橙
+  '#d9ebdc', // 豆绿
+  '#dce8f7', // 雾蓝
+  '#e9e1f5', // 浅紫
+]
+
+/**
+ * 按底色亮度取可读文字色（区块级自定义底色的文字自动黑白）。
+ * 感知亮度（ITU-R BT.601 加权）> 0.6 → 深字，否则白字；非法 hex 回退深字（浅底为主流）。
+ */
+export function readableTextColor(bg: string): string {
+  const hex = sanitizeHex(bg)
+  if (!hex) return '#1a1a1a'
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 0xff
+  const g = (n >> 8) & 0xff
+  const b = n & 0xff
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.6 ? '#1a1a1a' : '#ffffff'
+}
+
 export function resolveTheme(
   themeId: string,
   tokens?: ThemeTokens,

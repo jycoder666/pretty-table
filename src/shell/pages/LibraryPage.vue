@@ -19,13 +19,14 @@ onMounted(() => {
 })
 
 // ── FR-20 类型筛选（增强期交互口径 §2.1）：chips 同时过滤系统预设与我的模板两段 ──
-type FilterType = 'compare' | 'detail' | 'pricing' | 'matrix'
+type FilterType = 'compare' | 'detail' | 'pricing' | 'matrix' | 'stat'
 const FILTER_CHIPS: { type: FilterType | ''; label: string }[] = [
   { type: '', label: '全部' },
   { type: 'compare', label: '多列对比' },
   { type: 'detail', label: '单主体明细' },
   { type: 'pricing', label: '价目清单' },
   { type: 'matrix', label: '宽表矩阵' },
+  { type: 'stat', label: '统计看板' },
 ]
 const filter = ref<FilterType | ''>('')
 
@@ -108,6 +109,7 @@ const typeLabel = (t: TemplateInstance) => {
     pricing: '价目',
     matrix: '矩阵',
     blank: '空白',
+    stat: '统计看板',
   }
   return m[t.meta?.templateType ?? ''] ?? '模板'
 }

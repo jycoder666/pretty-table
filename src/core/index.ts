@@ -35,6 +35,8 @@ export type {
   CoreHandle,
   ViewportRect,
   ViewportHit,
+  KpiCard,
+  BarFormat,
 } from './types'
 
 export type { ErrorCode, WarnCode, CoreError, CoreWarning, Result, PasteErrorCode } from './errors'
@@ -72,6 +74,8 @@ export {
   resolveTheme,
   isThemeId,
   sanitizeHex,
+  readableTextColor,
+  SOFT_BLOCK_COLORS,
   type Palette,
 } from './theme/palettes'
 export {
@@ -109,6 +113,8 @@ export {
   getSlotDisplayText,
   countFilledSlotsInRange,
   slotIdsInRange,
+  groupRowBlocks,
+  type GroupRowInfo,
 } from './store/intent'
 export {
   applyStructuralIntent,
@@ -163,10 +169,28 @@ export {
   rowHeightOf,
   typeMetrics,
   drawImageCell,
+  drawBarCell,
   type CellMeta,
   type VCustomRenderArgs,
   type VCellRect,
 } from './adapter/toOption'
+
+// 表外 KPI 统计卡 + 单元格条形格式（schema 1.2 扩展；预览 / HTML / PNG 三方同源单点）
+export {
+  KPI_CARD_MAX,
+  effectiveKpiCards,
+  kpiHeroHeight,
+  sanitizeKpiCards,
+  sanitizeBar,
+  kpiValueText,
+  renderKpiHeroHtml,
+  drawKpiHero,
+  kpiHeroStyle,
+  kpiCardStyle,
+  kpiValueStyle,
+  kpiUnitStyle,
+  kpiLabelStyle,
+} from './kpi/kpiCards'
 
 // T34：渲染核（VTable 依赖图）只经动态导入出口暴露，壳层用 loadRenderCore()
 export { loadRenderCore, type RenderCore } from './render/lazyCore'
@@ -175,6 +199,7 @@ export { exportText } from './export/text'
 export {
   buildExportModel,
   renderExportHtml,
+  captionText,
   type ExportModel,
   type ExportCell,
 } from './export/model'
@@ -190,4 +215,5 @@ export {
   DETAIL_ALPHA_V1,
   PRICING_V1,
   MATRIX_V1,
+  STAT_V1,
 } from './templates'

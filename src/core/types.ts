@@ -11,10 +11,20 @@ export interface MergeRange {
   end: CellCoord
 }
 
+/** Schema 1.2 扩展：单元格条形格式（数据格内水平彩色条，宽度 = ratio 百分比） */
+export interface BarFormat {
+  /** 0～1；越界由核内 clamp 收口 */
+  ratio: number
+  /** 自定义条色（hex）；缺省 = 主题 primary */
+  color?: string
+}
+
 export interface TextSlotObject {
   text: string | number
   align?: Align
   emphasize?: Emphasis | Emphasis[]
+  /** Schema 1.2 扩展：横条格式（文字/数值格可设） */
+  bar?: BarFormat
 }
 
 /** Schema 1.1: three-state semantic mark */
@@ -32,6 +42,8 @@ export interface NumSlotObject {
   num: number | null
   align?: Align
   emphasize?: Emphasis | Emphasis[]
+  /** Schema 1.2 扩展：横条格式（数值格可设，条宽 = ratio 百分比） */
+  bar?: BarFormat
 }
 
 /** Schema 1.2：图片槽值。image 必须是通过 imageGuard.isImageDataUrl 白名单校验的 data URL */
@@ -90,6 +102,8 @@ export interface BlockDesc {
     label?: string
     text?: string
     styleTier?: 1 | 2 | 3
+    /** 区块级底色覆盖（仅 sectionBar / groupHeader 消费；hex，缺省 = 跟主题 primary） */
+    color?: string
     [k: string]: unknown
   }
 }
@@ -124,7 +138,17 @@ export interface LayoutSpec {
   style?: LayoutStyle
 }
 
-export type TemplateType = 'compare' | 'detail' | 'pricing' | 'matrix' | 'blank'
+export type TemplateType = 'compare' | 'detail' | 'pricing' | 'matrix' | 'blank' | 'stat'
+
+/** Schema 1.2 扩展：表外 KPI 统计卡（hero 区一排等宽卡片，上限 6 张） */
+export interface KpiCard {
+  id: string
+  label: string
+  value: string | number
+  unit?: string
+  /** 强调卡：数值/边框走主题 emphasis 色、底色 emphasisSoft */
+  accent?: boolean
+}
 
 export interface TemplateMeta {
   displayName?: string
@@ -148,6 +172,8 @@ export interface TemplateInstance {
   slotDefs?: Record<string, SlotDef>
   /** Schema 1.1: at most one recommended column */
   highlight?: { recommendCol: number | null }
+  /** Schema 1.2 扩展: 表外 KPI 统计卡（缺省/空数组 = 无卡片区，导出零占位） */
+  kpiCards?: KpiCard[]
   /** Runtime: zebra on/off; defaults true when unset */
   zebraOn?: boolean
 }
@@ -192,6 +218,22 @@ export type EditIntent =
   /** 灵活操作升级 T01：整块换位（区间一次置换一次校验，不拆单行拼批） */
   | { kind: 'moveRowBlock'; from: number; count: number; to: number }
   | { kind: 'moveColBlock'; from: number; count: number; to: number }
+  /** Schema 1.2 扩展：KPI 统计卡（一次意图 = 一张撤销快照；上限 6 张） */
+  | { kind: 'addKpiCard'; card: KpiCard }
+  | { kind: 'updateKpiCard'; cardId: string; patch: Partial<Omit<KpiCard, 'id'>> }
+  | { kind: 'removeKpiCard'; cardId: string }
+  /** dir=-1 上移 / +1 下移（与相邻卡互换；越界拒绝） */
+  | { kind: 'moveKpiCard'; cardId: string; dir: -1 | 1 }
+  /** Schema 1.2 扩展：单元格条形格式（bar=null 清除，恢复纯文本格） */
+  | { kind: 'setSlotBar'; slotId: string; bar: BarFormat | null }
+  /** 分组行动态化：在 aboveRow 逻辑行上方插入一条分组/分区行（新槽位 + 区块，一次意图一张快照） */
+  | { kind: 'addBlockRow'; aboveRow: number; type: 'sectionBar' | 'groupHeader'; text?: string }
+  /** 分组行动态化：连槽位一起删除（仅 between-rows 槽；与 removeBlock 只删区块区分） */
+  | { kind: 'removeBlockRow'; blockId: string }
+  /** 分组行动态化：分组行上移/下移一格（改锚点；与相邻行间空位无冲突才允许） */
+  | { kind: 'moveBlockRow'; blockId: string; dir: -1 | 1 }
+  /** 表名编辑：有 captionSlot 写槽（预览行同步），否则写 meta.displayName（导出用） */
+  | { kind: 'setCaption'; text: string }
 
 /** E3 多次撤销：撤销/重做栈深上限（入栈超限裁掉最旧一条，恒定内存上界） */
 export const UNDO_LIMITS = { maxDepth: 50 } as const

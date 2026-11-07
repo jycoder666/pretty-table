@@ -1,5 +1,6 @@
 import type {
   Align,
+  BarFormat,
   BlockType,
   Emphasis,
   LayoutStyle,
@@ -12,7 +13,7 @@ import type {
   SlotValue,
   TemplateInstance,
 } from '../types'
-import { resolveTheme, type Palette } from '../theme/palettes'
+import { resolveTheme, readableTextColor, type Palette } from '../theme/palettes'
 import { toVTableTheme } from '../theme/vtableTheme'
 import { FONT_STACK } from '../theme/font'
 import { semanticColor } from '../theme/semantic'
@@ -71,6 +72,12 @@ export type CellMeta = {
   blockType?: BlockType
   /** R-4：区块样式档位（emphFooter 字号 2 档 / leftTag 深浅 2 档） */
   styleTier?: number
+  /** leftTag 格所属区块槽 id（点击选中区块的命中口径，见 findSlotAtVisual） */
+  blockSlotId?: string
+  /** 区块级底色覆盖（sectionBar / groupHeader；缺省 = 主题 primary） */
+  blockColor?: string
+  /** Schema 1.2 扩展：单元格横条格式（数据格内水平彩色条） */
+  bar?: BarFormat
 }
 
 function slotParts(
@@ -83,6 +90,7 @@ function slotParts(
   mark?: MarkValue | null
   num?: number | null
   image?: string
+  bar?: BarFormat
 } {
   if (v === undefined || v === null) return { text: '' }
   if (typeof v === 'object') {
@@ -95,6 +103,7 @@ function slotParts(
       align: v.align,
       emphasize: Array.isArray(em) ? em : em ? [em] : undefined,
     }
+    const bar = 'bar' in v && v.bar && typeof v.bar === 'object' ? (v.bar as BarFormat) : undefined
     if ('mark' in v) {
       const m = (v as MarkSlotObject).mark
       return { text: m ? MARK_GLYPH[m] : '', mark: m, ...style }
@@ -105,9 +114,10 @@ function slotParts(
         text: n === null || n === undefined ? '' : formatNumber(n, def ?? { format: 'number' }),
         num: n,
         ...style,
+        ...(bar ? { bar } : {}),
       }
     }
-    return { text: String(v.text ?? ''), ...style }
+    return { text: String(v.text ?? ''), ...style, ...(bar ? { bar } : {}) }
   }
   // mark/num 槽存普通文字（如「面议」「100万」）→ 按文字显示，不套格式
   return { text: String(v) }
@@ -139,8 +149,11 @@ export function buildVisualRows(inst: TemplateInstance): {
     const m = /^after-(\d+)$/.exec(def.rowHint ?? '')
     if (m) gapAfter.set(Number(m[1]), def.id)
   }
-  // R-4 leftTag：left-N 锚点 → 该逻辑行首列标记（不插行）
-  const leftTagAt = new Map<number, { text: string; styleTier?: number }>()
+  // R-4 leftTag：left-N 锚点 → 该逻辑行首列标记（不插行）；blockSlotId 供命中链选中区块
+  const leftTagAt = new Map<
+    number,
+    { text: string; styleTier?: number; blockSlotId: string }
+  >()
   for (const def of inst.layout.blockSlots) {
     const m = /^left-(\d+)$/.exec(def.rowHint ?? '')
     if (!m) continue
@@ -149,6 +162,7 @@ export function buildVisualRows(inst: TemplateInstance): {
       leftTagAt.set(Number(m[1]), {
         text: String(block.props?.text ?? ''),
         styleTier: typeof block.props?.styleTier === 'number' ? block.props.styleTier : undefined,
+        blockSlotId: def.id,
       })
     }
   }
@@ -165,13 +179,11 @@ export function buildVisualRows(inst: TemplateInstance): {
       let isPlaceholder = false
       let mark: MarkValue | null | undefined
       let image: string | undefined
+      let bar: BarFormat | undefined
       let role: CellMeta['role'] = r < headerLevels ? 'header' : c === 0 ? 'label' : 'body'
 
       if (r === 0 && c === 0 && inst.meta?.templateType === 'compare') {
         text = '项目'
-        role = 'header'
-      } else if (r === 1 && inst.meta?.templateType === 'detail') {
-        text = c === 0 ? '项目' : c === 1 ? '说明' : '备注'
         role = 'header'
       } else if (sid) {
         const parts = slotParts(inst.slots[sid], inst.slotDefs?.[sid])
@@ -183,6 +195,7 @@ export function buildVisualRows(inst: TemplateInstance): {
         else if (parts.num !== undefined) align = parts.align ?? 'right'
         else align = parts.align
         emphasize = parts.emphasize
+        bar = parts.bar
         // 含图格不显示占位（R-3）；空图片槽（已清）照常显示占位
         if (text === '' && !image) {
           isPlaceholder = true
@@ -199,7 +212,15 @@ export function buildVisualRows(inst: TemplateInstance): {
         role = 'leftTag'
         text = tag.text
         isPlaceholder = false
-        metaRow.push({ slotId: sid, role, text, isPlaceholder, blockType: 'leftTag', styleTier: tag.styleTier })
+        metaRow.push({
+          slotId: sid,
+          role,
+          text,
+          isPlaceholder,
+          blockType: 'leftTag',
+          styleTier: tag.styleTier,
+          blockSlotId: tag.blockSlotId,
+        })
         continue
       }
 
@@ -212,6 +233,7 @@ export function buildVisualRows(inst: TemplateInstance): {
         isPlaceholder,
         mark,
         image,
+        ...(bar ? { bar } : {}),
       })
     }
     metas.push(metaRow)
@@ -236,6 +258,10 @@ export function buildVisualRows(inst: TemplateInstance): {
         isPlaceholder: !block,
         blockType: block?.type,
         styleTier: typeof block?.props?.styleTier === 'number' ? block.props.styleTier : undefined,
+        blockColor:
+          block && typeof block.props?.color === 'string' && block.props.color
+            ? block.props.color
+            : undefined,
       }))
       blockRowIndexes.set(metas.length, gapId)
       metas.push(blockRow)
@@ -315,9 +341,14 @@ function styleForCell(
       // 字号 2 档（TH-B2）：常规 / 略大
       style.fontSize = metrics.fontSize + (cell.styleTier === 2 ? 2 : 0)
     } else {
-      // sectionBar / groupHeader：主色整行
-      style.bgColor = palette.primary
-      style.color = palette.headerText
+      // sectionBar / groupHeader：主色整行；区块级自定义底色时文字按亮度自动黑白
+      if (cell.blockColor) {
+        style.bgColor = cell.blockColor
+        style.color = readableTextColor(cell.blockColor)
+      } else {
+        style.bgColor = palette.primary
+        style.color = palette.headerText
+      }
       style.fontWeight = 600
       style.textAlign = 'left'
     }
@@ -465,10 +496,81 @@ export function drawImageCell(
   }
 }
 
+// ── Schema 1.2 扩展：单元格条形格式绘制通道（与图片格同走 customLayout，预览 / PNG 同源）──
+
+/** bar 格组构建器：由渲染通道注入（vrender 依赖必须留在 VTable chunk） */
+export type BarGroupFactory = (
+  bar: { ratio: number; color: string },
+  text: string,
+  textStyle: {
+    fontSize: number
+    color: string
+    fontWeight?: number
+    fontFamily: string
+    textAlign: 'left' | 'center' | 'right'
+  },
+  width: number,
+  height: number,
+  padH: number,
+) => unknown
+
+let barGroupFactory: BarGroupFactory | null = null
+
+/** 渲染通道注册（vtableLite 装载时调用一次；传 null 撤销，bar 格回退默认文字绘制） */
+export function registerBarGroupFactory(fn: BarGroupFactory | null): void {
+  barGroupFactory = fn
+}
+
+/**
+ * 条形格绘制：格内水平彩色条（宽 = 内容区宽 × ratio）+ 原文本覆盖其上。
+ * 无 bar / 通道未注册 → undefined 交给 VTable 默认文字绘制（style 回调并存）。
+ */
+export function drawBarCell(
+  cell: CellMeta | undefined,
+  palette: Palette,
+  metrics: TypeMetrics,
+  args: VCustomRenderArgs,
+): VCustomRenderResult | undefined {
+  if (!cell?.bar) return undefined
+  if (!barGroupFactory) return undefined
+  const { width, height } = args.rect
+  const ratio = Math.min(1, Math.max(0, Number(cell.bar.ratio) || 0))
+  const color = cell.bar.color || palette.primary
+  const em = cell.emphasize ?? []
+  return {
+    rootContainer: barGroupFactory(
+      { ratio, color },
+      cell.text,
+      {
+        fontSize: metrics.fontSize,
+        color: em.includes('red') ? palette.emphasis : '#1a1a1a',
+        fontWeight: em.includes('bold') ? 700 : undefined,
+        fontFamily: FONT_STACK,
+        textAlign: cell.align ?? 'right',
+      },
+      width,
+      height,
+      metrics.padH,
+    ),
+    expectedWidth: width,
+    expectedHeight: height,
+    renderDefault: false,
+  }
+}
+
 export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<string, unknown> {
   const { palette, zebraOn } = resolveTheme(inst.themeId, inst.themeTokens)
   const effectiveZebra = inst.zebraOn === false ? false : zebraOn
-  const { metas, rowHeights, blockRowIndexes } = buildVisualRows(inst)
+  const built = buildVisualRows(inst)
+  // 导出（PNG）占位口径与 HTML 导出同源（model.ts 已按 isPlaceholder 置空串）：
+  // 预览保留「填写内容 / 可拖入区块」提示，导出一律置空，不泄占位文案。
+  const metas =
+    ctx.mode === 'export'
+      ? built.metas.map((row) =>
+          row.map((cell) => (cell.isPlaceholder ? { ...cell, text: '' } : cell)),
+        )
+      : built.metas
+  const { rowHeights, blockRowIndexes } = built
   const merges = remapMerges(inst, blockRowIndexes)
   const colCount = inst.layout.colCount
   const recommendCol = inst.highlight?.recommendCol ?? null
@@ -483,10 +585,13 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
   })
 
   // R-3：含图列挂 customLayout（列级，图片格绘制通道）；文字格仍走 style 回调，两机制并存
+  // Schema 1.2 扩展：含 bar 格的列同样挂 customLayout（图片 / 条形两通道在回调内按格分流）
   const imageCols = new Set<number>()
+  const barCols = new Set<number>()
   metas.forEach((row) => {
     row.forEach((cell, c) => {
       if (cell.image) imageCols.add(c)
+      if (cell.bar) barCols.add(c)
     })
   })
 
@@ -501,13 +606,16 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
         return styleForCell(cell, palette, effectiveZebra, args.row, args.col, ctx.mode, recommendCol, metrics)
       },
     }
-    if (imageCols.has(c)) {
+    if (imageCols.has(c) || barCols.has(c)) {
       // P1 修复：customLayout 函数通道（rootContainer 直接采用，见文件头选型说明）；
       // vtable 1.26.8 customRender 参数无 ctx，旧 args.ctx.drawImage 必崩
       col.customLayout = (args: VCustomRenderArgs) => {
         const cell = metas[args.row]?.[args.col]
-        const asset = cell?.image ? ctx.images?.get(cell.image) : undefined
-        return drawImageCell(cell, asset, args)
+        if (cell?.image) {
+          const asset = ctx.images?.get(cell.image)
+          return drawImageCell(cell, asset, args)
+        }
+        return drawBarCell(cell, palette, metrics, args)
       }
     }
     return col
@@ -597,6 +705,10 @@ export function findSlotAtVisual(
   const { metas, blockRowIndexes } = buildVisualRows(inst)
   const cell = metas[visualRow]?.[col]
   const blockSlot = blockRowIndexes.get(visualRow)
+  // leftTag 格（left-N 锚点，不插行）：命中返回其区块槽 id，点击即可选中区块编辑文字
+  if (cell?.role === 'leftTag' && cell.blockSlotId) {
+    return { slotId: cell.blockSlotId, isBlockSlot: true }
+  }
   return { slotId: cell?.slotId ?? null, isBlockSlot: Boolean(blockSlot) }
 }
 

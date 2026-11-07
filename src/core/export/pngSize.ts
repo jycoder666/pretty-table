@@ -1,5 +1,6 @@
 import type { TemplateInstance } from '../types'
 import { measureContentSize } from '../adapter/toOption'
+import { effectiveKpiCards, kpiHeroHeight } from '../kpi/kpiCards'
 
 /**
  * PNG 尺寸估算（T34 拆分）：只算不画、不依赖 VTable。
@@ -13,13 +14,14 @@ export const PNG_MAX_PIXELS_DEFAULT = 16_777_216
 /** 四周留白（CSS px），输出尺寸 =（内容 + 2×PAD）× 倍率 */
 export const PNG_PAD = 16
 
-/** 只算不画：按倍率预估输出像素尺寸（留白口径 =（内容 + 32）× 倍率） */
+/** 只算不画：按倍率预估输出像素尺寸（留白口径 =（内容 + 32）× 倍率；Schema 1.2 扩展 含 KPI hero 区高） */
 export function measurePng(inst: TemplateInstance, scale: 1 | 2 | 3 = 2) {
   const m = measureContentSize(inst)
+  const kpi = kpiHeroHeight(effectiveKpiCards(inst))
   return {
     contentWidth: m.width,
-    contentHeight: m.height,
+    contentHeight: m.height + kpi,
     outWidth: (m.width + PNG_PAD * 2) * scale,
-    outHeight: (m.height + PNG_PAD * 2) * scale,
+    outHeight: (m.height + kpi + PNG_PAD * 2) * scale,
   }
 }

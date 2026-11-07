@@ -8,6 +8,7 @@ import {
   BLANK_V1,
   COMPARE_ALPHA_V1,
   DETAIL_ALPHA_V1,
+  STAT_V1,
 } from './index'
 import { validateInstance, cloneInstance } from '../schema/validate'
 import { migrateInstance, SCHEMA_VERSION_CURRENT } from '../schema/migrate'
@@ -107,9 +108,10 @@ describe('价目 / 矩阵系统模板（T26 · U-1 §8）', () => {
     expect(MATRIX_V1.layout.allowedMerges).toContainEqual({ start: [0, 1], end: [0, 5] })
   })
 
-  it('登记后可从模板库取用，共 5 张系统预设（blank 居首，FR-C6）', () => {
+  it('登记后可从模板库取用，共 6 张系统预设（blank 居首，FR-C6；stat-v1 统计看板）', () => {
     expect(getPresetTemplate('pricing-v1')?.meta?.templateType).toBe('pricing')
     expect(getPresetTemplate('matrix-v1')?.meta?.templateType).toBe('matrix')
+    expect(getPresetTemplate('stat-v1')?.meta?.templateType).toBe('stat')
     expect(getPresetTemplate('pricing-v1')).not.toBeNull()
     expect(listPresetTemplates().map((t) => t.templateId)).toEqual([
       'blank-v1',
@@ -117,6 +119,7 @@ describe('价目 / 矩阵系统模板（T26 · U-1 §8）', () => {
       'detail-alpha-v1',
       'pricing-v1',
       'matrix-v1',
+      'stat-v1',
     ])
   })
 
@@ -183,8 +186,8 @@ describe('blank-v1 新建空白表底稿（FR-C6 · Q-10）', () => {
 // ── 交互升级 T02：模板补 emphFooter / leftTag 槽（R-4）────────
 
 describe('模板补槽 · footer / leftTag（交互升级 R-4）', () => {
-  it('五张系统模板（含 blank）都配 footer 槽：accept 仅 emphFooter、rowHint=after-末行', () => {
-    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, PRICING_V1, MATRIX_V1]) {
+  it('系统模板（含 blank / stat）都配 footer 槽：accept 仅 emphFooter、rowHint=after-末行', () => {
+    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, PRICING_V1, MATRIX_V1, STAT_V1]) {
       const footer = tpl.layout.blockSlots.find((s) => s.region === 'footer')
       expect(footer).toBeDefined()
       expect(footer!.accept).toEqual(['emphFooter'])
@@ -193,8 +196,8 @@ describe('模板补槽 · footer / leftTag（交互升级 R-4）', () => {
     }
   })
 
-  it('compare / detail / matrix / blank 逐正文逻辑行配 leftTag 槽（left-N）；价目不配', () => {
-    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, MATRIX_V1]) {
+  it('compare / detail / matrix / blank / stat 逐正文逻辑行配 leftTag 槽（left-N）；价目不配', () => {
+    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, MATRIX_V1, STAT_V1]) {
       const lefts = tpl.layout.blockSlots.filter((s) => s.region === 'left-tag')
       const bodyRows: number[] = []
       for (let r = tpl.layout.headerLevels ?? 1; r < (tpl.layout.slotGrid ?? []).length; r++) bodyRows.push(r)
@@ -205,8 +208,8 @@ describe('模板补槽 · footer / leftTag（交互升级 R-4）', () => {
     expect(PRICING_V1.layout.blockSlots.filter((s) => s.region === 'left-tag')).toHaveLength(0)
   })
 
-  it('补槽后五张模板 validate / migrate 仍通过；blockSlots 无重复 id', () => {
-    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, PRICING_V1, MATRIX_V1]) {
+  it('补槽后全部模板 validate / migrate 仍通过；blockSlots 无重复 id', () => {
+    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, PRICING_V1, MATRIX_V1, STAT_V1]) {
       const v = validateInstance(cloneInstance(tpl))
       expect(v.ok).toBe(true)
       const m = migrateInstance(cloneInstance(tpl), listPresetTemplates())

@@ -18,6 +18,10 @@ export const DETAIL_ALPHA_V1: TemplateInstance = {
   slots: {
     'subject.name': '旗舰服务方案',
     'subject.plan': '2026 标准版',
+    // R1 表头行走槽位文案（初始值沿用旧硬编码「项目/说明/备注」，仅解除 toOption 硬编码）
+    'head.c0': '项目',
+    'head.c1': '说明',
+    'head.c2': '备注',
     'row.2.label': '适用对象',
     'row.2.value': '中小企业与内容团队',
     'row.2.note': '不限行业',
@@ -97,14 +101,10 @@ export const DETAIL_ALPHA_V1: TemplateInstance = {
       footerSlot(9),
       ...leftTagSlots(2, 9),
     ],
-    readonlyCells: [
-      [1, 0],
-      [1, 1],
-      [1, 2],
-    ],
+    // R1 表头文案槽位化后可编辑，不再设只读
     slotGrid: [
       ['subject.name', 'subject.name', 'subject.plan'],
-      [null, null, null], // header labels rendered as fixed text
+      ['head.c0', 'head.c1', 'head.c2'],
       ['row.2.label', 'row.2.value', 'row.2.note'],
       ['row.3.label', 'row.3.value', 'row.3.note'],
       ['row.4.label', 'row.4.value', 'row.4.note'],

@@ -331,7 +331,7 @@ describe('LibraryPage · FR-20 类型筛选（TC-070）：chips / 防误解小�
     await flushPromises()
   }
 
-  it('chips 顺序：全部/多列对比/单主体明细/价目清单/宽表矩阵，默认「全部」选中', async () => {
+  it('chips 顺序：全部/多列对比/单主体明细/价目清单/宽表矩阵/统计看板，默认「全部」选中', async () => {
     const wrapper = await mountPage()
     const chips = wrapper.findAll('[data-testid="type-filter"] .fchip')
     expect(chips.map((c) => c.text().trim())).toEqual([
@@ -340,6 +340,7 @@ describe('LibraryPage · FR-20 类型筛选（TC-070）：chips / 防误解小�
       '单主体明细',
       '价目清单',
       '宽表矩阵',
+      '统计看板',
     ])
     expect(
       (wrapper.find('[data-testid="filter-chip-all"]').element as HTMLButtonElement).classList.contains(

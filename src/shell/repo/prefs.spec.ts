@@ -1,7 +1,19 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getPngScale, setPngScale } from './prefs'
 
 const KEY = 'pt.pref.pngScale'
+
+// Node 26 实验性 localStorage 需 --localstorage-file 启动参数，vitest 环境未注入：
+// prefs.ts 本就要求「localStorage 不可用时静默回退」，此处给同接口内存桩保证测试可跑。
+if (typeof localStorage === 'undefined') {
+  const store = new Map<string, string>()
+  vi.stubGlobal('localStorage', {
+    getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+    setItem: (k: string, v: string) => void store.set(k, String(v)),
+    removeItem: (k: string) => void store.delete(k),
+    clear: () => void store.clear(),
+  })
+}
 
 describe('PNG 倍率偏好（pt.pref.pngScale）', () => {
   beforeEach(() => {

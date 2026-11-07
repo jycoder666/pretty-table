@@ -54,6 +54,11 @@ const PASTE_BLOCKED_INTENTS: ReadonlySet<EditIntent['kind']> = new Set([
   'moveCol',
   'moveRowBlock',
   'moveColBlock',
+  // 分组行动态化 / 表名编辑（编辑台二轮）：结构或内容变更，粘贴预览期一律互斥
+  'addBlockRow',
+  'removeBlockRow',
+  'moveBlockRow',
+  'setCaption',
 ])
 
 /**

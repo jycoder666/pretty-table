@@ -422,21 +422,33 @@ describe('PropertyPanel · 分组折叠（PX-16）', () => {
     expect(editor.current!.layout.headerLevels).toBe(2)
   })
 
-  it('删区块入口归入结构组；区块文字编辑留在内容组', async () => {
+  it('删区块入口分流：分组行区块走「删除分组行」；普通区块显示「删除区块」；文字编辑留在内容组', async () => {
     const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
+    // 分组行区块（preset-g1）：文字编辑在内容组；删除入口为「删除分组行」（整行删除），
+    // 不再重复提供「删除区块」（避免分组行删块后槽位悬空的旧交互）
     editor.selectedBlockId = 'preset-g1'
     await wrapper.vm.$nextTick()
     const contentBody = wrapper.find('[data-testid="group-content"] .group-body')
-    const structureBody = wrapper.find('[data-testid="group-structure"] .group-body')
     expect(contentBody.text()).toContain('区块')
     expect(contentBody.find('textarea').exists()).toBe(true)
-    expect(structureBody.text()).toContain('删除区块')
+    expect(wrapper.find('[data-testid="block-remove-row"]').exists()).toBe(true)
+    expect(wrapper.findAll('button').some((b) => b.text().trim() === '删除区块')).toBe(false)
+    // 普通区块（emphFooter 落 footer 槽）：出现独立「区块操作 · 删除区块」入口
+    editor.addBlock('emphFooter', 'footer-1')
+    const blk = editor.current!.blocks.find((b) => b.type === 'emphFooter')!
+    editor.selectedBlockId = blk.id
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findAll('button').some((b) => b.text().trim() === '删除区块')).toBe(true)
   })
 
   // ── 灵活操作升级 T06：ConfirmDialog 单挂载收口（PropertyPanel 不再挂载，弹窗由 EditorPage 单点渲染）──
+  // 分组行区块删除入口已演进为「删除分组行」（整行删除），普通区块保留「删除区块」；
+  // 两者确认均走模块级 confirmState 单例，此处用普通区块断言确认路径。
   it('删区块确认路径：面板不再挂 ConfirmDialog；确认走模块级 confirmState 单例，取消不删、确认才删', async () => {
     const { editor, wrapper } = await setup(COMPARE_ALPHA_V1)
-    editor.selectedBlockId = 'preset-g1'
+    editor.addBlock('emphFooter', 'footer-1')
+    const blk = editor.current!.blocks.find((b) => b.type === 'emphFooter')!
+    editor.selectedBlockId = blk.id
     await wrapper.vm.$nextTick()
     const before = editor.current!.blocks.length
     // 面板树内无 ConfirmDialog 实例（T06 收口后编辑台单点在 EditorPage）
@@ -450,7 +462,7 @@ describe('PropertyPanel · 分组折叠（PX-16）', () => {
     settleConfirm(false)
     await flushPromises()
     expect(editor.current!.blocks.length).toBe(before)
-    expect(editor.selectedBlockId).toBe('preset-g1')
+    expect(editor.selectedBlockId).toBe(blk.id)
 
     // 确认：settle(true) → removeSelectedBlock 生效（blocks 少一处）
     await btn.trigger('click')

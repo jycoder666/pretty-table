@@ -1,0 +1,70 @@
+IMG=C:/Users/60196/Downloads/table/精美表格图片生成需求 (4).png PIXELS=x SCALE=2
+DBG rect type=Windows.Foundation.Rect X=842 Xtype=System.Double
+Y=88 X=421 | A tJ T IJ M N M E N tJ
+Y=88 X=574 | E S T ．
+Y=88 X=620 | 2 0 1 9
+Y=119 X=391 | 秋 季 菜 单
+Y=184 X=384 | S E A S 0 N 众 L
+Y=184 X=478 | 9 月 至 11 月 · 日 1 1 ： 3 0 一 2 1 ： 3 0
+Y=254 X=154 | S T A R T E R S
+Y=326 X=103 | 慢 烤 番 茄 与 罗 勒
+Y=356 X=104 | SLOW-ROASTED TOMATO ， BASIL
+Y=418 X=104 | 冷 切 牛 舌 ． 柚 子 醋
+Y=448 X=104 | 8 E E F TONGUE ， YUZU DRESSING
+Y=510 X=104 | 香 煎 带 子 · 青 豆 泥
+Y=540 X=104 | SEARED SCALLOP ， PEA P U R é E
+Y=601 X=104 | 时 令 沙 拉
+Y=630 X=104 | SEASONAL G R E E N S
+Y=253 X=575 | 蒊 点
+Y=254 X=626 | D E S S E R T S
+Y=330 X=484 | 58
+Y=420 X=484 | 78
+Y=512 X=485 | 88
+Y=604 X=484 | 48
+Y=780 X=474 | 168
+Y=870 X=474 | 138
+Y=962 X=474 | 128
+Y=1054 X=474 | 158
+Y=1144 X=474 | 178
+Y=1236 X=474 | 158
+Y=326 X=576 | 焦 糖 布 丁
+Y=356 X=575 | C R M E CARAMEL
+Y=418 X=576 | 开 心 果 巴 斯 克
+Y=448 X=576 | PISTACHIO BASQUE
+Y=522 X=574 | 饮 品
+Y=522 X=626 | D R | N K S
+Y=704 X=103 | 主
+Y=704 X=154 | M A | S
+Y=776 X=104 | 炭 烤 羊 排 ． 迷 迭 香 汁
+Y=806 X=104 | LAMB RACK ， ROSEMARY JUS
+Y=868 X=104 | 黑 松 露 野 菌 意 面
+Y=898 X=103 | TRUFFLE MUSHROOM PA STA
+Y=960 X=104 | 香 草 烤 鸡 半 只
+Y=990 X=104 | H E R B ROASTED （ H 还 K E N
+Y=1050 X=104 | 海 鲜 烩 饭
+Y=1080 X=104 | SEAFOOD RISOTTO
+Y=1142 X=103 | 慢 炖 牛 颊 肉
+Y=1172 X=104 | BRAISED BEEF C H E E K
+Y=1234 X=103 | 黄 油 煎 鳕 鱼
+Y=1264 X=104 | PAN-SEARED COD ， BROWN 8 tJ T T E R
+Y=1327 X=103 | 定 价 含 税 · 不 另 收 莠 费
+Y=1348 X=180 | 品 、 价 格 与 店 名 仅 作 版 示 g ；
+Y=595 X=575 | 手 冲 单 品
+Y=624 X=576 | POUR-OVER ， 引 N G L E ORIGIN
+Y=686 X=576 | 气 泡 柚 子
+Y=716 X=576 | SPARKLING YUZIJ
+Y=778 X=576 | 云 南 晒 红
+Y=806 X=574 | YUNNAN SUN-DRIED BLACK
+Y=868 X=576 | 季 节 果 酒
+Y=898 X=576 | SEASONAL FRUIT WINE
+Y=1166 X=598 | 本 季 供 应 说 明
+Y=1194 X=598 | 食 材 随 季 节 调 整 ， 售 罄 见 谅 。
+Y=1214 X=598 | 午 市 套 餐 98 元 起 ， 含 前 菜 与 主 菜 。
+Y=1236 X=598 | 全 阝 菜 品 现 点 现 做 ， 出 餐 约 20 分 钟 。
+Y=330 X=956 | 42
+Y=420 X=956 | 48
+Y=598 X=957 | 38
+Y=688 X=957 | 32
+Y=780 X=957 | 36
+Y=870 X=956 | 48
+Y=1342 X=912 | 05 | 0 8

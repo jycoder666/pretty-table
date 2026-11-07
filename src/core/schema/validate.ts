@@ -3,6 +3,7 @@ import type { LayoutStyle, TemplateInstance } from '../types'
 import { clampColWidth, clampTier } from '../theme/layoutScales'
 import { sanitizeHex } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
+import { sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
 
 /** themeTokens 里的角色色键（schema 1.2），hex 值需要清洗 */
 const TOKEN_COLOR_KEYS: readonly string[] = [
@@ -124,7 +125,21 @@ export function validateInstance(json: unknown): Result<TemplateInstance> {
         details: { count: badImages },
       })
     }
+    // Schema 1.2 扩展：槽值 bar 格式清洗（ratio 非法删键、color 非法 hex 回主题默认）
+    for (const [id, v] of Object.entries(slots)) {
+      if (!v || typeof v !== 'object' || Array.isArray(v) || !('bar' in v)) continue
+      const obj = v as Record<string, unknown>
+      const cleaned = sanitizeBar(obj.bar)
+      if (!cleaned) delete obj.bar
+      else obj.bar = cleaned
+      void id
+    }
   }
+
+  // Schema 1.2 扩展：kpiCards 清洗（非数组删字段；项级清洗与截断在 sanitizeKpiCards 内）
+  const kpiClean = sanitizeKpiCards(inst.kpiCards)
+  if (kpiClean === null) delete inst.kpiCards
+  else inst.kpiCards = kpiClean
 
   return ok(cloneInstance(inst), warnings.length ? warnings : undefined)
 }

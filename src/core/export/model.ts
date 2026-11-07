@@ -1,9 +1,10 @@
 import type { SlotValue, TemplateInstance } from '../types'
-import { resolveTheme, type Palette } from '../theme/palettes'
+import { resolveTheme, readableTextColor, type Palette } from '../theme/palettes'
 import { cellInlineStyle } from '../theme/inlineStyle'
 import { FONT_STACK } from '../theme/font'
 import { MARK_LABEL } from '../format/formatTokens'
 import { isImageDataUrl } from '../image/imageGuard'
+import { effectiveKpiCards, renderKpiHeroHtml } from '../kpi/kpiCards'
 import {
   buildVisualRows,
   remapMerges,
@@ -37,10 +38,14 @@ export interface ExportCell {
   image?: string
   /** R-3：图片格行高 px（与预览 rowHeights 同源；rowSpan 时为跨行高之和） */
   heightPx?: number
+  /** Schema 1.2 扩展：横条格式（color 已解析：自定义 hex 或主题 primary） */
+  bar?: { ratio: number; color: string }
 }
 
 export interface ExportModel {
   caption?: string
+  /** Schema 1.2 扩展：表外 KPI 统计卡（已渲染好的 hero HTML；无卡片 = 缺省零占位） */
+  kpiHeroHtml?: string
   headRows: ExportCell[][]
   bodyRows: ExportCell[][]
   footRows: ExportCell[][]
@@ -57,8 +62,8 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;')
 }
 
-/** caption 取值：captionSlot 文本槽优先，否则 displayName */
-function captionText(inst: TemplateInstance): string {
+/** caption 取值：captionSlot 文本槽优先，否则 displayName（壳层表名编辑框同源单点） */
+export function captionText(inst: TemplateInstance): string {
   const sid = inst.layout.captionSlot
   if (sid) {
     const v: SlotValue | undefined = inst.slots[sid]
@@ -176,6 +181,11 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
         const head = row[0]
         const slotId = blockRowIndexes.get(ri) ?? ''
         emittedBlockSlots.add(slotId)
+        // 区块级底色（sectionBar / groupHeader）：追加覆盖主色；文字色按亮度自动黑白（与预览同源）
+        const blockColorOverride =
+          head && head.blockType !== 'emphFooter' && head.blockColor
+            ? `background:${head.blockColor};color:${readableTextColor(head.blockColor)}`
+            : ''
         const cell: ExportCell = {
           text: head?.isPlaceholder ? '' : (head?.text ?? ''),
           tag: 'th',
@@ -183,7 +193,12 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
           style:
             head?.blockType === 'emphFooter'
               ? emphFooterStyle(palette, metrics, head?.styleTier)
-              : cellInlineStyle(palette, { role: 'block' }, metrics),
+              : [
+                  cellInlineStyle(palette, { role: 'block' }, metrics),
+                  blockColorOverride,
+                ]
+                    .filter(Boolean)
+                    .join(';'),
         }
         // R-4：footer 区块行固定进 tfoot（与预览表底一致），不再双输出到 bodyRows
         if (isFooterSlot(inst, slotId)) footRows.push([cell])
@@ -206,6 +221,14 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
         const heightPx = image
           ? rowHeights.slice(ri, ri + rs).reduce((a, b) => a + b, 0)
           : undefined
+        // Schema 1.2 扩展：横条格式（表体数据格；条色 = 自定义 hex 或主题 primary）
+        const bar =
+          !inHeader && cell.bar
+            ? {
+                ratio: Math.min(1, Math.max(0, Number(cell.bar.ratio) || 0)),
+                color: cell.bar.color || palette.primary,
+              }
+            : undefined
         const style = cellStyle(cell, palette, effectiveZebra, ri, ci, recommendCol, metrics)
         cells.push({
           text: cell.isPlaceholder ? '' : cell.text,
@@ -218,6 +241,7 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
           badge: cell.badge,
           image,
           heightPx,
+          bar,
         })
       })
       if (inHeader) headRows.push(cells)
@@ -244,8 +268,11 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
       return typeof w === 'number' ? w : c === 0 ? MIN_FIRST_COL_WIDTH : MIN_COL_WIDTH
     }).reduce((a, b) => a + b, 0)
 
+    // Schema 1.2 扩展：KPI hero 区在模型构建期渲染成内联样式 HTML（与表格同 palette 派生）
+    const kpiCards = effectiveKpiCards(inst)
     return ok({
       caption: captionText(inst),
+      kpiHeroHtml: kpiCards.length > 0 ? renderKpiHeroHtml(kpiCards, palette) : undefined,
       headRows,
       bodyRows,
       footRows,
@@ -272,11 +299,17 @@ export function renderExportHtml(model: ExportModel): string {
     if (cell.colSpan !== undefined) attrs.push(`colspan="${attr(String(cell.colSpan))}"`)
     if (cell.ariaLabel) attrs.push(`aria-label="${attr(cell.ariaLabel)}"`)
     const badge = cell.badge ? `<span style="font-size:11px">${escapeHtml(cell.badge)}</span>` : ''
+    // Schema 1.2 扩展：横条格 = 相对容器 + 绝对定位色条（宽 = ratio 百分比、高 60%）+ 文本覆盖
+    const barInner = cell.bar
+      ? `<div style="position:absolute;left:0;top:20%;height:60%;width:${Math.round(cell.bar.ratio * 100)}%;background:${attr(cell.bar.color)};border-radius:3px"></div>`
+      : ''
     // GC-22：src 只可能来自 isImageDataUrl 白名单校验通过的值（buildExportModel 已闸），
     // 白名单正则保证无引号/无标签注入，data URI 本身不转义
     const inner = cell.image
       ? `<img src="${cell.image}" alt="" style="display:block;width:100%;height:100%;object-fit:cover">`
-      : `${escapeHtml(cell.text)}${badge}`
+      : cell.bar
+        ? `<div style="position:relative">${barInner}<span style="position:relative">${escapeHtml(cell.text)}${badge}</span></div>`
+        : `${escapeHtml(cell.text)}${badge}`
     return `<${cell.tag} ${attrs.join(' ')}>${inner}</${cell.tag}>`
   }
   const rowHtml = (row: ExportCell[]): string => `<tr>${row.map(cellHtml).join('')}</tr>`
@@ -288,7 +321,8 @@ export function renderExportHtml(model: ExportModel): string {
     : ''
   const table = `<table style="border-collapse:collapse;width:100%;max-width:100%;min-width:${model.minWidthPx}px">${caption}${thead}${tbody}${tfoot}</table>`
   // 窄屏（FR-26）：外包横滚容器 + table min-width，页面不撑破；编辑器剥掉 sticky/overflow 时优雅降级
-  return `<div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch">${table}</div>`
+  // Schema 1.2 扩展：KPI hero 区置于横滚容器内、表格上方（无卡片零占位）
+  return `<div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch">${model.kpiHeroHtml ?? ''}${table}</div>`
 }
 
 /**

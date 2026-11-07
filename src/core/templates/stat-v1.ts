@@ -1,0 +1,121 @@
+import type { TemplateInstance } from '../types'
+import { footerSlot, leftTagSlots } from './blockSlotHelpers'
+
+/**
+ * 统计看板底稿（收支/行程等看板类需求）：表外 2 张 KPI 卡（本月收入 21,800 元 /
+ * 结余率 29%）+ 6 行 3 列分组明细表（分项 / 金额 / 占比）。金额列为 CNY 货币槽、
+ * 占比列为百分比数值槽——编辑台可对占比列数据格开「条形」直观看比例。
+ */
+export const STAT_V1: TemplateInstance = {
+  schemaVersion: '1.2',
+  templateId: 'stat-v1',
+  themeId: 'T-A',
+  zebraOn: true,
+  slotDefs: {
+    'stat.amount.1': { kind: 'number', format: 'currency', currency: 'CNY', fractionDigits: 2 },
+    'stat.amount.2': { kind: 'number', format: 'currency', currency: 'CNY', fractionDigits: 2 },
+    'stat.amount.3': { kind: 'number', format: 'currency', currency: 'CNY', fractionDigits: 2 },
+    'stat.amount.4': { kind: 'number', format: 'currency', currency: 'CNY', fractionDigits: 2 },
+    'stat.amount.5': { kind: 'number', format: 'currency', currency: 'CNY', fractionDigits: 2 },
+    'stat.amount.6': { kind: 'number', format: 'currency', currency: 'CNY', fractionDigits: 2 },
+    'stat.ratio.1': { kind: 'number', format: 'percent' },
+    'stat.ratio.2': { kind: 'number', format: 'percent' },
+    'stat.ratio.3': { kind: 'number', format: 'percent' },
+    'stat.ratio.4': { kind: 'number', format: 'percent' },
+    'stat.ratio.5': { kind: 'number', format: 'percent' },
+    'stat.ratio.6': { kind: 'number', format: 'percent' },
+  },
+  highlight: { recommendCol: null },
+  kpiCards: [
+    { id: 'kpi-1', label: '本月收入', value: '21,800', unit: '元' },
+    { id: 'kpi-2', label: '结余率', value: '29', unit: '%', accent: true },
+  ],
+  meta: {
+    displayName: '统计看板',
+    description: '顶部统计卡 + 分组明细，适合收支/行程等看板类信息图',
+    templateType: 'stat',
+    origin: 'preset',
+  },
+  slots: {
+    'stat.title': '本月收支明细',
+    'stat.h.item': '分项',
+    'stat.h.amount': { text: '金额', align: 'center' },
+    'stat.h.ratio': { text: '占比', align: 'center' },
+    'stat.item.1': '工资收入',
+    'stat.amount.1': 15200,
+    'stat.ratio.1': 0.7,
+    'stat.item.2': '副业收入',
+    'stat.amount.2': 4200,
+    'stat.ratio.2': 0.19,
+    'stat.item.3': '理财收益',
+    'stat.amount.3': 2400,
+    'stat.ratio.3': 0.11,
+    'stat.item.4': '日常开销',
+    'stat.amount.4': 8600,
+    'stat.ratio.4': 0.56,
+    'stat.item.5': '房租水电',
+    'stat.amount.5': 4300,
+    'stat.ratio.5': 0.28,
+    'stat.item.6': '其他支出',
+    'stat.amount.6': 2400,
+    'stat.ratio.6': 0.16,
+  },
+  blocks: [
+    {
+      id: 'preset-s1',
+      type: 'groupHeader',
+      slotId: 'gap-s1',
+      props: { text: '收入构成', styleTier: 1 },
+    },
+    {
+      id: 'preset-s2',
+      type: 'groupHeader',
+      slotId: 'gap-s2',
+      props: { text: '支出构成', styleTier: 1 },
+    },
+  ],
+  layout: {
+    rowCount: 7,
+    colCount: 3,
+    frozenColCount: 1,
+    headerLevels: 1,
+    captionSlot: 'stat.title',
+    merges: [],
+    structuralMerges: [],
+    allowedMerges: [
+      { start: [1, 1], end: [1, 2] },
+      { start: [2, 1], end: [2, 2] },
+      { start: [3, 1], end: [3, 2] },
+      { start: [4, 1], end: [4, 2] },
+      { start: [5, 1], end: [5, 2] },
+      { start: [6, 1], end: [6, 2] },
+    ],
+    blockSlots: [
+      {
+        id: 'gap-s1',
+        accept: ['sectionBar', 'groupHeader'],
+        region: 'between-rows',
+        mutexGroup: 's1',
+        rowHint: 'after-0',
+      },
+      {
+        id: 'gap-s2',
+        accept: ['sectionBar', 'groupHeader'],
+        region: 'between-rows',
+        mutexGroup: 's2',
+        rowHint: 'after-3',
+      },
+      footerSlot(6),
+      ...leftTagSlots(1, 6),
+    ],
+    slotGrid: [
+      ['stat.h.item', 'stat.h.amount', 'stat.h.ratio'],
+      ['stat.item.1', 'stat.amount.1', 'stat.ratio.1'],
+      ['stat.item.2', 'stat.amount.2', 'stat.ratio.2'],
+      ['stat.item.3', 'stat.amount.3', 'stat.ratio.3'],
+      ['stat.item.4', 'stat.amount.4', 'stat.ratio.4'],
+      ['stat.item.5', 'stat.amount.5', 'stat.ratio.5'],
+      ['stat.item.6', 'stat.amount.6', 'stat.ratio.6'],
+    ],
+  },
+}

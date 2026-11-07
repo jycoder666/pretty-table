@@ -1,0 +1,5 @@
+appId: wbapp_7Oa8eVrs88OGvP4jGfEY6H
+name: PrettyTable 表格模板编辑器
+localDir: F:\pretty-table\dist
+appType: web
+entryHtml: index.html

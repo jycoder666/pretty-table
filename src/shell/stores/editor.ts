@@ -395,6 +395,18 @@ export const useEditorStore = defineStore('editor', () => {
     apply({ kind: 'setSlot', slotId, value: text }, textUndoOpts(`slot:${slotId}`))
   }
 
+  /**
+   * 表名编辑（编辑台二轮）：captionSlot 槽存在 → 与该槽就地编辑共用撤销会话
+   * （同一处文案两个入口，连续输入合并一步撤销）；无槽模板（displayName 承载）独立会话。
+   */
+  function setCaptionText(text: string) {
+    const sid = current.value?.layout.captionSlot
+    apply(
+      { kind: 'setCaption', text },
+      textUndoOpts(sid ? `slot:${sid}` : 'caption:display'),
+    )
+  }
+
   function setTheme(themeId: ThemeId) {
     apply({ kind: 'setTheme', themeId })
   }
@@ -729,6 +741,7 @@ export const useEditorStore = defineStore('editor', () => {
     undo,
     redo,
     setSlotText,
+    setCaptionText,
     setTheme,
     setZebra,
     setAlign,

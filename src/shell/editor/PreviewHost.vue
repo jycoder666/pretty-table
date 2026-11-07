@@ -3,9 +3,18 @@ import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vu
 import {
   loadRenderCore,
   type CoreHandle,
+  type KpiCard,
   findSlotAtVisual,
   findMergeAt,
   visualToLogicalRow,
+  effectivePalette,
+  effectiveKpiCards,
+  kpiHeroStyle,
+  kpiCardStyle,
+  kpiValueStyle,
+  kpiUnitStyle,
+  kpiLabelStyle,
+  kpiValueText,
 } from '@/core'
 import {
   editableCellAt,
@@ -276,6 +285,48 @@ const mountStyle = computed(() => {
   }
 })
 
+// ── Schema 1.2 扩展：KPI 统计卡 hero 区（表格上方一排等宽卡片，无卡片零占位）──
+// 样式与导出同源：卡片底/边框/文字色全部经 kpiCards.ts 样式函数从 palettes 派生。
+const kpiCards = computed<KpiCard[]>(() =>
+  editor.current ? effectiveKpiCards(editor.current) : [],
+)
+
+const kpiPalette = computed(() => effectivePalette(editor.current))
+
+const kpiHeroWrapStyle = computed(() => {
+  const inst = editor.current
+  if (!inst) return undefined
+  return {
+    width: `min(100%, ${Math.ceil(totalContentWidth(inst))}px)`,
+    margin: '12px auto 0',
+  }
+})
+
+function kpiRowStyleOf(): string {
+  const pal = kpiPalette.value
+  return pal ? kpiHeroStyle(pal) : ''
+}
+
+function kpiCardStyleOf(card: KpiCard): string {
+  const pal = kpiPalette.value
+  return pal ? kpiCardStyle(card, pal) : ''
+}
+
+function kpiValueStyleOf(card: KpiCard): string {
+  const pal = kpiPalette.value
+  return pal ? kpiValueStyle(card, pal) : ''
+}
+
+function kpiUnitStyleOf(): string {
+  const pal = kpiPalette.value
+  return pal ? kpiUnitStyle(pal) : ''
+}
+
+function kpiLabelStyleOf(): string {
+  const pal = kpiPalette.value
+  return pal ? kpiLabelStyle(pal) : ''
+}
+
 /** WP1：合并/拆分成功后描边闪一次（flashKey 归零即停，可重复触发） */
 const flashing = computed(() => editor.flashKey > 0)
 /** 工具条定位用宿主可视高度（上方空间不足时改贴选区下沿） */
@@ -481,6 +532,16 @@ function onDblClick(ev: MouseEvent) {
   const y = ev.clientY - rect.top
   const pos = handle ? handle.hitTest(x, y) : locateVisual(editor.current, x, y)
   if (!pos) return
+  // leftTag 格（区块贴在首列）：双击选中区块，不进被盖住的原格就地编辑
+  const tagHit = findSlotAtVisual(editor.current, pos.row, pos.col)
+  if (tagHit.isBlockSlot && tagHit.slotId && visualToLogicalRow(editor.current, pos.row) !== null) {
+    const b = editor.current.blocks.find((x2) => x2.slotId === tagHit.slotId)
+    if (b && b.type === 'leftTag') {
+      editor.selectedBlockId = b.id
+      editor.selectedSlotId = null
+      return
+    }
+  }
   const logical = visualToLogicalRow(editor.current, pos.row)
   if (logical === null) return
   const merge = findMergeAt(editor.current.layout, logical, pos.col)
@@ -782,6 +843,17 @@ defineExpose({
     @click="onClick"
   >
     <!-- PX-09：悬浮粘贴按钮已并入顶部工具条（EditorPage header），预览区保持纯净 -->
+    <!-- Schema 1.2 扩展：KPI 统计卡 hero 区（表格上方；无卡片 v-if 零占位） -->
+    <div v-if="kpiCards.length" class="kpi-hero" :style="kpiHeroWrapStyle" data-testid="kpi-hero">
+      <div :style="kpiRowStyleOf()">
+        <div v-for="card in kpiCards" :key="card.id" :style="kpiCardStyleOf(card)">
+          <div :style="kpiValueStyleOf(card)">
+            {{ kpiValueText(card) }}<span v-if="card.unit" :style="kpiUnitStyleOf()"> {{ card.unit }}</span>
+          </div>
+          <p :style="kpiLabelStyleOf()">{{ card.label }}</p>
+        </div>
+      </div>
+    </div>
     <div
       ref="el"
       class="vtable-root"

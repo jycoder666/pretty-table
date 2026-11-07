@@ -98,15 +98,44 @@ async function copyHtml() {
 }
 
 async function downloadPng() {
-  if (!editor.current) return
+  const blob = await renderPngBlob()
+  if (!blob) return
+  // blob URL 延迟释放（此前同步 revoke 在极端 CPU 饥饿下会抢在下载启动前
+  // 失效 URL，导致静默丢下载——见 blobDownload.ts 文件头说明）
+  triggerBlobDownload(blob, `${editor.current?.meta?.displayName ?? 'table'}.png`)
+  editor.showToast('PNG 已下载')
+}
+
+/**
+ * 新标签页打开（取证路径）：生成同一 PNG 后以 blob URL 直开图片页，
+ * 供无法触发下载的环境（部分内嵌浏览器/受管控 WebView）截图取证；
+ * 不改变「导出 PNG」按钮行为。URL 延迟 60s 释放，保证新标签来得及加载。
+ */
+async function openPngInTab() {
+  const blob = await renderPngBlob()
+  if (!blob) return
+  const url = URL.createObjectURL(blob)
+  const win = window.open(url, '_blank', 'noopener')
+  if (!win) {
+    editor.showToast('浏览器拦截了新窗口，请允许弹窗后重试')
+    URL.revokeObjectURL(url)
+    return
+  }
+  editor.showToast('已在新标签页打开')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+/** PNG 生成共用体（下载 / 新标签页打开同源）：门槛与白话提示口径一致 */
+async function renderPngBlob(): Promise<Blob | null> {
+  if (!editor.current) return null
   if (PT_DEBUG && faultGate('EXPORT_PNG_FAIL')) {
     editor.showToast(errorCopy('EXPORT_PNG_FAIL'))
-    return
+    return null
   }
   if (PT_DEBUG && faultGate('EXPORT_PNG_TOO_LARGE')) {
     scaleAttn.value = true
     editor.showToast(pngScaleAdvice())
-    return
+    return null
   }
   editor.exporting = true
   editor.showToast('正在生成图片…')
@@ -126,14 +155,12 @@ async function downloadPng() {
       } else {
         editor.showToast(errorCopy(r.error.code, r.error.message))
       }
-      return
+      return null
     }
-    // blob URL 延迟释放（此前同步 revoke 在极端 CPU 饥饿下会抢在下载启动前
-    // 失效 URL，导致静默丢下载——见 blobDownload.ts 文件头说明）
-    triggerBlobDownload(r.value, `${editor.current.meta?.displayName ?? 'table'}.png`)
-    editor.showToast('PNG 已下载')
+    return r.value
   } catch {
     editor.showToast(errorCopy('EXPORT_PNG_FAIL'))
+    return null
   } finally {
     editor.exporting = false
   }
@@ -191,6 +218,17 @@ async function downloadPng() {
           </PtTooltip>
           <PtTooltip text="按当前倍率导出 PNG 图片（与预览同源）">
             <PtButton class="wide" :disabled="editor.exporting" @click="downloadPng">导出 PNG</PtButton>
+          </PtTooltip>
+          <PtTooltip text="在新标签页直接打开图片，用于无法下载时取证">
+            <PtButton
+              class="wide"
+              variant="ghost"
+              :disabled="editor.exporting"
+              data-testid="png-open-tab"
+              @click="openPngInTab"
+            >
+              新标签页打开
+            </PtButton>
           </PtTooltip>
           <PtButton variant="ghost" @click="open = false">关闭</PtButton>
         </div>

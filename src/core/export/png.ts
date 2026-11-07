@@ -6,6 +6,7 @@ import { fail, ok, type Result } from '../errors'
 import { toOption, measureContentSize } from '../adapter/toOption'
 import { resolveTheme } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
+import { drawKpiHero, effectiveKpiCards, kpiHeroHeight } from '../kpi/kpiCards'
 import { PNG_MAX_PIXELS_DEFAULT, PNG_PAD, measurePng } from './pngSize'
 
 // pngSize 是与 VTable 解耦的估算模块（壳层静态消费）；此处 re-export 保持
@@ -204,8 +205,11 @@ export async function exportPng(
   }
 
   const measured = measureContentSize(inst)
+  // Schema 1.2 扩展：输出画布高 = KPI hero 区 + 表格内容（无卡片 kpiExtra = 0，口径与 measurePng 一致）
+  const kpiCards = effectiveKpiCards(inst)
+  const kpiExtra = kpiHeroHeight(kpiCards)
   const outW = (measured.width + PNG_PAD * 2) * scale
-  const outH = (measured.height + PNG_PAD * 2) * scale
+  const outH = (measured.height + kpiExtra + PNG_PAD * 2) * scale
   if (outW * outH > maxPixels) {
     return fail('EXPORT_PNG_TOO_LARGE', `输出 ${Math.round(outW)}×${Math.round(outH)}=${Math.round(outW * outH)} 像素超过上限 ${maxPixels}，请改用更低倍率重试`, {
       width: outW,
@@ -282,7 +286,17 @@ export async function exportPng(
       ctx.fillStyle = palette.paper
       ctx.fillRect(0, 0, canvas.width, canvas.height)
     }
-    ctx.drawImage(img, PNG_PAD * scale, PNG_PAD * scale, img.width, img.height)
+    // Schema 1.2 扩展：KPI hero 区先画（表格上方；几何与语义色同 HTML 导出单点），表格图随之下移
+    const kpiDrawn = drawKpiHero(
+      ctx,
+      kpiCards,
+      palette,
+      PNG_PAD * scale,
+      PNG_PAD * scale,
+      measured.width * scale,
+      scale,
+    )
+    ctx.drawImage(img, PNG_PAD * scale, PNG_PAD * scale + kpiDrawn, img.width, img.height)
 
     // P1 空图守卫（终检兜底）：产物降采样后除纸面/透明外无任何内容像素 →
     // 显式报错（EXPORT_PNG_EMPTY + errorCopy 白话，GC-25），绝不静默交付全空白图。
