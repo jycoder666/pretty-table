@@ -4,7 +4,7 @@
 // 代价（如实登记）：levels=2 的 R0 标题行放不下（21 超限），表名仅经 caption-input → displayName → HTML <caption>；
 // PNG 渲染器不画 <caption>（png.ts 无 caption 逻辑），PNG 侧无表名文字——旧行数预算（表头2）在本应用内不可达。
 // D2/D4 组头文字系从旧导出合并损坏态 + OCR（img7.txt）复原：D2 环洱海约130km / D4 返程。
-import { launch, openBlank, navFromHome, fillCell, pasteGrid, startPlace, placeAt, storeEditBlock, applyStyle, addKpi, exportAll, assertIncludes } from '../tables-20261107/lib.mjs'
+import { launch, openBlank, navFromHome, fillCell, pasteGrid, startPlace, placeAt, storeEditBlock, applyStyle, addKpi, exportAll, assertIncludes, exportJson } from '../tables-20261107/lib.mjs'
 import fs from 'node:fs'
 
 const NAME = '大理四天三晚行程'
@@ -201,6 +201,10 @@ try {
   console.log('[产物] PNG', fs.statSync(pngPath).size, 'B | HTML', fs.statSync(htmlPath).size, 'B | tpl键', tplCount)
   console.log('[门禁] 断言', okAll ? 'PASS' : 'FAIL', '| console error:', consoleErrors.length, '| pageerror:', pageErrors.length)
   if (consoleErrors.length) console.log('[console 切片]', JSON.stringify(consoleErrors.slice(0, 5)))
+
+  // [11] 模板 JSON 导出（跨设备同步）：新导出功能落 tables/
+  const jsonPath = await exportJson(page, 'F:/pretty-table/tables/大理四天三晚行程.json')
+  console.log('[11] JSON 落盘:', jsonPath, fs.statSync(jsonPath).size, 'B')
 } finally {
   await browser.close()
 }

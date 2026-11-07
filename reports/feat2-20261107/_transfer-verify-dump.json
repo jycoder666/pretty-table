@@ -1,0 +1,583 @@
+{
+  "schemaVersion": "1.2",
+  "templateId": "user-1793988536437-p0uwb",
+  "themeId": "T-B",
+  "zebraOn": true,
+  "slotDefs": {
+    "u1": {
+      "kind": "text"
+    },
+    "u2": {
+      "kind": "text"
+    },
+    "u4": {
+      "kind": "text"
+    },
+    "u5": {
+      "kind": "text"
+    },
+    "u7": {
+      "kind": "text"
+    },
+    "u8": {
+      "kind": "text"
+    },
+    "u9": {
+      "kind": "text"
+    },
+    "u10": {
+      "kind": "text"
+    },
+    "u11": {
+      "kind": "text"
+    },
+    "u12": {
+      "kind": "text"
+    },
+    "u14": {
+      "kind": "text"
+    },
+    "u15": {
+      "kind": "text"
+    },
+    "u17": {
+      "kind": "text"
+    },
+    "u18": {
+      "kind": "text"
+    },
+    "u19": {
+      "kind": "text"
+    },
+    "u20": {
+      "kind": "text"
+    },
+    "u21": {
+      "kind": "text"
+    },
+    "u22": {
+      "kind": "text"
+    },
+    "u23": {
+      "kind": "text"
+    },
+    "u24": {
+      "kind": "text"
+    },
+    "u25": {
+      "kind": "text"
+    },
+    "u26": {
+      "kind": "text"
+    },
+    "u27": {
+      "kind": "text"
+    },
+    "u28": {
+      "kind": "text"
+    },
+    "u29": {
+      "kind": "text"
+    },
+    "u30": {
+      "kind": "text"
+    },
+    "u31": {
+      "kind": "text"
+    },
+    "u32": {
+      "kind": "text"
+    },
+    "u33": {
+      "kind": "text"
+    },
+    "u34": {
+      "kind": "text"
+    },
+    "u35": {
+      "kind": "text"
+    }
+  },
+  "highlight": {
+    "recommendCol": 3
+  },
+  "meta": {
+    "displayName": "百万医疗险·横向测评",
+    "description": "三方案并排对比，适合参数/条款对照",
+    "templateType": "compare",
+    "origin": "user",
+    "sourceTemplateId": "compare-alpha-v1",
+    "savedAt": "2026-11-06T18:08:56.438Z"
+  },
+  "slots": {
+    "band.2": {
+      "text": "康健守护"
+    },
+    "obj.name.a": {
+      "text": "性价比款"
+    },
+    "obj.name.c": {
+      "text": "大保款"
+    },
+    "row.3.label": {
+      "text": "首年保费"
+    },
+    "row.3.val.a": {
+      "text": "268"
+    },
+    "row.3.val.c": {
+      "text": "386"
+    },
+    "row.4.label": {
+      "text": "一般住院保额"
+    },
+    "row.4.val.a": {
+      "text": "200万"
+    },
+    "row.4.val.c": {
+      "text": "300万"
+    },
+    "row.6.label": {
+      "text": "重疾医疗保额"
+    },
+    "row.6.val.a": {
+      "text": "400万"
+    },
+    "row.6.val.c": {
+      "text": "600万"
+    },
+    "row.7.label": {
+      "text": "年免赔额"
+    },
+    "row.7.val.a": {
+      "text": "1万元"
+    },
+    "row.7.val.c": {
+      "text": "1万元"
+    },
+    "row.8.label": {
+      "text": "住院垫付"
+    },
+    "row.8.val.a": {
+      "text": "支持"
+    },
+    "row.8.val.c": {
+      "text": "支持"
+    },
+    "row.9.label": {
+      "text": "综合评级"
+    },
+    "row.9.val.a": {
+      "text": "★★★★☆"
+    },
+    "row.9.val.c": {
+      "text": "★★★★☆"
+    },
+    "u1": {
+      "text": "明悦优选"
+    },
+    "u2": {
+      "text": "服务型"
+    },
+    "u4": {
+      "text": "445"
+    },
+    "u5": {
+      "text": "250万"
+    },
+    "u7": {
+      "text": "450万"
+    },
+    "u8": {
+      "text": "8000元"
+    },
+    "u9": {
+      "text": "不支持"
+    },
+    "u10": {
+      "text": "★★★☆☆"
+    },
+    "u11": {
+      "text": "无忧人生"
+    },
+    "u12": {
+      "text": "长期续保"
+    },
+    "u14": {
+      "text": "512"
+    },
+    "u15": {
+      "text": "300万"
+    },
+    "u17": {
+      "text": "500万"
+    },
+    "u18": {
+      "text": "5000元"
+    },
+    "u19": {
+      "text": "支持"
+    },
+    "u20": {
+      "text": "★★★★★"
+    },
+    "u21": {
+      "text": "保证续保期"
+    },
+    "u22": {
+      "text": "6年"
+    },
+    "u23": {
+      "text": "10年"
+    },
+    "u24": {
+      "text": "20年"
+    },
+    "u25": {
+      "text": "5年"
+    },
+    "u26": {
+      "text": "院外特药目录"
+    },
+    "u27": {
+      "text": "102种"
+    },
+    "u28": {
+      "text": "128种"
+    },
+    "u29": {
+      "text": "118种"
+    },
+    "u30": {
+      "text": "96种"
+    },
+    "u31": {
+      "text": "报销比例（经社保）"
+    },
+    "u32": {
+      "text": "100%"
+    },
+    "u33": {
+      "text": "100%"
+    },
+    "u34": {
+      "text": "100%"
+    },
+    "u35": {
+      "text": "90%"
+    },
+    "band.1": {
+      "text": "安心e生"
+    }
+  },
+  "blocks": [
+    {
+      "id": "blk-1793988493805",
+      "type": "groupHeader",
+      "slotId": "gap-g1",
+      "props": {
+        "label": "",
+        "text": "核心指标对照",
+        "styleTier": 1
+      }
+    },
+    {
+      "id": "blk-1793988495554",
+      "type": "emphFooter",
+      "slotId": "footer-1",
+      "props": {
+        "label": "",
+        "text": "注：保费为30岁男性、有社保、首年保费口径；保障为年累计上限，实际赔付以条款为准。\n示例样张·产品名与数据仅作排版示意，不构成任何产品评价或推荐。",
+        "styleTier": 1
+      }
+    },
+    {
+      "id": "blk-1793988497264",
+      "type": "sectionBar",
+      "slotId": "gap-g2",
+      "props": {
+        "label": "",
+        "text": "分区",
+        "styleTier": 1
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 11,
+    "colCount": 5,
+    "frozenColCount": 1,
+    "headerLevels": 2,
+    "recommendableCols": [
+      1,
+      2,
+      3
+    ],
+    "merges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          1,
+          0
+        ]
+      }
+    ],
+    "structuralMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          1,
+          0
+        ]
+      }
+    ],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          1
+        ],
+        "end": [
+          0,
+          2
+        ]
+      },
+      {
+        "start": [
+          2,
+          1
+        ],
+        "end": [
+          3,
+          1
+        ]
+      },
+      {
+        "start": [
+          2,
+          2
+        ],
+        "end": [
+          3,
+          2
+        ]
+      },
+      {
+        "start": [
+          4,
+          1
+        ],
+        "end": [
+          10,
+          1
+        ]
+      },
+      {
+        "start": [
+          4,
+          2
+        ],
+        "end": [
+          10,
+          2
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "gap-g1",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "mutexGroup": "g1",
+        "rowHint": "after-1"
+      },
+      {
+        "id": "gap-g2",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "mutexGroup": "g2",
+        "rowHint": "after-4"
+      },
+      {
+        "id": "footer-1",
+        "accept": [
+          "emphFooter"
+        ],
+        "region": "footer",
+        "rowHint": "after-10"
+      },
+      {
+        "id": "left-r2",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-2"
+      },
+      {
+        "id": "left-r3",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-2"
+      },
+      {
+        "id": "left-r4",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-3"
+      },
+      {
+        "id": "left-r5",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-4"
+      },
+      {
+        "id": "left-r6",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-4"
+      },
+      {
+        "id": "left-r7",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-5"
+      },
+      {
+        "id": "left-r8",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-9"
+      },
+      {
+        "id": "left-r9",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-10"
+      }
+    ],
+    "readonlyCells": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ]
+    ],
+    "slotGrid": [
+      [
+        null,
+        "band.1",
+        "band.2",
+        "u11",
+        "u1"
+      ],
+      [
+        null,
+        "obj.name.a",
+        "obj.name.c",
+        "u12",
+        "u2"
+      ],
+      [
+        "row.3.label",
+        "row.3.val.a",
+        "row.3.val.c",
+        "u14",
+        "u4"
+      ],
+      [
+        "row.4.label",
+        "row.4.val.a",
+        "row.4.val.c",
+        "u15",
+        "u5"
+      ],
+      [
+        "row.6.label",
+        "row.6.val.a",
+        "row.6.val.c",
+        "u17",
+        "u7"
+      ],
+      [
+        "row.7.label",
+        "row.7.val.a",
+        "row.7.val.c",
+        "u18",
+        "u8"
+      ],
+      [
+        "u31",
+        "u32",
+        "u33",
+        "u34",
+        "u35"
+      ],
+      [
+        "u26",
+        "u27",
+        "u28",
+        "u29",
+        "u30"
+      ],
+      [
+        "u21",
+        "u22",
+        "u23",
+        "u24",
+        "u25"
+      ],
+      [
+        "row.8.label",
+        "row.8.val.a",
+        "row.8.val.c",
+        "u19",
+        "u9"
+      ],
+      [
+        "row.9.label",
+        "row.9.val.a",
+        "row.9.val.c",
+        "u20",
+        "u10"
+      ]
+    ]
+  },
+  "themeTokens": {
+    "primary": "#0b211c",
+    "headerText": "#ffffff",
+    "zebra": "#f1e9d8",
+    "emphasis": "#b4532a",
+    "border": "#d8cdb8",
+    "background": "#f6f0e3"
+  }
+}

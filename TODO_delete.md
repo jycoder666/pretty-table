@@ -11,6 +11,11 @@
 | 2026-11-07 | reports/feat2-20261107/probe-tpl.mjs | 一次性探针（卡片标题/块色 UI） |
 | 2026-11-07 | reports/feat-20261106/debug-open.mjs | 一轮功能调试脚本（此前会话遗留登记） |
 | 2026-11-07 | reports/tables-20261107/dbg-*.png / debug-*.mjs / exp-*.png | 建表过程调试截图与脚本（成品 PNG/HTML/编辑台截图不在此列） |
+| 2026-11-08 | reports/tables-20261107/_work/dump-a.mjs | A组 4 张表 JSON 导出落 tables/（持久 profile 通道，可复跑） |
+| 2026-11-08 | reports/tables-20261107/_work/verify-tables.mjs | tables/ 8 文件 JSON.parse+行数+表名 vs HTML 校验（可复跑） |
+| 2026-11-08 | reports/feat2-20261107/verify-transfer.mjs | 导出/导入端到端验收脚本（截图 verify-transfer-*.png 同目录，可复跑） |
+| 2026-11-08 | reports/feat2-20261107/_transfer-verify-dump.json | 验收脚本导出的中间 JSON（9540B，验收用例可再生成） |
+| 2026-11-08 | reports/tables-20261107/*.html.bak-2026-11-08（3 个） | A组旧 HTML caption 改名前残留，同版本新鲜 HTML 覆盖前备份（百万/三款/年度体检） |
 
 ## 二轮新功能验证结论（2026-11-07 主代理实测，截图在 reports/feat2-20261107/）
 

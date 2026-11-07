@@ -3,7 +3,7 @@
 // v2 方案：levels=2（R0 合并标题行 + R1 列头）+ 14 品项行（焦糖布丁/开心果巴斯克 1 并行、云南晒红/季节果酒 1 并行，
 // 16 品项与价格仍全部在表）+ 4 真分组行 = 插入期可见行恰好 20。v1（levels=1）已验证可行但 PNG 不渲染 <caption> 丢表名，故升级 v2。
 // 表名同时走 caption-input（blank 无 captionSlot → displayName → 导出 <caption>），HTML 侧与旧导出一致（caption + 标题行双保险）。
-import { launch, openBlank, navFromHome, fillCell, pasteGrid, startPlace, placeAt, storeEditBlock, applyStyle, addKpi, exportAll, assertIncludes } from '../tables-20261107/lib.mjs'
+import { launch, openBlank, navFromHome, fillCell, pasteGrid, startPlace, placeAt, storeEditBlock, applyStyle, addKpi, exportAll, assertIncludes, exportJson } from '../tables-20261107/lib.mjs'
 import fs from 'node:fs'
 
 const NAME = '餐厅秋季菜单'
@@ -208,6 +208,10 @@ try {
   console.log('[产物] PNG', fs.statSync(pngPath).size, 'B | HTML', fs.statSync(htmlPath).size, 'B | tpl键', tplCount)
   console.log('[门禁] 断言', okAll ? 'PASS' : 'FAIL', '| console error:', consoleErrors.length, '| pageerror:', pageErrors.length)
   if (consoleErrors.length) console.log('[console 切片]', JSON.stringify(consoleErrors.slice(0, 5)))
+
+  // [12] 模板 JSON 导出（跨设备同步）：新导出功能落 tables/
+  const jsonPath = await exportJson(page, 'F:/pretty-table/tables/餐厅秋季菜单.json')
+  console.log('[12] JSON 落盘:', jsonPath, fs.statSync(jsonPath).size, 'B')
 } finally {
   await browser.close()
 }

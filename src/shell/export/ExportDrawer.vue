@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { DialogRoot, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 'reka-ui'
-import { exportHtml, exportText, loadRenderCore, measurePng } from '@/core'
+import { exportHtml, exportText, instanceToJSON, loadRenderCore, measurePng } from '@/core'
 import { useEditorStore } from '../stores/editor'
 import { errorCopy } from '../editor/errorCopy'
 import { pngMaxOverride } from '../debug/flags'
@@ -106,6 +106,25 @@ async function downloadPng() {
   editor.showToast('PNG 已下载')
 }
 
+/** 模板 JSON 导出（跨设备同步）：核内 instanceToJSON 规范化 → blob 下载 .pretty-table.json */
+function downloadJson() {
+  if (!editor.current) return
+  let r: ReturnType<typeof instanceToJSON>
+  try {
+    r = instanceToJSON(editor.current)
+  } catch {
+    editor.showToast('这张表读不出来，无法导出 JSON')
+    return
+  }
+  if (!r.ok) {
+    editor.showToast('这张表读不出来，无法导出 JSON')
+    return
+  }
+  const blob = new Blob([r.value], { type: 'application/json' })
+  triggerBlobDownload(blob, `${editor.current?.meta?.displayName ?? 'table'}.pretty-table.json`)
+  editor.showToast('模板 JSON 已下载')
+}
+
 /**
  * 新标签页打开（取证路径）：生成同一 PNG 后以 blob URL 直开图片页，
  * 供无法触发下载的环境（部分内嵌浏览器/受管控 WebView）截图取证；
@@ -174,7 +193,7 @@ async function renderPngBlob(): Promise<Blob | null> {
       <DialogContent class="drawer">
         <DialogTitle>导出</DialogTitle>
         <!-- PX-11：副标题改正向表述（不再提「无 Excel 导出」） -->
-        <p>复制带样式的 HTML，或下载高清 PNG（与预览同源）。</p>
+        <p>复制带样式的 HTML，下载高清 PNG（与预览同源）；导出 JSON 可在另一台设备导入还原。</p>
 
         <div class="png-opts">
           <div class="opt-row">
@@ -218,6 +237,17 @@ async function renderPngBlob(): Promise<Blob | null> {
           </PtTooltip>
           <PtTooltip text="按当前倍率导出 PNG 图片（与预览同源）">
             <PtButton class="wide" :disabled="editor.exporting" @click="downloadPng">导出 PNG</PtButton>
+          </PtTooltip>
+          <PtTooltip text="下载模板 JSON 文件，在另一台设备的模板库导入即可还原这张表">
+            <PtButton
+              class="wide"
+              variant="ghost"
+              :disabled="editor.exporting"
+              data-testid="export-json-btn"
+              @click="downloadJson"
+            >
+              导出 JSON
+            </PtButton>
           </PtTooltip>
           <PtTooltip text="在新标签页直接打开图片，用于无法下载时取证">
             <PtButton

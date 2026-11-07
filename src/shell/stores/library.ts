@@ -71,6 +71,28 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
+  /**
+   * JSON 导入（跨设备同步）：沿用 repo.save 的键机制（tpl:<templateId>）——
+   * 同 id 直接覆盖（同一份文件重复导入幂等，不产生重复卡）。
+   * origin 归一 user、savedAt 记导入时刻；templateId 沿用文件里的，
+   * 缺失时（理论上 instanceFromJSON 已挡）兜底生成新 id。
+   * 返回是否成功，提示文案由页面层决定。
+   */
+  async function importTemplate(inst: TemplateInstance): Promise<boolean> {
+    const saved = cloneInstance(inst)
+    if (!saved.templateId) {
+      saved.templateId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    }
+    saved.meta = { ...saved.meta, origin: 'user', savedAt: new Date().toISOString() }
+    try {
+      await repo.save(saved)
+      await refreshMine()
+      return true
+    } catch {
+      return false
+    }
+  }
+
   return {
     presets,
     mine,
@@ -80,5 +102,6 @@ export const useLibraryStore = defineStore('library', () => {
     saveAsTemplate,
     renameTemplate,
     removeTemplate,
+    importTemplate,
   }
 })

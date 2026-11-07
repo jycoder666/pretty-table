@@ -1,0 +1,455 @@
+{
+  "schemaVersion": "1.2",
+  "templateId": "user-1794022513399-3rtp4",
+  "themeId": "T-C",
+  "zebraOn": true,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "秋季菜单 · AUTUMN MENU",
+    "description": "从零开始的 16 行 2 列空表，行列与表头层级都可以再调",
+    "templateType": "blank",
+    "origin": "preset"
+  },
+  "slots": {
+    "u1": {
+      "text": "秋季菜单 · AUTUMN MENU"
+    },
+    "u2": "",
+    "u3": {
+      "text": "品名"
+    },
+    "u4": {
+      "text": "价格（CNY）"
+    },
+    "u5": {
+      "text": "慢烤番茄与罗勒\r\nSLOW-ROASTED TOMATO, BASIL"
+    },
+    "u6": {
+      "text": "¥58"
+    },
+    "u7": {
+      "text": "冷切牛舌 · 柚子醋\r\nBEEF TONGUE, YUZU DRESSING"
+    },
+    "u8": {
+      "text": "¥78"
+    },
+    "u9": {
+      "text": "香煎带子 · 青豆泥\r\nSEARED SCALLOP, PEA PURÉE"
+    },
+    "u10": {
+      "text": "¥88"
+    },
+    "u11": {
+      "text": "时令沙拉\r\nSEASONAL GREENS"
+    },
+    "u12": {
+      "text": "¥48"
+    },
+    "u13": {
+      "text": "炭烤羊排 · 迷迭香汁\r\nLAMB RACK, ROSEMARY JUS"
+    },
+    "u14": {
+      "text": "¥168"
+    },
+    "u15": {
+      "text": "黑松露野菌意面\r\nTRUFFLE MUSHROOM PASTA"
+    },
+    "u16": {
+      "text": "¥138"
+    },
+    "u17": {
+      "text": "香草烤鸡半只\r\nHERB ROASTED CHICKEN"
+    },
+    "u18": {
+      "text": "¥128"
+    },
+    "u19": {
+      "text": "海鲜烩饭\r\nSEAFOOD RISOTTO"
+    },
+    "u20": {
+      "text": "¥158"
+    },
+    "u21": {
+      "text": "慢炖牛颊肉\r\nBRAISED BEEF CHEEK"
+    },
+    "u22": {
+      "text": "¥178"
+    },
+    "u23": {
+      "text": "黄油煎鳕鱼\r\nPAN-SEARED COD, BROWN BUTTER"
+    },
+    "u24": {
+      "text": "¥158"
+    },
+    "u25": {
+      "text": "焦糖布丁 · 开心果巴斯克\r\nCRÈME CARAMEL / PISTACHIO BASQUE"
+    },
+    "u26": {
+      "text": "¥42 / ¥48"
+    },
+    "u27": {
+      "text": "手冲单品\r\nPOUR-OVER, SINGLE ORIGIN"
+    },
+    "u28": {
+      "text": "¥38"
+    },
+    "u29": {
+      "text": "气泡柚子\r\nSPARKLING YUZU"
+    },
+    "u30": {
+      "text": "¥32"
+    },
+    "u31": {
+      "text": "云南晒红 · 季节果酒\r\nYUNNAN SUN-DRIED BLACK / SEASONAL FRUIT WINE"
+    },
+    "u32": {
+      "text": "¥36 / ¥48"
+    }
+  },
+  "blocks": [
+    {
+      "id": "blk-d1",
+      "type": "groupHeader",
+      "slotId": "gap-d1",
+      "props": {
+        "text": "STARTERS · 前菜",
+        "styleTier": 1,
+        "color": "#f7e3d2"
+      }
+    },
+    {
+      "id": "blk-d2",
+      "type": "groupHeader",
+      "slotId": "gap-d2",
+      "props": {
+        "text": "MAIN · 主菜",
+        "styleTier": 1,
+        "color": "#d9ebdc"
+      }
+    },
+    {
+      "id": "blk-d3",
+      "type": "groupHeader",
+      "slotId": "gap-d3",
+      "props": {
+        "text": "DESSERTS · 甜点",
+        "styleTier": 1,
+        "color": "#dce8f7"
+      }
+    },
+    {
+      "id": "blk-d4",
+      "type": "groupHeader",
+      "slotId": "gap-d4",
+      "props": {
+        "text": "DRINKS · 饮品",
+        "styleTier": 1,
+        "color": "#e9e1f5"
+      }
+    },
+    {
+      "id": "blk-1794022499496",
+      "type": "emphFooter",
+      "slotId": "footer-1",
+      "props": {
+        "label": "",
+        "text": "食材随季节调整，售罄见谅 · 午市套餐 98 元起（含前菜与主菜）· 现点现做出餐约 20 分钟 · 定价含税不另收服务费 · 菜品与价格仅作排版示意",
+        "styleTier": 1
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 16,
+    "colCount": 2,
+    "headerLevels": 2,
+    "merges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          0,
+          1
+        ]
+      }
+    ],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          15,
+          1
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "footer-1",
+        "accept": [
+          "emphFooter"
+        ],
+        "region": "footer",
+        "rowHint": "after-15"
+      },
+      {
+        "id": "left-r2",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-2"
+      },
+      {
+        "id": "left-r3",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-3"
+      },
+      {
+        "id": "left-r4",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-4"
+      },
+      {
+        "id": "left-r5",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-5"
+      },
+      {
+        "id": "left-r6",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-6"
+      },
+      {
+        "id": "left-r7",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-7"
+      },
+      {
+        "id": "left-r8",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-8"
+      },
+      {
+        "id": "left-r9",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-9"
+      },
+      {
+        "id": "left-r10",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-10"
+      },
+      {
+        "id": "left-r11",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-11"
+      },
+      {
+        "id": "left-r12",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-12"
+      },
+      {
+        "id": "left-r13",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-13"
+      },
+      {
+        "id": "left-r14",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-14"
+      },
+      {
+        "id": "left-r15",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-15"
+      },
+      {
+        "id": "gap-d1",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "rowHint": "after-1"
+      },
+      {
+        "id": "gap-d2",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "rowHint": "after-5"
+      },
+      {
+        "id": "gap-d3",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "rowHint": "after-11"
+      },
+      {
+        "id": "gap-d4",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "rowHint": "after-12"
+      }
+    ],
+    "slotGrid": [
+      [
+        "u1",
+        "u2"
+      ],
+      [
+        "u3",
+        "u4"
+      ],
+      [
+        "u5",
+        "u6"
+      ],
+      [
+        "u7",
+        "u8"
+      ],
+      [
+        "u9",
+        "u10"
+      ],
+      [
+        "u11",
+        "u12"
+      ],
+      [
+        "u13",
+        "u14"
+      ],
+      [
+        "u15",
+        "u16"
+      ],
+      [
+        "u17",
+        "u18"
+      ],
+      [
+        "u19",
+        "u20"
+      ],
+      [
+        "u21",
+        "u22"
+      ],
+      [
+        "u23",
+        "u24"
+      ],
+      [
+        "u25",
+        "u26"
+      ],
+      [
+        "u27",
+        "u28"
+      ],
+      [
+        "u29",
+        "u30"
+      ],
+      [
+        "u31",
+        "u32"
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        360,
+        150
+      ]
+    }
+  },
+  "kpiCards": [
+    {
+      "id": "kpi-1794022500573",
+      "label": "供应季",
+      "value": "9 月 – 11 月"
+    },
+    {
+      "id": "kpi-1794022501022",
+      "label": "营业时间",
+      "value": "11:30 – 21:30"
+    },
+    {
+      "id": "kpi-1794022501489",
+      "label": "午市套餐",
+      "value": 98,
+      "unit": "元起"
+    },
+    {
+      "id": "kpi-1794022501929",
+      "label": "在售品项",
+      "value": 16
+    }
+  ],
+  "themeTokens": {
+    "primary": "#0b211c",
+    "headerText": "#ffffff",
+    "zebra": "#f1e9d8",
+    "emphasis": "#b4532a",
+    "border": "#d8cdb8",
+    "background": "#f6f0e3"
+  },
+  "slotDefs": {}
+}

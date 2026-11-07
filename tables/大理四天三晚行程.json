@@ -1,0 +1,520 @@
+{
+  "schemaVersion": "1.2",
+  "templateId": "user-1794022578103-zdrhi",
+  "themeId": "T-C",
+  "zebraOn": true,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "大理四天三晚 · TRAVEL ITINERARY",
+    "description": "从零开始的 16 行 3 列空表，行列与表头层级都可以再调",
+    "templateType": "blank",
+    "origin": "preset"
+  },
+  "slots": {
+    "u1": {
+      "text": "时段"
+    },
+    "u2": {
+      "text": "安排"
+    },
+    "u3": {
+      "text": "贴士"
+    },
+    "u4": {
+      "text": "09:40"
+    },
+    "u5": {
+      "text": "落地 · 取车"
+    },
+    "u6": {
+      "text": "机场到古城约 40 分钟"
+    },
+    "u7": {
+      "text": "12:00"
+    },
+    "u8": {
+      "text": "古城午餐"
+    },
+    "u9": {
+      "text": "人民路 · 本地菜"
+    },
+    "u10": {
+      "text": "15:00"
+    },
+    "u11": {
+      "text": "崇圣寺三塔"
+    },
+    "u12": {
+      "text": "倒影公园 · 日落侧光最好"
+    },
+    "u13": {
+      "text": "19:30"
+    },
+    "u14": {
+      "text": "人民路夜逛"
+    },
+    "u15": {
+      "text": "小吃与手作小摊"
+    },
+    "u16": {
+      "text": "08:30"
+    },
+    "u17": {
+      "text": "才村码头"
+    },
+    "u18": {
+      "text": "看洱海日出，风大要外套"
+    },
+    "u19": {
+      "text": "11:00"
+    },
+    "u20": {
+      "text": "喜洲古镇"
+    },
+    "u21": {
+      "text": "严家大院与喜洲粑粑"
+    },
+    "u22": {
+      "text": "14:30"
+    },
+    "u23": {
+      "text": "海舌公园"
+    },
+    "u24": {
+      "text": "湿地栈道，步行 40 分钟"
+    },
+    "u25": {
+      "text": "18:30"
+    },
+    "u26": {
+      "text": "小普陀 · 落日"
+    },
+    "u27": {
+      "text": "提前 40 分钟占位"
+    },
+    "u28": {
+      "text": "09:00"
+    },
+    "u29": {
+      "text": "感通索道"
+    },
+    "u30": {
+      "text": "上行 8 分钟，排队较长"
+    },
+    "u31": {
+      "text": "12:30"
+    },
+    "u32": {
+      "text": "寂照庵素斋"
+    },
+    "u33": {
+      "text": "11:30 开始派号"
+    },
+    "u34": {
+      "text": "15:30"
+    },
+    "u35": {
+      "text": "玉带云游路"
+    },
+    "u36": {
+      "text": "平路，适合慢走"
+    },
+    "u37": {
+      "text": "20:00"
+    },
+    "u38": {
+      "text": "客栈露台观星"
+    },
+    "u39": {
+      "text": "远离月光更清楚"
+    },
+    "u40": {
+      "text": "09:00"
+    },
+    "u41": {
+      "text": "古城早市"
+    },
+    "u42": {
+      "text": "鲜花饼与菌子汤 · 提前 2 小时到机场"
+    },
+    "u43": {
+      "text": "11:30"
+    },
+    "u44": {
+      "text": "退房 · 还车"
+    },
+    "u45": {
+      "text": "检查行李与租车油量"
+    },
+    "u46": {
+      "text": "14:20"
+    },
+    "u47": {
+      "text": "机场返程"
+    },
+    "u48": {
+      "text": "预计 18:05 落地"
+    }
+  },
+  "blocks": [
+    {
+      "id": "blk-d1",
+      "type": "groupHeader",
+      "slotId": "gap-d1",
+      "props": {
+        "text": "D1 · 10.02 周四 · 入住古城客栈，先适应海拔",
+        "styleTier": 1,
+        "color": "#f7e3d2"
+      }
+    },
+    {
+      "id": "blk-d2",
+      "type": "groupHeader",
+      "slotId": "gap-d2",
+      "props": {
+        "text": "D2 · 10.03 周五 · 环洱海 · 约 130km",
+        "styleTier": 1,
+        "color": "#d9ebdc"
+      }
+    },
+    {
+      "id": "blk-d3",
+      "type": "groupHeader",
+      "slotId": "gap-d3",
+      "props": {
+        "text": "D3 · 10.04 周六 · 苍山（山上比古城低 8–10℃）",
+        "styleTier": 1,
+        "color": "#dce8f7"
+      }
+    },
+    {
+      "id": "blk-d4",
+      "type": "groupHeader",
+      "slotId": "gap-d4",
+      "props": {
+        "text": "D4 · 10.05 周日 · 返程",
+        "styleTier": 1,
+        "color": "#e9e1f5"
+      }
+    },
+    {
+      "id": "blk-1794022563794",
+      "type": "emphFooter",
+      "slotId": "footer-1",
+      "props": {
+        "label": "",
+        "text": "BUDGET 合计约 5,250 元/两人（往返机票 2,100 + 住宿 3 晚 1,950 + 餐食与门票 1,200）· 出行提示：防晒霜与帽子、薄外套、保温杯与少量现金、相机备用电池 · 示例样张：行程、时间与价格仅作示意",
+        "styleTier": 1
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 16,
+    "colCount": 3,
+    "headerLevels": 1,
+    "merges": [],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          15,
+          2
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "footer-1",
+        "accept": [
+          "emphFooter"
+        ],
+        "region": "footer",
+        "rowHint": "after-15"
+      },
+      {
+        "id": "left-r1",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-1"
+      },
+      {
+        "id": "left-r2",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-2"
+      },
+      {
+        "id": "left-r3",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-3"
+      },
+      {
+        "id": "left-r4",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-4"
+      },
+      {
+        "id": "left-r5",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-5"
+      },
+      {
+        "id": "left-r6",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-6"
+      },
+      {
+        "id": "left-r7",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-7"
+      },
+      {
+        "id": "left-r8",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-8"
+      },
+      {
+        "id": "left-r9",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-9"
+      },
+      {
+        "id": "left-r10",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-10"
+      },
+      {
+        "id": "left-r11",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-11"
+      },
+      {
+        "id": "left-r12",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-12"
+      },
+      {
+        "id": "left-r13",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-13"
+      },
+      {
+        "id": "left-r14",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-14"
+      },
+      {
+        "id": "left-r15",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-15"
+      },
+      {
+        "id": "gap-d1",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "rowHint": "after-0"
+      },
+      {
+        "id": "gap-d2",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "rowHint": "after-4"
+      },
+      {
+        "id": "gap-d3",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "rowHint": "after-8"
+      },
+      {
+        "id": "gap-d4",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "rowHint": "after-12"
+      }
+    ],
+    "slotGrid": [
+      [
+        "u1",
+        "u2",
+        "u3"
+      ],
+      [
+        "u4",
+        "u5",
+        "u6"
+      ],
+      [
+        "u7",
+        "u8",
+        "u9"
+      ],
+      [
+        "u10",
+        "u11",
+        "u12"
+      ],
+      [
+        "u13",
+        "u14",
+        "u15"
+      ],
+      [
+        "u16",
+        "u17",
+        "u18"
+      ],
+      [
+        "u19",
+        "u20",
+        "u21"
+      ],
+      [
+        "u22",
+        "u23",
+        "u24"
+      ],
+      [
+        "u25",
+        "u26",
+        "u27"
+      ],
+      [
+        "u28",
+        "u29",
+        "u30"
+      ],
+      [
+        "u31",
+        "u32",
+        "u33"
+      ],
+      [
+        "u34",
+        "u35",
+        "u36"
+      ],
+      [
+        "u37",
+        "u38",
+        "u39"
+      ],
+      [
+        "u40",
+        "u41",
+        "u42"
+      ],
+      [
+        "u43",
+        "u44",
+        "u45"
+      ],
+      [
+        "u46",
+        "u47",
+        "u48"
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        110,
+        190,
+        330
+      ]
+    }
+  },
+  "kpiCards": [
+    {
+      "id": "kpi-1794022564892",
+      "label": "行程",
+      "value": "4 天 3 晚"
+    },
+    {
+      "id": "kpi-1794022565336",
+      "label": "方式",
+      "value": "两人自驾"
+    },
+    {
+      "id": "kpi-1794022565780",
+      "label": "往返里程",
+      "value": "约 1,860",
+      "unit": "km"
+    },
+    {
+      "id": "kpi-1794022566220",
+      "label": "预算合计",
+      "value": "5,250",
+      "unit": "元/两人"
+    }
+  ],
+  "themeTokens": {
+    "primary": "#0b211c",
+    "headerText": "#ffffff",
+    "zebra": "#f1e9d8",
+    "emphasis": "#b4532a",
+    "border": "#d8cdb8",
+    "background": "#f6f0e3"
+  },
+  "slotDefs": {}
+}

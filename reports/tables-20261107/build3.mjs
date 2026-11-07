@@ -1,5 +1,5 @@
 // 表3：产品改版排期（blank 12 行×5 列·2 层表头；matrix 数据槽为 mark/percent 不收文字，故用 blank）
-import { launch, openBlank, navFromHome, fillCell, pasteGrid, storeEditBlock, applyStyle, addKpi, exportAll, assertIncludes, cellEm, startPlace, placeAt, canvas } from './lib.mjs'
+import { launch, openBlank, navFromHome, fillCell, pasteGrid, storeEditBlock, applyStyle, addKpi, exportAll, assertIncludes, exportJson, cellEm, startPlace, placeAt, canvas } from './lib.mjs'
 import fs from 'node:fs'
 
 const NAME = '产品改版排期'
@@ -74,10 +74,24 @@ try {
     { label: '参与', value: '产品组 12', unit: '人' },
   ])
 
+  // [6] 表名落 displayName（blank 无 captionSlot → setCaption 写 meta.displayName；HTML caption 与 JSON 同源）
+  const capOk = await page.evaluate((t) => {
+    const app = document.querySelector('#app')?.__vue_app__
+    const st = app?.config.globalProperties?.$pinia?._s?.get('editor')
+    if (!st) return false
+    return st.apply({ kind: 'setCaption', text: t })
+  }, '产品改版项目排期')
+  if (!capOk) throw new Error('setCaption 失败，如实中断')
+  console.log('[6] displayName 落库: 产品改版项目排期')
+
   await page.waitForTimeout(600)
   const { html, pngPath, htmlPath } = await exportAll(page, NAME)
   const okAll = assertIncludes(html, ['产品改版项目排期', '需求调研 · 用户访谈', '复盘与下一期规划', 'M1', 'M2', '首屏 1.2 秒内', '回归 3 轮', '灰度 2 批', '工期按自然日', '26', '#0b211c'], NAME)
   console.log('[产物] PNG', fs.statSync(pngPath).size, 'B | HTML', fs.statSync(htmlPath).size, 'B')
   console.log('[门禁] 断言', okAll ? 'PASS' : 'FAIL', '| console error:', consoleErrors.length, '| pageerror:', pageErrors.length)
+
+  // [末] 模板 JSON 导出（跨设备同步）：新导出功能落 tables/
+  const jsonPath = await exportJson(page, 'F:/pretty-table/tables/产品改版排期.json')
+  console.log('[JSON] 落盘:', jsonPath, fs.statSync(jsonPath).size, 'B')
 } finally { await browser.close() }
 console.log('BUILD3_DONE')

@@ -1,0 +1,411 @@
+{
+  "schemaVersion": "1.2",
+  "templateId": "user-1794022607224-bxlgd",
+  "themeId": "T-C",
+  "zebraOn": true,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "三年级 2 班 · 课程表",
+    "description": "从零开始的 10 行 6 列空表，行列与表头层级都可以再调",
+    "templateType": "blank",
+    "origin": "preset"
+  },
+  "slots": {
+    "u1": {
+      "text": "三年级 2 班 · 课程表"
+    },
+    "u2": "",
+    "u3": "",
+    "u4": "",
+    "u5": "",
+    "u6": "",
+    "u7": {
+      "text": "节次 / 星期"
+    },
+    "u8": {
+      "text": "周一"
+    },
+    "u9": {
+      "text": "周二"
+    },
+    "u10": {
+      "text": "周三"
+    },
+    "u11": {
+      "text": "周四"
+    },
+    "u12": {
+      "text": "周五"
+    },
+    "u13": {
+      "text": "第 1 节\r\n08:20–09:00"
+    },
+    "u14": {
+      "text": "语文\r\n心老师 · 302"
+    },
+    "u15": {
+      "text": "数学\r\n李老师 · 302"
+    },
+    "u16": {
+      "text": "英语\r\n陈老师 · 302"
+    },
+    "u17": {
+      "text": "语文\r\n心老师 · 302"
+    },
+    "u18": {
+      "text": "数学\r\n李老师 · 302"
+    },
+    "u19": {
+      "text": "第 2 节\r\n09:10–09:50"
+    },
+    "u20": {
+      "text": "数学\r\n李老师 · 302"
+    },
+    "u21": {
+      "text": "语文\r\n心老师 · 302"
+    },
+    "u22": {
+      "text": "科学\r\n刘老师 · 实验室"
+    },
+    "u23": {
+      "text": "体育\r\n赵老师 · 操场"
+    },
+    "u24": {
+      "text": "英语\r\n陈老师 · 302"
+    },
+    "u25": {
+      "text": "第 3 节\r\n10:20–11:00"
+    },
+    "u26": {
+      "text": "英语\r\n陈老师 · 302"
+    },
+    "u27": {
+      "text": "科学\r\n刘老师 · 实验室"
+    },
+    "u28": {
+      "text": "语文\r\n心老师 · 302"
+    },
+    "u29": {
+      "text": "音乐\r\n孙老师 · 音乐室"
+    },
+    "u30": {
+      "text": "语文\r\n心老师 · 302"
+    },
+    "u31": {
+      "text": "第 4 节\r\n11:10–11:50"
+    },
+    "u32": {
+      "text": "美术\r\n吴老师 · 美术室"
+    },
+    "u33": {
+      "text": "音乐\r\n孙老师 · 音乐室"
+    },
+    "u34": {
+      "text": "体育\r\n赵老师 · 操场"
+    },
+    "u35": {
+      "text": "信息技术\r\n郑老师 · 机房"
+    },
+    "u36": {
+      "text": "数学\r\n李老师 · 302"
+    },
+    "u37": {
+      "text": "午休 11:50–14:00 · 午饭午睡"
+    },
+    "u38": "",
+    "u39": "",
+    "u40": "",
+    "u41": "",
+    "u42": "",
+    "u43": {
+      "text": "第 5 节\r\n14:00–14:40"
+    },
+    "u44": {
+      "text": "音乐\r\n孙老师 · 音乐室"
+    },
+    "u45": {
+      "text": "科学\r\n刘老师 · 实验室"
+    },
+    "u46": {
+      "text": "数学\r\n李老师 · 302"
+    },
+    "u47": {
+      "text": "体育\r\n赵老师 · 操场"
+    },
+    "u48": {
+      "text": "体育\r\n赵老师 · 操场"
+    },
+    "u49": {
+      "text": "第 6 节\r\n14:50–15:30"
+    },
+    "u50": {
+      "text": "英语\r\n陈老师 · 302"
+    },
+    "u51": {
+      "text": "美术\r\n吴老师 · 美术室"
+    },
+    "u52": {
+      "text": "音乐\r\n孙老师 · 音乐室"
+    },
+    "u53": {
+      "text": "自习\r\n心老师 · 302"
+    },
+    "u54": {
+      "text": "班会\r\n班主任 · 302"
+    },
+    "u55": {
+      "text": "第 7 节\r\n15:40–16:20"
+    },
+    "u56": {
+      "text": "班会\r\n班主任 · 302"
+    },
+    "u57": {
+      "text": "自习\r\n李老师 · 302"
+    },
+    "u58": {
+      "text": "美术\r\n吴老师 · 美术室"
+    },
+    "u59": {
+      "text": "自习\r\n陈老师 · 302"
+    },
+    "u60": {
+      "text": "科学\r\n刘老师 · 实验室"
+    }
+  },
+  "blocks": [
+    {
+      "id": "blk-1794022588559",
+      "type": "emphFooter",
+      "slotId": "footer-1",
+      "props": {
+        "label": "",
+        "text": "注：上午四节、下午三节；午休 11:50–14:00。如需调课请联系年级组 · 示例样张：校名、班级与教师仅作排版示意",
+        "styleTier": 1
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 10,
+    "colCount": 6,
+    "headerLevels": 2,
+    "merges": [
+      {
+        "start": [
+          6,
+          0
+        ],
+        "end": [
+          6,
+          5
+        ]
+      }
+    ],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          9,
+          5
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "footer-1",
+        "accept": [
+          "emphFooter"
+        ],
+        "region": "footer",
+        "rowHint": "after-9"
+      },
+      {
+        "id": "left-r2",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-2"
+      },
+      {
+        "id": "left-r3",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-3"
+      },
+      {
+        "id": "left-r4",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-4"
+      },
+      {
+        "id": "left-r5",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-5"
+      },
+      {
+        "id": "left-r6",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-6"
+      },
+      {
+        "id": "left-r7",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-7"
+      },
+      {
+        "id": "left-r8",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-8"
+      },
+      {
+        "id": "left-r9",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-9"
+      }
+    ],
+    "slotGrid": [
+      [
+        "u1",
+        "u2",
+        "u3",
+        "u4",
+        "u5",
+        "u6"
+      ],
+      [
+        "u7",
+        "u8",
+        "u9",
+        "u10",
+        "u11",
+        "u12"
+      ],
+      [
+        "u13",
+        "u14",
+        "u15",
+        "u16",
+        "u17",
+        "u18"
+      ],
+      [
+        "u19",
+        "u20",
+        "u21",
+        "u22",
+        "u23",
+        "u24"
+      ],
+      [
+        "u25",
+        "u26",
+        "u27",
+        "u28",
+        "u29",
+        "u30"
+      ],
+      [
+        "u31",
+        "u32",
+        "u33",
+        "u34",
+        "u35",
+        "u36"
+      ],
+      [
+        "u37",
+        "u38",
+        "u39",
+        "u40",
+        "u41",
+        "u42"
+      ],
+      [
+        "u43",
+        "u44",
+        "u45",
+        "u46",
+        "u47",
+        "u48"
+      ],
+      [
+        "u49",
+        "u50",
+        "u51",
+        "u52",
+        "u53",
+        "u54"
+      ],
+      [
+        "u55",
+        "u56",
+        "u57",
+        "u58",
+        "u59",
+        "u60"
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        118,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "themeTokens": {
+    "primary": "#0b211c",
+    "headerText": "#ffffff",
+    "zebra": "#f1e9d8",
+    "emphasis": "#b4532a",
+    "border": "#d8cdb8",
+    "background": "#f6f0e3"
+  },
+  "kpiCards": [
+    {
+      "id": "kpi-1794022598419",
+      "label": "学期",
+      "value": "2026 秋季"
+    },
+    {
+      "id": "kpi-1794022598858",
+      "label": "学校",
+      "value": "阳光小学"
+    },
+    {
+      "id": "kpi-1794022599284",
+      "label": "周次",
+      "value": "第 12 周"
+    }
+  ],
+  "slotDefs": {}
+}

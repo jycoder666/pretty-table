@@ -346,3 +346,16 @@ export function assertIncludes(html, keys, label) {
   else console.log(`[ASSERT-OK ${label}] ${keys.length} 个关键词全部命中`)
   return missing.length === 0
 }
+
+/** 模板 JSON 导出（2026-11-08 跨设备同步）：开导出抽屉 → 点「导出 JSON」捕获 download 落盘到 savePath */
+export async function exportJson(page, savePath) {
+  await page.getByRole('button', { name: '导出', exact: true }).click()
+  await page.waitForTimeout(700)
+  const dlPromise = page.waitForEvent('download', { timeout: 30000 })
+  await page.getByTestId('export-json-btn').click()
+  const dl = await dlPromise
+  await dl.saveAs(savePath)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(400)
+  return savePath
+}

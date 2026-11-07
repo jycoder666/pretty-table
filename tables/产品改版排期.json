@@ -1,0 +1,458 @@
+{
+  "schemaVersion": "1.2",
+  "templateId": "user-1794022639629-k5mq7",
+  "themeId": "T-C",
+  "zebraOn": true,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "产品改版项目排期",
+    "description": "从零开始的 12 行 5 列空表，行列与表头层级都可以再调",
+    "templateType": "blank",
+    "origin": "preset"
+  },
+  "slots": {
+    "u1": {
+      "text": "产品改版项目排期 · 2026 Q3-Q4"
+    },
+    "u2": "",
+    "u3": "",
+    "u4": "",
+    "u5": "",
+    "u6": {
+      "text": "任务 TASK"
+    },
+    "u7": {
+      "text": "周期"
+    },
+    "u8": {
+      "text": "里程碑"
+    },
+    "u9": {
+      "text": "负责角色"
+    },
+    "u10": {
+      "text": "关键产出"
+    },
+    "u11": {
+      "text": "需求调研 · 用户访谈"
+    },
+    "u12": {
+      "text": "5/1 – 5/12"
+    },
+    "u13": {
+      "text": ""
+    },
+    "u14": {
+      "text": "产品"
+    },
+    "u15": {
+      "text": "14 场用户访谈"
+    },
+    "u16": {
+      "text": "竞品分析与功能清单"
+    },
+    "u17": {
+      "text": "5/13 – 5/26"
+    },
+    "u18": {
+      "text": ""
+    },
+    "u19": {
+      "text": "产品"
+    },
+    "u20": {
+      "text": "输出 68 条需求"
+    },
+    "u21": {
+      "text": "交互原型与视觉稿"
+    },
+    "u22": {
+      "text": "5/27 – 6/16"
+    },
+    "u23": {
+      "text": ""
+    },
+    "u24": {
+      "text": "设计"
+    },
+    "u25": {
+      "text": "32 个界面"
+    },
+    "u26": {
+      "text": "技术方案与架构评审"
+    },
+    "u27": {
+      "text": "6/17 – 6/30"
+    },
+    "u28": {
+      "text": "M1",
+      "emphasize": [
+        "bold",
+        "red"
+      ]
+    },
+    "u29": {
+      "text": "技术"
+    },
+    "u30": {
+      "text": "评审通过 · M1",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u31": {
+      "text": "核心模块开发"
+    },
+    "u32": {
+      "text": "7/1 – 8/11"
+    },
+    "u33": {
+      "text": ""
+    },
+    "u34": {
+      "text": "研发 · 前端 4 人 + 后端 3 人"
+    },
+    "u35": {
+      "text": "核心功能交付"
+    },
+    "u36": {
+      "text": "后台与数据看板"
+    },
+    "u37": {
+      "text": "7/15 – 8/18"
+    },
+    "u38": {
+      "text": ""
+    },
+    "u39": {
+      "text": "数据 · 3 人"
+    },
+    "u40": {
+      "text": "看板上线"
+    },
+    "u41": {
+      "text": "联调与性能优化"
+    },
+    "u42": {
+      "text": "8/19 – 9/8"
+    },
+    "u43": {
+      "text": ""
+    },
+    "u44": {
+      "text": "全员"
+    },
+    "u45": {
+      "text": "首屏 1.2 秒内"
+    },
+    "u46": {
+      "text": "全量测试与缺陷修复"
+    },
+    "u47": {
+      "text": "9/9 – 9/28"
+    },
+    "u48": {
+      "text": "M2",
+      "emphasize": [
+        "bold",
+        "red"
+      ]
+    },
+    "u49": {
+      "text": "测试"
+    },
+    "u50": {
+      "text": "回归 3 轮 · M2",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u51": {
+      "text": "灰度上线"
+    },
+    "u52": {
+      "text": "9/29 – 10/12"
+    },
+    "u53": {
+      "text": ""
+    },
+    "u54": {
+      "text": "运维"
+    },
+    "u55": {
+      "text": "灰度 2 批"
+    },
+    "u56": {
+      "text": "复盘与下一期规划"
+    },
+    "u57": {
+      "text": "10/13 – 10/30"
+    },
+    "u58": {
+      "text": ""
+    },
+    "u59": {
+      "text": "产品"
+    },
+    "u60": {
+      "text": "输出待办单"
+    }
+  },
+  "blocks": [
+    {
+      "id": "blk-1794022613824",
+      "type": "emphFooter",
+      "slotId": "footer-1",
+      "props": {
+        "label": "",
+        "text": "注：工期按自然日，节假日已扣除 · 示例样张：项目名、任务与工期仅作排版示意",
+        "styleTier": 1
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 12,
+    "colCount": 5,
+    "headerLevels": 2,
+    "merges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          0,
+          4
+        ]
+      }
+    ],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          11,
+          4
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "footer-1",
+        "accept": [
+          "emphFooter"
+        ],
+        "region": "footer",
+        "rowHint": "after-11"
+      },
+      {
+        "id": "left-r2",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-2"
+      },
+      {
+        "id": "left-r3",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-3"
+      },
+      {
+        "id": "left-r4",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-4"
+      },
+      {
+        "id": "left-r5",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-5"
+      },
+      {
+        "id": "left-r6",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-6"
+      },
+      {
+        "id": "left-r7",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-7"
+      },
+      {
+        "id": "left-r8",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-8"
+      },
+      {
+        "id": "left-r9",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-9"
+      },
+      {
+        "id": "left-r10",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-10"
+      },
+      {
+        "id": "left-r11",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-11"
+      }
+    ],
+    "slotGrid": [
+      [
+        "u1",
+        "u2",
+        "u3",
+        "u4",
+        "u5"
+      ],
+      [
+        "u6",
+        "u7",
+        "u8",
+        "u9",
+        "u10"
+      ],
+      [
+        "u11",
+        "u12",
+        "u13",
+        "u14",
+        "u15"
+      ],
+      [
+        "u16",
+        "u17",
+        "u18",
+        "u19",
+        "u20"
+      ],
+      [
+        "u21",
+        "u22",
+        "u23",
+        "u24",
+        "u25"
+      ],
+      [
+        "u26",
+        "u27",
+        "u28",
+        "u29",
+        "u30"
+      ],
+      [
+        "u31",
+        "u32",
+        "u33",
+        "u34",
+        "u35"
+      ],
+      [
+        "u36",
+        "u37",
+        "u38",
+        "u39",
+        "u40"
+      ],
+      [
+        "u41",
+        "u42",
+        "u43",
+        "u44",
+        "u45"
+      ],
+      [
+        "u46",
+        "u47",
+        "u48",
+        "u49",
+        "u50"
+      ],
+      [
+        "u51",
+        "u52",
+        "u53",
+        "u54",
+        "u55"
+      ],
+      [
+        "u56",
+        "u57",
+        "u58",
+        "u59",
+        "u60"
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        225,
+        135,
+        90,
+        180,
+        185
+      ]
+    }
+  },
+  "themeTokens": {
+    "primary": "#0b211c",
+    "headerText": "#ffffff",
+    "zebra": "#f1e9d8",
+    "emphasis": "#b4532a",
+    "border": "#d8cdb8",
+    "background": "#f6f0e3"
+  },
+  "kpiCards": [
+    {
+      "id": "kpi-1794022630533",
+      "label": "周期",
+      "value": "5/1 – 10/30"
+    },
+    {
+      "id": "kpi-1794022630957",
+      "label": "总工期",
+      "value": 26,
+      "unit": "周"
+    },
+    {
+      "id": "kpi-1794022631399",
+      "label": "参与",
+      "value": "产品组 12",
+      "unit": "人"
+    }
+  ],
+  "slotDefs": {}
+}

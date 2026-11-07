@@ -2,13 +2,13 @@
 import { computed, onMounted, ref } from 'vue'
 import { useLibraryStore } from '../stores/library'
 import { useEditorStore } from '../stores/editor'
-import { createBlankInstance } from '@/core'
+import { createBlankInstance, instanceFromJSON } from '@/core'
 import PtButton from '../ui/PtButton.vue'
 import ConfirmDialog from '../ui/ConfirmDialog.vue'
 import { confirmAction } from '../ui/confirm'
 import TemplateThumb from './TemplateThumb.vue'
 import RenameDialog from '../ui/RenameDialog.vue'
-import { errorCopy } from '../editor/errorCopy'
+import { errorCopy, warnCopy } from '../editor/errorCopy'
 import type { TemplateInstance } from '@/core'
 
 const library = useLibraryStore()
@@ -160,6 +160,51 @@ async function removeTpl(t: TemplateInstance) {
   if (ok) editor.showToast('已删除')
   else editor.showToast(errorCopy('TEMPLATE_DELETE_FAIL'))
 }
+
+// ── 模板 JSON 导入（跨设备同步）：文件选择或粘贴文本 → 核内校验 → 入「我的模板」──
+const importOpen = ref(false)
+const importText = ref('')
+
+function openImport() {
+  importText.value = ''
+  importOpen.value = true
+}
+
+async function onImportFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    importText.value = await file.text()
+  } catch {
+    editor.showToast('文件读取失败，请重试')
+    return
+  }
+  // 读入后立刻清空 input.value：同一路径连续选同一文件也触发 change
+  input.value = ''
+}
+
+async function confirmImport() {
+  const text = importText.value
+  if (!text.trim()) {
+    editor.showToast('请先选择文件或粘贴模板 JSON')
+    return
+  }
+  const r = instanceFromJSON(text)
+  if (!r.inst) {
+    editor.showToast(r.reason ?? '导入失败，请重试')
+    return
+  }
+  const ok = await library.importTemplate(r.inst)
+  if (!ok) {
+    editor.showToast(errorCopy('TEMPLATE_SAVE_FAIL'))
+    return
+  }
+  const name = r.inst.meta?.displayName ?? '模板'
+  const warnTail = r.warnings.length ? `；${r.warnings.map((w) => warnCopy(w.code)).join('；')}` : ''
+  editor.showToast(`已导入「${name}」${warnTail}`)
+  importOpen.value = false
+}
 </script>
 
 <template>
@@ -259,7 +304,19 @@ async function removeTpl(t: TemplateInstance) {
     </section>
 
     <section>
-      <h2>我的模板</h2>
+      <div class="mine-head">
+        <h2>我的模板</h2>
+        <!-- 模板 JSON 导入（跨设备同步）：文件或粘贴文本，核内校验后入库 -->
+        <PtButton
+          variant="ghost"
+          type="button"
+          data-testid="import-btn"
+          class="import-btn"
+          @click.stop="openImport"
+        >
+          导入模板
+        </PtButton>
+      </div>
       <p v-if="library.listError" class="err">
         {{ library.listError }}
         <PtButton variant="ghost" type="button" @click.stop="() => library.refreshMine()">重试</PtButton>
@@ -303,6 +360,42 @@ async function removeTpl(t: TemplateInstance) {
       :initial-name="renameTarget?.meta?.displayName ?? ''"
       @confirm="onRename"
     />
+
+    <!-- 模板 JSON 导入小弹层：选 .json 文件或粘贴文本，导入走核内 instanceFromJSON 校验 -->
+    <div v-if="importOpen" class="import-overlay" data-testid="import-dialog">
+      <div
+        class="import-box"
+        role="dialog"
+        aria-modal="true"
+        aria-label="导入模板"
+      >
+        <div class="import-head">
+          <strong>导入模板</strong>
+          <PtButton variant="ghost" type="button" data-testid="import-close" @click.stop="importOpen = false">
+            关闭
+          </PtButton>
+        </div>
+        <p class="import-hint">选择本机导出的 .pretty-table.json 文件，或把模板 JSON 文本粘贴到下面。</p>
+        <input
+          type="file"
+          accept=".json,application/json"
+          data-testid="import-file"
+          aria-label="选择模板 JSON 文件"
+          @change="onImportFile"
+        />
+        <textarea
+          v-model="importText"
+          class="import-text"
+          rows="8"
+          placeholder="粘贴模板 JSON 文本"
+          data-testid="import-text"
+        />
+        <div class="import-actions">
+          <PtButton variant="ghost" type="button" @click.stop="importOpen = false">取消</PtButton>
+          <PtButton type="button" data-testid="import-confirm" @click.stop="confirmImport">导入</PtButton>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -439,5 +532,64 @@ h2 {
 .hint {
   font-size: 12px;
   color: var(--pt-muted);
+}
+/* 模板 JSON 导入：小节标题行 + 弹层（ExportDrawer 预览小窗同风格） */
+.mine-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.import-btn {
+  flex: none;
+}
+.import-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 35%);
+  z-index: var(--pt-z-toolbar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.import-box {
+  background: #fff;
+  border: 1px solid var(--pt-border);
+  border-radius: 12px;
+  padding: 16px;
+  width: min(560px, 92vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+}
+.import-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.import-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+.import-box input[type='file'] {
+  font: inherit;
+  font-size: 13px;
+}
+.import-text {
+  width: 100%;
+  box-sizing: border-box;
+  font: 12px/1.4 ui-monospace, monospace;
+  border: 1px solid var(--pt-border);
+  border-radius: 8px;
+  padding: 8px;
+  resize: vertical;
+}
+.import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>

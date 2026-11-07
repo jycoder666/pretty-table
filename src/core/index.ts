@@ -206,6 +206,9 @@ export {
 // PNG 估算/门槛常量不依赖 VTable，从 pngSize 静态导出（exportPng 走 loadRenderCore）
 export { measurePng, PNG_MAX_PIXELS_DEFAULT } from './export/pngSize'
 
+// 模板 JSON 导出/导入（跨设备同步 · 核内单点，壳只做文件 IO）
+export { instanceToJSON, instanceFromJSON, type TransferParseResult } from './transfer/transfer'
+
 export {
   listPresetTemplates,
   getPresetTemplate,

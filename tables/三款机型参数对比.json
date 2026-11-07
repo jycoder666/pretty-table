@@ -1,0 +1,506 @@
+{
+  "schemaVersion": "1.2",
+  "templateId": "user-1793988590041-9qw5w",
+  "themeId": "T-B",
+  "zebraOn": true,
+  "slotDefs": {
+    "u1": {
+      "kind": "text"
+    },
+    "u2": {
+      "kind": "text"
+    },
+    "u4": {
+      "kind": "text"
+    },
+    "u5": {
+      "kind": "text"
+    },
+    "u7": {
+      "kind": "text"
+    },
+    "u8": {
+      "kind": "text"
+    },
+    "u9": {
+      "kind": "text"
+    },
+    "u10": {
+      "kind": "text"
+    },
+    "u11": {
+      "kind": "text"
+    },
+    "u12": {
+      "kind": "text"
+    },
+    "u13": {
+      "kind": "text"
+    },
+    "u14": {
+      "kind": "text"
+    },
+    "u15": {
+      "kind": "text"
+    },
+    "u16": {
+      "kind": "text"
+    },
+    "u17": {
+      "kind": "text"
+    },
+    "u18": {
+      "kind": "text"
+    },
+    "u19": {
+      "kind": "text"
+    },
+    "u20": {
+      "kind": "text"
+    },
+    "u21": {
+      "kind": "text"
+    },
+    "u22": {
+      "kind": "text"
+    }
+  },
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "三款机型参数对比",
+    "description": "三方案并排对比，适合参数/条款对照",
+    "templateType": "compare",
+    "origin": "user",
+    "sourceTemplateId": "compare-alpha-v1",
+    "savedAt": "2026-11-06T18:09:50.043Z"
+  },
+  "slots": {
+    "band.2": {
+      "text": "Pro"
+    },
+    "obj.name.a": {
+      "text": "轻巧款"
+    },
+    "obj.name.c": {
+      "text": "均衡款·主推"
+    },
+    "row.3.label": {
+      "text": "屏幕"
+    },
+    "row.3.val.a": {
+      "text": "6.1\" OLED\n120Hz 直屏"
+    },
+    "row.3.val.c": {
+      "text": "6.7\" OLED\n120Hz 曲面"
+    },
+    "row.4.label": {
+      "text": "处理器"
+    },
+    "row.4.val.a": {
+      "text": "天玑8400\n4nm"
+    },
+    "row.4.val.c": {
+      "text": "骁龙8\n4nm"
+    },
+    "row.6.label": {
+      "text": "内存/存储"
+    },
+    "row.6.val.a": {
+      "text": "12+256GB\nLPDDR5X"
+    },
+    "row.6.val.c": {
+      "text": "16+512GB\nLPDDR5X"
+    },
+    "row.7.label": {
+      "text": "后置主摄"
+    },
+    "row.7.val.a": {
+      "text": "4800万\nf/1.8·OIS"
+    },
+    "row.7.val.c": {
+      "text": "5000万\nf/1.7·OIS"
+    },
+    "row.8.label": {
+      "text": "参考价格"
+    },
+    "row.8.val.a": {
+      "text": "¥3,299"
+    },
+    "row.8.val.c": {
+      "text": "¥4,599"
+    },
+    "row.9.label": {
+      "text": "适合人群"
+    },
+    "row.9.val.a": {
+      "text": "轻薄优先\n通勤与轻度使用"
+    },
+    "row.9.val.c": {
+      "text": "性能与价格最均衡\n大多数人的主力机"
+    },
+    "u1": {
+      "text": "Ultra"
+    },
+    "u2": {
+      "text": "旗舰款"
+    },
+    "u4": {
+      "text": "6.8\" LTPO\n120Hz 自适应"
+    },
+    "u5": {
+      "text": "骁龙8至尊\n3nm"
+    },
+    "u7": {
+      "text": "16+1TB\nLPDDR5X"
+    },
+    "u8": {
+      "text": "1亿\nf/1.6·OIS"
+    },
+    "u9": {
+      "text": "¥5,999"
+    },
+    "u10": {
+      "text": "影像与重度使用\n可接受更重机身"
+    },
+    "u11": {
+      "text": "机身重量"
+    },
+    "u12": {
+      "text": "178g\n7.4mm 厚"
+    },
+    "u13": {
+      "text": "199g\n7.9mm 厚"
+    },
+    "u14": {
+      "text": "221g\n8.6mm 厚"
+    },
+    "u15": {
+      "text": "有线快充"
+    },
+    "u16": {
+      "text": "45W\n30分钟约60%"
+    },
+    "u17": {
+      "text": "80W\n30分钟约82%"
+    },
+    "u18": {
+      "text": "100W\n22分钟约80%"
+    },
+    "u19": {
+      "text": "电池容量"
+    },
+    "u20": {
+      "text": "4200mAh\n日常一天一充"
+    },
+    "u21": {
+      "text": "5000mAh\n轻度可用两天"
+    },
+    "u22": {
+      "text": "5500mAh\n重度一天有余"
+    },
+    "band.1": {
+      "text": "Air"
+    }
+  },
+  "blocks": [
+    {
+      "id": "blk-1793988554387",
+      "type": "groupHeader",
+      "slotId": "gap-g1",
+      "props": {
+        "label": "",
+        "text": "核心参数 · 逐项对照",
+        "styleTier": 1
+      }
+    },
+    {
+      "id": "blk-1793988556102",
+      "type": "emphFooter",
+      "slotId": "footer-1",
+      "props": {
+        "label": "",
+        "text": "注：均为公开规格整理，充电速度为实验室条件实测均值，实际以产品页面为准。\n示例样张·机型名称与数据仅作排版示意，不构成购买建议。",
+        "styleTier": 1
+      }
+    },
+    {
+      "id": "blk-1793988557802",
+      "type": "sectionBar",
+      "slotId": "gap-g2",
+      "props": {
+        "label": "",
+        "text": "分区",
+        "styleTier": 1
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 11,
+    "colCount": 4,
+    "frozenColCount": 1,
+    "headerLevels": 2,
+    "recommendableCols": [
+      1,
+      2,
+      3
+    ],
+    "merges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          1,
+          0
+        ]
+      }
+    ],
+    "structuralMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          1,
+          0
+        ]
+      }
+    ],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          1
+        ],
+        "end": [
+          0,
+          2
+        ]
+      },
+      {
+        "start": [
+          2,
+          1
+        ],
+        "end": [
+          3,
+          1
+        ]
+      },
+      {
+        "start": [
+          2,
+          2
+        ],
+        "end": [
+          3,
+          2
+        ]
+      },
+      {
+        "start": [
+          4,
+          1
+        ],
+        "end": [
+          10,
+          1
+        ]
+      },
+      {
+        "start": [
+          4,
+          2
+        ],
+        "end": [
+          10,
+          2
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "gap-g1",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "mutexGroup": "g1",
+        "rowHint": "after-1"
+      },
+      {
+        "id": "gap-g2",
+        "accept": [
+          "sectionBar",
+          "groupHeader"
+        ],
+        "region": "between-rows",
+        "mutexGroup": "g2",
+        "rowHint": "after-4"
+      },
+      {
+        "id": "footer-1",
+        "accept": [
+          "emphFooter"
+        ],
+        "region": "footer",
+        "rowHint": "after-10"
+      },
+      {
+        "id": "left-r2",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-2"
+      },
+      {
+        "id": "left-r3",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-2"
+      },
+      {
+        "id": "left-r4",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-3"
+      },
+      {
+        "id": "left-r5",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-4"
+      },
+      {
+        "id": "left-r6",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-4"
+      },
+      {
+        "id": "left-r7",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-5"
+      },
+      {
+        "id": "left-r8",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-9"
+      },
+      {
+        "id": "left-r9",
+        "accept": [
+          "leftTag"
+        ],
+        "region": "left-tag",
+        "rowHint": "left-10"
+      }
+    ],
+    "readonlyCells": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ]
+    ],
+    "slotGrid": [
+      [
+        null,
+        "band.1",
+        "band.2",
+        "u1"
+      ],
+      [
+        null,
+        "obj.name.a",
+        "obj.name.c",
+        "u2"
+      ],
+      [
+        "row.3.label",
+        "row.3.val.a",
+        "row.3.val.c",
+        "u4"
+      ],
+      [
+        "row.4.label",
+        "row.4.val.a",
+        "row.4.val.c",
+        "u5"
+      ],
+      [
+        "row.6.label",
+        "row.6.val.a",
+        "row.6.val.c",
+        "u7"
+      ],
+      [
+        "row.7.label",
+        "row.7.val.a",
+        "row.7.val.c",
+        "u8"
+      ],
+      [
+        "u19",
+        "u20",
+        "u21",
+        "u22"
+      ],
+      [
+        "u15",
+        "u16",
+        "u17",
+        "u18"
+      ],
+      [
+        "u11",
+        "u12",
+        "u13",
+        "u14"
+      ],
+      [
+        "row.8.label",
+        "row.8.val.a",
+        "row.8.val.c",
+        "u9"
+      ],
+      [
+        "row.9.label",
+        "row.9.val.a",
+        "row.9.val.c",
+        "u10"
+      ]
+    ]
+  },
+  "themeTokens": {
+    "primary": "#0b211c",
+    "headerText": "#ffffff",
+    "zebra": "#f1e9d8",
+    "emphasis": "#b4532a",
+    "border": "#d8cdb8",
+    "background": "#f6f0e3"
+  }
+}

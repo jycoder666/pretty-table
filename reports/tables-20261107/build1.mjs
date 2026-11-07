@@ -1,5 +1,5 @@
 // 表1：三年级2班课程表（blank 10 行×6 列·2 层表头 + 左栏标签块 + 注脚 + KPI 副题）
-import { launch, openBlank, navFromHome, fillCell, pasteGrid, startPlace, placeAt, storeEditBlock, applyStyle, addKpi, exportAll, assertIncludes, OUT, canvas } from './lib.mjs'
+import { launch, openBlank, navFromHome, fillCell, pasteGrid, startPlace, placeAt, storeEditBlock, applyStyle, addKpi, exportAll, assertIncludes, exportJson, OUT, canvas } from './lib.mjs'
 import fs from 'node:fs'
 
 const NAME = '三年级2班课程表'
@@ -70,6 +70,16 @@ try {
     { label: '周次', value: '第 12 周' },
   ])
 
+  // [6] 表名落 displayName（blank 无 captionSlot → setCaption 写 meta.displayName；HTML caption 与 JSON 同源）
+  const capOk = await page.evaluate((t) => {
+    const app = document.querySelector('#app')?.__vue_app__
+    const st = app?.config.globalProperties?.$pinia?._s?.get('editor')
+    if (!st) return false
+    return st.apply({ kind: 'setCaption', text: t })
+  }, '三年级 2 班 · 课程表')
+  if (!capOk) throw new Error('setCaption 失败，如实中断')
+  console.log('[6] displayName 落库: 三年级 2 班 · 课程表')
+
   await page.waitForTimeout(600)
   const { html, pngPath, htmlPath } = await exportAll(page, NAME)
   const okAll = assertIncludes(html, ['三年级 2 班 · 课程表', '周一', '周五', '美术室', '信息技术', '午休', '第 7 节', '阳光小学', '#0b211c', '#f6f0e3'], NAME)
@@ -77,6 +87,10 @@ try {
   const htmlBytes = fs.statSync(htmlPath).size
   console.log(`[产物] PNG ${pngBytes} B | HTML ${htmlBytes} B`)
   console.log('[门禁] 断言', okAll ? 'PASS' : 'FAIL', '| console error:', consoleErrors.length, '| pageerror:', pageErrors.length)
+
+  // [末] 模板 JSON 导出（跨设备同步）：新导出功能落 tables/
+  const jsonPath = await exportJson(page, 'F:/pretty-table/tables/三年级2班课程表.json')
+  console.log('[JSON] 落盘:', jsonPath, fs.statSync(jsonPath).size, 'B')
 } finally {
   await browser.close()
 }
