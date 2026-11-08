@@ -35,3 +35,4 @@
 | 4 | 表名 caption 编辑 | PASS（caption-input → 导出 HTML 同步） |
 | 5 | 空槽导出无占位 | PASS（导出 HTML 不含「可拖入」） |
 | 6 | leftTag 文字编辑 | PASS（store 选中 → 区块区 textarea 写入 props.text 生效） |
+| 2026-11-09 | _quarantine_20261109/tmp-smoke/（seed-smoke.mjs+截图） | 存储韧性轮GUI冒烟临时件已移入隔离目录，待确认后清空；历史.reports调试件维持原登记不动 | 已隔离 |
