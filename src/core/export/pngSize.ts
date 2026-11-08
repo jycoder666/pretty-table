@@ -14,8 +14,9 @@ export const PNG_MAX_PIXELS_DEFAULT = 16_777_216
 /** 四周留白（CSS px），输出尺寸 =（内容 + 2×PAD）× 倍率 */
 export const PNG_PAD = 16
 
-/** 只算不画：按倍率预估输出像素尺寸（留白口径 =（内容 + 32）× 倍率；Schema 1.2 扩展 含 KPI hero 区高） */
-export function measurePng(inst: TemplateInstance, scale: 1 | 2 | 3 = 2) {
+/** 只算不画：按倍率预估输出像素尺寸（留白口径 =（内容 + 32）× 倍率；Schema 1.2 扩展 含 KPI hero 区高；
+ * P4 起倍率为连续区间 0.5–4（不再限 1/2/3 三档） */
+export function measurePng(inst: TemplateInstance, scale: number = 2) {
   const m = measureContentSize(inst)
   const kpi = kpiHeroHeight(effectiveKpiCards(inst))
   return {

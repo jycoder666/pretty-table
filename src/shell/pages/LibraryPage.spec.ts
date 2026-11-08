@@ -22,6 +22,12 @@ vi.mock('../repo/idbTemplateRepo', () => ({
   }),
 }))
 
+// 种子播种走真实模块（P6 改懒加载后含动态 import，并行跑时慢于 flushPromises）：
+// 页面测试不依赖真实 tables/*.json IO，mock 为空操作（播种行为由 seedTemplates.spec 专测）
+vi.mock('../repo/seedTemplates', () => ({
+  ensureSeeded: vi.fn<() => Promise<void>>(async () => {}),
+}))
+
 function fakeMine(id: string): TemplateInstance {
   const inst = cloneInstance(COMPARE_ALPHA_V1)
   inst.templateId = id
@@ -113,7 +119,7 @@ describe('LibraryPage · 我的模板删除入口（PX-01）', () => {
     expect(presetSection.text()).not.toContain('删除')
   })
 
-  it('确认后删除成功：repo 删除 + 列表刷新 + toast「已删除」', async () => {
+  it('确认后删除成功：repo 删除 + 列表刷新 + 出现 10 秒撤销条（P3，不再直接 toast）', async () => {
     const editor = useEditorStore()
     listMock.mockResolvedValueOnce([fakeMine('user-x1')]).mockResolvedValue([])
     const wrapper = await mountPage()
@@ -125,7 +131,19 @@ describe('LibraryPage · 我的模板删除入口（PX-01）', () => {
     await answerConfirm(wrapper, true)
     expect(removeMock).toHaveBeenCalledWith('user-x1')
     expect(useLibraryStore().mine).toHaveLength(0)
-    expect(editor.toast).toBe('已删除')
+    // P3：进入撤销态而非 toast「已删除」；撤销条展示被删模板名与剩余秒数
+    const bar = wrapper.find('[data-testid="undo-bar"]')
+    expect(bar.exists()).toBe(true)
+    expect(bar.text()).toContain('我的模板 user-x1')
+    expect(bar.text()).toContain('10s')
+    expect(editor.toast).not.toBe('已删除')
+    // 点撤销：快照重新落库（repo.save 同 id）+ toast「已恢复」
+    await wrapper.find('[data-testid="undo-btn"]').trigger('click')
+    await flushPromises()
+    expect(saveMock).toHaveBeenCalledTimes(1)
+    expect((saveMock.mock.calls[0]![0] as TemplateInstance).templateId).toBe('user-x1')
+    expect(editor.toast).toBe('已恢复')
+    expect(wrapper.find('[data-testid="undo-bar"]').exists()).toBe(false)
   })
 
   it('取消确认：不删除', async () => {

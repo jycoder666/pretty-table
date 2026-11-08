@@ -22,6 +22,22 @@ function readInstance(v: unknown): TemplateInstance | null {
   return (m.ok ? m.value : r.value) as TemplateInstance
 }
 
+/**
+ * P1 quota 错误归一：idb 写操作抛 QuotaExceededError 时转带 reason:'quota' 的业务错误
+ * （激活 EditorPage「我的模板已满」分支，文案由壳层给出）；其它异常原样 rethrow。
+ */
+function toQuotaError(
+  e: unknown,
+  code: 'TEMPLATE_SAVE_FAIL' | 'TEMPLATE_DELETE_FAIL',
+  message: string,
+): unknown {
+  const name = e && typeof e === 'object' ? (e as { name?: unknown }).name : undefined
+  if (name === 'QuotaExceededError') {
+    return { code, message, details: { reason: 'quota' } }
+  }
+  return e
+}
+
 export function createIdbTemplateRepo(): TemplateRepo {
   return {
     async list() {
@@ -48,14 +64,24 @@ export function createIdbTemplateRepo(): TemplateRepo {
         throw { code: 'TEMPLATE_SAVE_FAIL', message: 'save fail', details: { reason: 'io' } }
       }
       const plain = JSON.parse(JSON.stringify(inst)) as TemplateInstance
-      await set(TPL_KEY_PREFIX + plain.templateId, plain, kvStore)
+      try {
+        await set(TPL_KEY_PREFIX + plain.templateId, plain, kvStore)
+      } catch (e) {
+        // P1：配额溢出转业务错误（reason:'quota'），其余异常原样上抛
+        throw toQuotaError(e, 'TEMPLATE_SAVE_FAIL', '浏览器存储空间已满，无法保存')
+      }
     },
     async remove(templateId: string) {
       // 故障注入（GC-19 / PX-01）：?pt-fault=TEMPLATE_DELETE_FAIL → 删除失败
       if (PT_DEBUG && faultGate('TEMPLATE_DELETE_FAIL')) {
         throw { code: 'TEMPLATE_DELETE_FAIL', message: 'remove fail', details: { reason: 'io' } }
       }
-      await del(TPL_KEY_PREFIX + templateId, kvStore)
+      try {
+        await del(TPL_KEY_PREFIX + templateId, kvStore)
+      } catch (e) {
+        // P1：配额溢出转业务错误（reason:'quota'），其余异常原样上抛
+        throw toQuotaError(e, 'TEMPLATE_DELETE_FAIL', '浏览器存储空间已满，无法删除')
+      }
     },
   }
 }

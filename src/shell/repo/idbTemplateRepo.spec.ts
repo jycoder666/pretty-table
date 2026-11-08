@@ -7,15 +7,26 @@ import { createIdbTemplateRepo } from './idbTemplateRepo'
  * idb-keyval 以内存 Map 模拟（等价持久化语义，jsdom 无 indexedDB）。
  */
 
-const { mem } = vi.hoisted(() => ({ mem: new Map<string, unknown>() }))
+const { mem, quotaSet, quotaDel } = vi.hoisted(() => ({
+  mem: new Map<string, unknown>(),
+  quotaSet: { on: false },
+  quotaDel: { on: false },
+}))
 
 vi.mock('idb-keyval', () => ({
   createStore: vi.fn<() => object>(() => ({})),
   get: vi.fn<(key: string) => Promise<unknown>>(async (key: string) => mem.get(key)),
   set: vi.fn<(key: string, val: unknown) => Promise<void>>(async (key: string, val: unknown) => {
+    // P1 quota 用例开关：打开后模拟浏览器配额溢出
+    if (quotaSet.on) {
+      throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' })
+    }
     mem.set(key, val)
   }),
   del: vi.fn<(key: string) => Promise<void>>(async (key: string) => {
+    if (quotaDel.on) {
+      throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' })
+    }
     mem.delete(key)
   }),
   keys: vi.fn<() => Promise<string[]>>(async () => [...mem.keys()]),
@@ -39,6 +50,8 @@ function legacyUserTemplate(
 
 beforeEach(() => {
   mem.clear()
+  quotaSet.on = false
+  quotaDel.on = false
 })
 
 describe('idbTemplateRepo · 读时迁移（FR-C4 闭环）', () => {
@@ -98,5 +111,29 @@ describe('idbTemplateRepo · 读时迁移（FR-C4 闭环）', () => {
     expect(out).toHaveLength(1)
     expect(out[0]!.templateId).toBe('user-ok')
     expect(await repo.get('tpl:bad')).toBeNull()
+  })
+})
+
+describe('idbTemplateRepo · P1 配额溢出归一（QuotaExceededError → reason:quota）', () => {
+  it('save 遇 QuotaExceededError → 抛 TEMPLATE_SAVE_FAIL + reason:quota（激活 EditorPage「已满」分支）', async () => {
+    const repo = createIdbTemplateRepo()
+    quotaSet.on = true
+    await expect(repo.save(legacyUserTemplate('user-q1', '1.2'))).rejects.toMatchObject({
+      code: 'TEMPLATE_SAVE_FAIL',
+      message: '浏览器存储空间已满，无法保存',
+      details: { reason: 'quota' },
+    })
+  })
+
+  it('remove 遇 QuotaExceededError → 抛 TEMPLATE_DELETE_FAIL + reason:quota；其它异常原样上抛', async () => {
+    const repo = createIdbTemplateRepo()
+    quotaDel.on = true
+    await expect(repo.remove('user-x')).rejects.toMatchObject({
+      code: 'TEMPLATE_DELETE_FAIL',
+      details: { reason: 'quota' },
+    })
+    // 非 quota 异常（如读写底层故障）不得被吞成 quota：关掉开关后 del 正常
+    quotaDel.on = false
+    await expect(repo.remove('user-x')).resolves.toBeUndefined()
   })
 })

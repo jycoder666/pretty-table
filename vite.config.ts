@@ -71,5 +71,19 @@ export default defineConfig(({ mode }) => {
     define: {
       'import.meta.env.VITE_PT_DEBUG': JSON.stringify(env.VITE_PT_DEBUG ?? ''),
     },
+    build: {
+      // P6 收尾（体积门禁）：seedTemplates 对 tables/*.json 的动态导入默认拆 8 个
+      // 小 chunk，各自独立 gzip 无共享字典（实测 14.4KB）；归并为单 chunk 后
+      // 重复键名（templateId/schemaVersion/slots…）跨表共享压缩（实测 8.67KB）。
+      // 仍保持懒加载：不进首屏入口，打开库页首次播种时才下载。
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (id.replace(/\\/g, '/').includes('/tables/')) return 'seed-tables'
+            return undefined
+          },
+        },
+      },
+    },
   }
 })

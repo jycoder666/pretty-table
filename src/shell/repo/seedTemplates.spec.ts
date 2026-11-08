@@ -76,7 +76,9 @@ beforeEach(() => {
 })
 
 describe('seedTemplates · 内置需求表自动播种', () => {
-  it('glob 收集：tables/ 下 8 张表全部合法，显示名=文件名去扩展名', () => {
+  it('glob 收集：tables/ 下 8 张表全部合法，显示名=文件名去扩展名（P6 懒加载后经 ensureSeeded 触发）', async () => {
+    // P6：glob 改 eager:false，种子清单在首次 ensureSeeded 时动态加载填充
+    await ensureSeeded()
     expect(SEED_TEMPLATES).toHaveLength(8)
     expect(SEED_TEMPLATES.map((s) => s.fileName).sort()).toEqual([...SEED_FILE_NAMES].sort())
     for (const s of SEED_TEMPLATES) {

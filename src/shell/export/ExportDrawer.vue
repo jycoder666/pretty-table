@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { DialogRoot, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 'reka-ui'
-import { exportHtml, exportText, instanceToJSON, loadRenderCore, measurePng } from '@/core'
+import {
+  exportCsv,
+  exportHtml,
+  exportText,
+  instanceToJSON,
+  loadRenderCore,
+  measurePng,
+  PNG_PAD,
+} from '@/core'
 import { useEditorStore } from '../stores/editor'
 import { errorCopy } from '../editor/errorCopy'
 import { pngMaxOverride } from '../debug/flags'
@@ -31,9 +39,37 @@ function chooseScale(s: PngScale) {
   scaleAttn.value = false
 }
 
+// ── P4 PNG 尺寸档位：自动 / 1080 宽（小红书）/ 1200 宽（公众号）。
+// 选中目标宽时倍率由「目标宽 /（内容宽 + 2×留白）」推算（2 位小数、clamp 0.5–4），
+// 倍率 seg 组禁用；切回「自动」恢复手动三档 ──
+type SizePreset = 'auto' | '1080' | '1200'
+const sizePreset = ref<SizePreset>('auto')
+
+function choosePreset(p: SizePreset) {
+  sizePreset.value = p
+  scaleAttn.value = false
+}
+
+/** 内容宽（与倍率无关，取一次供档位换算） */
+const contentSize = computed(() =>
+  editor.current ? measurePng(editor.current, 1) : null,
+)
+
+/** 档位等效倍率；自动档为 null（沿用 pngScale 手动三档） */
+const presetScale = computed<number | null>(() => {
+  if (sizePreset.value === 'auto' || !contentSize.value) return null
+  const target = Number(sizePreset.value)
+  const raw = target / (contentSize.value.contentWidth + PNG_PAD * 2)
+  // 四舍五入保留 2 位小数，clamp 到核内支持的 0.5–4 区间
+  return Math.min(4, Math.max(0.5, Math.round(raw * 100) / 100))
+})
+
+/** 实际生效倍率：档位推算优先，自动档沿用用户倍率（预估与下载同源单点） */
+const activeScale = computed(() => presetScale.value ?? pngScale.value)
+
 /** 实时预估（只算不画）：约 W × H 像素 */
 const estimate = computed(() =>
-  editor.current ? measurePng(editor.current, pngScale.value) : null,
+  editor.current ? measurePng(editor.current, activeScale.value) : null,
 )
 
 // ── PX-12：PNG 超像素门槛 → 按当前倍率给出具体的降倍建议 + 高亮倍率选项 ──
@@ -125,6 +161,25 @@ function downloadJson() {
   editor.showToast('模板 JSON 已下载')
 }
 
+/** P4 CSV 导出：纯数据网格（核内静态纯函数，无需 loadRenderCore）→ blob 下载 .csv */
+function downloadCsv() {
+  if (!editor.current) return
+  let r: ReturnType<typeof exportCsv>
+  try {
+    r = exportCsv(editor.current)
+  } catch {
+    editor.showToast('这张表读不出来，无法导出 CSV')
+    return
+  }
+  if (!r.ok) {
+    editor.showToast(r.error.message)
+    return
+  }
+  const blob = new Blob([r.value], { type: 'text/csv;charset=utf-8' })
+  triggerBlobDownload(blob, `${editor.current.meta?.displayName ?? 'table'}.csv`)
+  editor.showToast('CSV 已下载')
+}
+
 /**
  * 新标签页打开（取证路径）：生成同一 PNG 后以 blob URL 直开图片页，
  * 供无法触发下载的环境（部分内嵌浏览器/受管控 WebView）截图取证；
@@ -162,7 +217,8 @@ async function renderPngBlob(): Promise<Blob | null> {
     // T34：exportPng 在渲染核动态 chunk 里（VTable），首次导出时按需加载
     const { exportPng } = await loadRenderCore()
     const r = await exportPng(editor.current, {
-      scale: pngScale.value,
+      // P4：档位模式下用等效倍率（自动档 = 手动三档选择）
+      scale: activeScale.value,
       transparent: pngTransparent.value,
       maxPixels: PT_DEBUG ? pngMaxOverride() : undefined,
     })
@@ -196,17 +252,44 @@ async function renderPngBlob(): Promise<Blob | null> {
         <p>复制带样式的 HTML，下载高清 PNG（与预览同源）；导出 JSON 可在另一台设备导入还原。</p>
 
         <div class="png-opts">
+          <!-- P4：尺寸档位（目标宽单选；选中后倍率由目标宽推算并锁定手动倍率） -->
+          <div class="opt-row">
+            <span class="opt-label">尺寸档位</span>
+            <div class="seg" role="radiogroup" aria-label="PNG 尺寸档位">
+              <button
+                v-for="p in [
+                  { key: 'auto', label: '自动' },
+                  { key: '1080', label: '1080 宽·小红书' },
+                  { key: '1200', label: '1200 宽·公众号' },
+                ] as const"
+                :key="p.key"
+                type="button"
+                class="seg-btn"
+                :class="{ on: sizePreset === p.key }"
+                :aria-pressed="sizePreset === p.key"
+                :disabled="editor.exporting"
+                @click="choosePreset(p.key)"
+              >
+                {{ p.label }}
+              </button>
+            </div>
+          </div>
           <div class="opt-row">
             <span class="opt-label">倍率</span>
-            <div class="seg" role="radiogroup" aria-label="PNG 倍率" :class="{ attn: scaleAttn }">
+            <div
+              class="seg"
+              role="radiogroup"
+              aria-label="PNG 倍率"
+              :class="{ attn: scaleAttn }"
+            >
               <button
                 v-for="s in scales"
                 :key="s"
                 type="button"
                 class="seg-btn"
-                :class="{ on: pngScale === s }"
-                :aria-pressed="pngScale === s"
-                :disabled="editor.exporting"
+                :class="{ on: sizePreset === 'auto' && pngScale === s }"
+                :aria-pressed="sizePreset === 'auto' && pngScale === s"
+                :disabled="editor.exporting || sizePreset !== 'auto'"
                 @click="chooseScale(s)"
               >
                 {{ s }}×
@@ -222,7 +305,9 @@ async function renderPngBlob(): Promise<Blob | null> {
             />
             透明底（表格外留白透明）
           </label>
-          <p v-if="estimate" class="estimate">约 {{ estimate.outWidth }} × {{ estimate.outHeight }} 像素</p>
+          <p v-if="estimate" class="estimate">
+            约 {{ estimate.outWidth }} × {{ estimate.outHeight }} 像素<template v-if="presetScale">（{{ presetScale }}×）</template>
+          </p>
         </div>
 
         <div class="actions">
@@ -237,6 +322,18 @@ async function renderPngBlob(): Promise<Blob | null> {
           </PtTooltip>
           <PtTooltip text="按当前倍率导出 PNG 图片（与预览同源）">
             <PtButton class="wide" :disabled="editor.exporting" @click="downloadPng">导出 PNG</PtButton>
+          </PtTooltip>
+          <!-- P4：CSV 纯数据导出（BOM + RFC 4180，贴回表格软件不乱码） -->
+          <PtTooltip text="下载纯数据 CSV 文件（无样式），可在表格软件中打开">
+            <PtButton
+              class="wide"
+              variant="ghost"
+              :disabled="editor.exporting"
+              data-testid="export-csv-btn"
+              @click="downloadCsv"
+            >
+              导出 CSV
+            </PtButton>
           </PtTooltip>
           <PtTooltip text="下载模板 JSON 文件，在另一台设备的模板库导入即可还原这张表">
             <PtButton

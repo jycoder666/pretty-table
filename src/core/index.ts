@@ -203,8 +203,11 @@ export {
   type ExportModel,
   type ExportCell,
 } from './export/model'
-// PNG 估算/门槛常量不依赖 VTable，从 pngSize 静态导出（exportPng 走 loadRenderCore）
-export { measurePng, PNG_MAX_PIXELS_DEFAULT } from './export/pngSize'
+// PNG 估算/门槛常量不依赖 VTable，从 pngSize 静态导出（exportPng 走 loadRenderCore）；
+// PNG_PAD 供壳层尺寸档位换算（P4），同样无 VTable 依赖、静态可用
+export { measurePng, PNG_MAX_PIXELS_DEFAULT, PNG_PAD } from './export/pngSize'
+// P4 CSV 导出：纯数据网格（复用 exportHtml 的 ExportModel 构建链，无 VTable 依赖，静态可用）
+export { exportCsv } from './export/csv'
 
 // 模板 JSON 导出/导入（跨设备同步 · 核内单点，壳只做文件 IO）
 export { instanceToJSON, instanceFromJSON, type TransferParseResult } from './transfer/transfer'

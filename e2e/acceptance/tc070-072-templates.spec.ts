@@ -21,30 +21,43 @@ test.beforeEach(async ({ context, browserName }) => {
 })
 
 test.describe('TC-PT-070 · 价目/矩阵入库：Chip、卡片、防误解小字、空态', () => {
-  test('五系统模板 + 空白卡入库、卡片类型 chip、我的模板空态（FR-20 系统模板与卡片部分）', async ({
+  test('五系统模板 + 空白卡入库、卡片类型 chip、种子播种（FR-20 系统模板与卡片部分）', async ({
     page,
   }) => {
     await page.goto('/')
-    // 系统预设：新建空白表 + 五类模板卡
+    // 系统预设：新建空白表 + 五类模板卡（2026-11-07 起含「统计看板」）
     await expect(page.locator('[data-testid="blank-card"]')).toBeVisible()
-    for (const name of ['多列对比表', '单主体明细表', '价目清单', '功能矩阵表']) {
+    for (const name of ['多列对比表', '单主体明细表', '价目清单', '功能矩阵表', '统计看板']) {
       const card = page.locator('article.card', { has: page.locator('h3', { hasText: name }) })
       await expect(card).toBeVisible()
-      await expect(card.locator('.chip')).toHaveText(/对比|明细|价目|矩阵/)
+      await expect(card.locator('.chip')).toHaveText(/对比|明细|价目|矩阵|看板/)
     }
     // 卡片小字（meta.description）存在
     const price = page.locator('article.card', { has: page.locator('h3', { hasText: '价目清单' }) })
     await expect(price.locator('p').first()).toContainText('报价')
-    // 我的模板空态（通用文案，未筛选时）
-    await expect(page.getByText('还没有我的模板')).toBeVisible()
+    // 我的模板：内置需求表自动播种（tables/*.json，2026-11-08 起常驻 ≥8 张，
+    // 全新浏览器上下文首次播种即写入——原「还没有我的模板」空态在种子常驻后不再出现）
+    const mineSection = page.locator('section', { has: page.locator('.mine-head') })
+    await expect(mineSection.locator('article.card')).toHaveCount(8)
+    await expect(
+      page.locator('article.card h3', { hasText: '三款机型参数对比' }),
+    ).toBeVisible()
+    await expect(page.locator('article.card h3', { hasText: '餐厅秋季菜单' })).toBeVisible()
   })
 
   // FR-20 §2.1-2.3 类型筛选（TC-070 原 FAIL 项，修复后转真实断言）
   test('类型筛选 chips、防误解小字、按类型空态、清空筛选', async ({ page }) => {
     await page.goto('/')
-    // Chip 顺序与文案（规格 §2.1）
+    // Chip 顺序与文案（规格 §2.1；2026-11-07 起新增「统计看板」第六类）
     const chips = page.locator('[data-testid="type-filter"] button')
-    await expect(chips).toHaveText(['全部', '多列对比', '单主体明细', '价目清单', '宽表矩阵'])
+    await expect(chips).toHaveText([
+      '全部',
+      '多列对比',
+      '单主体明细',
+      '价目清单',
+      '宽表矩阵',
+      '统计看板',
+    ])
     // 防误解小字（§2.2）：价目「不会自动计算」、矩阵「列多时左右滑动，首列固定」
     await expect(
       page.locator('article.card', { has: page.locator('h3', { hasText: '价目清单' }) }),
@@ -52,7 +65,8 @@ test.describe('TC-PT-070 · 价目/矩阵入库：Chip、卡片、防误解小�
     await expect(
       page.locator('article.card', { has: page.locator('h3', { hasText: '功能矩阵表' }) }),
     ).toContainText('列多时左右滑动，首列固定')
-    // 点「价目清单」Chip：系统段只剩价目卡、空白卡隐藏；我的模板段按类型空态（§2.3）
+    // 点「价目清单」Chip：系统段只剩价目卡、空白卡隐藏；我的模板段按类型空态（§2.3）。
+    // 种子 8 张的类型为 blank/compare/stat（无 pricing），价目筛选下我的模板段仍为空态
     await page.getByRole('button', { name: '价目清单', exact: true }).click()
     const priceCard = page.locator('article.card', {
       has: page.locator('h3', { hasText: '价目清单' }),
@@ -65,10 +79,13 @@ test.describe('TC-PT-070 · 价目/矩阵入库：Chip、卡片、防误解小�
     await expect(page.locator('[data-testid="mine-type-empty"]')).toContainText(
       '还没有存过价目清单模板',
     )
-    // 回「全部」：卡片与空白卡恢复、通用空态回归
+    // 回「全部」：卡片与空白卡恢复；种子常驻（原「还没有我的模板」空态已被
+    // 2026-11-08 内置需求表播种取代——断言种子卡恢复可见更符合当前产品语义）
     await page.getByRole('button', { name: '全部', exact: true }).click()
     await expect(page.locator('[data-testid="blank-card"]')).toBeVisible()
-    await expect(page.getByText('还没有我的模板')).toBeVisible()
+    await expect(
+      page.locator('article.card h3', { hasText: '三款机型参数对比' }),
+    ).toBeVisible()
   })
 })
 
