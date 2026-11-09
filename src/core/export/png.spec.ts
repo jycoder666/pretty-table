@@ -34,10 +34,29 @@ describe('PNG 倍率与透明底（T27）', () => {
     }
   })
 
-  it('非法倍率直接拒绝，不进渲染路径', async () => {
-    const r = await exportPng(cloneInstance(COMPARE_ALPHA_V1), { scale: 5 as 3 })
+  it('非法倍率直接拒绝，不进渲染路径（P4：区间 0.5–4 外拒绝）', async () => {
+    for (const bad of [0.1, 4.5]) {
+      const r = await exportPng(cloneInstance(COMPARE_ALPHA_V1), { scale: bad })
+      expect(r.ok).toBe(false)
+      expect(r.ok ? undefined : r.error.code).toBe('EXPORT_PNG_FAIL')
+      expect(r.ok ? undefined : r.error.message).toBe(`不支持的倍率 ${String(bad)}，支持 0.5×–4×`)
+    }
+  })
+
+  it('区间内连续倍率合法（P4）：1.5× 越过倍率校验进入后续流程', async () => {
+    // maxPixels 压到极小：若 1.5 被倍率校验拒绝会返回 EXPORT_PNG_FAIL；
+    // 通过校验则走到像素门槛检查返回 EXPORT_PNG_TOO_LARGE（此处 jsdom 不进真实渲染）
+    const r = await exportPng(cloneInstance(COMPARE_ALPHA_V1), { scale: 1.5, maxPixels: 1 })
     expect(r.ok).toBe(false)
-    expect(r.ok ? undefined : r.error.code).toBe('EXPORT_PNG_FAIL')
+    expect(r.ok ? undefined : r.error.code).toBe('EXPORT_PNG_TOO_LARGE')
+  })
+
+  it('measurePng 连续倍率：1.5× 预估 =（内容 + 32）× 1.5（±2px）', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    const content = measureContentSize(inst)
+    const m = measurePng(inst, 1.5)
+    expect(Math.abs(m.outWidth - (content.width + 32) * 1.5)).toBeLessThanOrEqual(2)
+    expect(Math.abs(m.outHeight - (content.height + 32) * 1.5)).toBeLessThanOrEqual(2)
   })
 
   it('输出超门槛 → EXPORT_PNG_TOO_LARGE，不自动降倍', async () => {

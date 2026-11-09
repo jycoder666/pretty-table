@@ -32,6 +32,8 @@ export type ErrorCode =
   | 'RENDER_FAIL'
   | 'EXPORT_HTML_FAIL'
   | 'EXPORT_PNG_FAIL'
+  // P4：CSV 导出（纯数据网格）失败（空表等），用户只见白话（GC-25）
+  | 'EXPORT_CSV_FAIL'
   | 'EXPORT_BLOCKED_RENDERING'
   |   'TEMPLATE_LIST_FAIL'
   | 'TEMPLATE_SAVE_FAIL'

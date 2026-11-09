@@ -42,3 +42,7 @@ test-results/
 playwright-report/
 .workbuddy/
 reports/tables-20261107/_work/pw-profile/
+
+# GUI 冒烟临时脚本（不入库）
+.tmp-smoke/
+_quarantine_*/

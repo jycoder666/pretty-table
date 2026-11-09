@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useLibraryStore } from '../stores/library'
 import { useEditorStore } from '../stores/editor'
 import { createBlankInstance, instanceFromJSON } from '@/core'
@@ -147,7 +147,8 @@ async function useTpl(t: TemplateInstance) {
   editor.openTemplate(t)
 }
 
-/** PX-01：删除「我的模板」，二次确认后经 repo 删除并刷新列表 */
+/** PX-01：删除「我的模板」，二次确认后经 repo 删除并刷新列表；
+ * P3：删除前留内存快照，成功后进入 10 秒撤销态（撤销条），不再直接 toast「已删除」 */
 async function removeTpl(t: TemplateInstance) {
   const go = await confirmAction({
     title: '删除模板',
@@ -156,9 +157,92 @@ async function removeTpl(t: TemplateInstance) {
     danger: true,
   })
   if (!go) return
+  const snapshot = JSON.parse(JSON.stringify(t)) as TemplateInstance
   const ok = await library.removeTemplate(t.templateId)
-  if (ok) editor.showToast('已删除')
-  else editor.showToast(errorCopy('TEMPLATE_DELETE_FAIL'))
+  if (!ok) {
+    editor.showToast(errorCopy('TEMPLATE_DELETE_FAIL'))
+    return
+  }
+  startUndo(snapshot)
+}
+
+// ── P3 删除 10 秒撤销：底部撤销条，倒计时归零自动丢弃快照 ──
+const UNDO_SECONDS = 10
+const undoLeft = ref(0)
+const undoSnapshot = ref<TemplateInstance | null>(null)
+let undoTimer: number | null = null
+
+function stopUndoTimer() {
+  if (undoTimer !== null) {
+    window.clearInterval(undoTimer)
+    undoTimer = null
+  }
+}
+
+/** 进入/重置撤销态：撤销期间再次删除另一张 → 替换快照与计时（新删除优先） */
+function startUndo(t: TemplateInstance) {
+  undoSnapshot.value = t
+  undoLeft.value = UNDO_SECONDS
+  stopUndoTimer()
+  undoTimer = window.setInterval(() => {
+    undoLeft.value -= 1
+    if (undoLeft.value <= 0) discardUndo()
+  }, 1000)
+}
+
+/** 丢弃快照收起撤销条（倒计时归零 / 手动撤销后调用） */
+function discardUndo() {
+  stopUndoTimer()
+  undoSnapshot.value = null
+  undoLeft.value = 0
+}
+
+/** 点撤销：快照重新落库（library.undoRemove 同 id 恢复）+ toast「已恢复」 */
+async function undoRemoveTpl() {
+  const snap = undoSnapshot.value
+  if (!snap) return
+  discardUndo()
+  const ok = await library.undoRemove(snap)
+  editor.showToast(ok ? '已恢复' : '恢复失败，请重试')
+}
+
+onUnmounted(stopUndoTimer)
+
+// ── P2 全量备份 / 导入备份：「我的模板」整包下载与还原 ──
+const restoreFileRef = ref<HTMLInputElement | null>(null)
+
+/** 备份全部：mine 全量 → 单文件 JSON 下载（store 内完成规范化与下载触发） */
+async function onBackupAll() {
+  const r = await library.backupAll()
+  if (r.ok) editor.showToast(`已导出 ${r.count} 张模板`)
+  else editor.showToast(r.error ?? '备份失败，请重试')
+}
+
+function onRestoreClick() {
+  restoreFileRef.value?.click()
+}
+
+/** 导入备份：选 .json → store 逐张校验入库 → toast 结果（跳过张数 >0 才显示后半句） */
+async function onRestoreFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  // 读入前立刻清空 value：同一路径连续选同一文件也触发 change
+  input.value = ''
+  if (!file) return
+  let text: string
+  try {
+    text = await file.text()
+  } catch {
+    editor.showToast('文件读取失败，请重试')
+    return
+  }
+  const r = await library.restoreBackup(text)
+  if (r.error) {
+    editor.showToast(r.error)
+    return
+  }
+  const tail = r.skipped > 0 ? `，跳过 ${r.skipped} 张` : ''
+  editor.showToast(`导入 ${r.imported} 张${tail}`)
 }
 
 // ── 模板 JSON 导入（跨设备同步）：文件选择或粘贴文本 → 核内校验 → 入「我的模板」──
@@ -306,17 +390,40 @@ async function confirmImport() {
     <section>
       <div class="mine-head">
         <h2>我的模板</h2>
-        <!-- 模板 JSON 导入（跨设备同步）：文件或粘贴文本，核内校验后入库 -->
-        <PtButton
-          variant="ghost"
-          type="button"
-          data-testid="import-btn"
-          class="import-btn"
-          @click.stop="openImport"
-        >
-          导入模板
-        </PtButton>
+        <div class="mine-tools">
+          <!-- P2 全量备份：mine 全部 → 单文件 JSON 下载 -->
+          <PtButton
+            variant="ghost"
+            type="button"
+            data-testid="backup-all-btn"
+            @click.stop="onBackupAll"
+          >
+            备份全部
+          </PtButton>
+          <!-- P2 导入备份：隐藏 file input 选 .json 整包还原 -->
+          <PtButton
+            variant="ghost"
+            type="button"
+            data-testid="restore-backup-btn"
+            @click.stop="onRestoreClick"
+          >
+            导入备份
+          </PtButton>
+          <!-- 模板 JSON 导入（跨设备同步）：文件或粘贴文本，核内校验后入库 -->
+          <PtButton variant="ghost" type="button" data-testid="import-btn" @click.stop="openImport">
+            导入模板
+          </PtButton>
+        </div>
       </div>
+      <input
+        ref="restoreFileRef"
+        type="file"
+        accept=".json,application/json"
+        class="restore-file"
+        aria-label="选择备份 JSON 文件"
+        data-testid="restore-backup-file"
+        @change="onRestoreFile"
+      />
       <p v-if="library.listError" class="err">
         {{ library.listError }}
         <PtButton variant="ghost" type="button" @click.stop="() => library.refreshMine()">重试</PtButton>
@@ -353,6 +460,14 @@ async function confirmImport() {
 
     <!-- PX-05：统一确认弹窗（删除模板 / 换模板替换） -->
     <ConfirmDialog />
+    <!-- P3：删除 10 秒撤销条（fixed 底部居中，倒计时归零自动消失） -->
+    <div v-if="undoLeft > 0 && undoSnapshot" class="undo-bar" data-testid="undo-bar" role="status">
+      <span>已删除《{{ undoSnapshot.meta?.displayName || '未命名模板' }}》</span>
+      <PtButton variant="ghost" type="button" data-testid="undo-btn" @click.stop="undoRemoveTpl">
+        撤销
+      </PtButton>
+      <span class="undo-count">· {{ undoLeft }}s</span>
+    </div>
     <!-- PX-10：重命名小弹层（ConfirmDialog 同风格） -->
     <RenameDialog
       v-model:open="renameOpen"
@@ -540,8 +655,45 @@ h2 {
   justify-content: space-between;
   gap: 12px;
 }
-.import-btn {
+/* P2：标题右侧工具组（备份全部 / 导入备份 / 导入模板），窄屏允许换行 */
+.mine-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.mine-tools > :deep(button) {
   flex: none;
+}
+/* P2：导入备份的隐藏 file input（只经按钮触发 click） */
+.restore-file {
+  display: none;
+}
+/* P3：删除撤销条（fixed 底部居中；配色全部走 CSS 变量派生，无硬编码色值） */
+.undo-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: var(--pt-z-toolbar);
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 14px;
+  border: 1px solid var(--pt-border);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.undo-count {
+  color: var(--pt-muted);
+  /* 倒计时数字对齐不跳（属性式） */
+  font-variant-numeric: tabular-nums;
 }
 .import-overlay {
   position: fixed;

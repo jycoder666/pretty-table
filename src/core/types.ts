@@ -264,7 +264,8 @@ export type RenderContext = {
 }
 
 export interface PngExportOptions {
-  scale?: 1 | 2 | 3
+  /** P4：倍率放宽为连续区间 0.5–4（原 1/2/3 三档） */
+  scale?: number
   transparent?: boolean
   maxPixels?: number
 }

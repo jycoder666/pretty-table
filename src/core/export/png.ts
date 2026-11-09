@@ -199,9 +199,9 @@ export async function exportPng(
   const transparent = opts.transparent ?? false
   const maxPixels = opts.maxPixels ?? PNG_MAX_PIXELS_DEFAULT
 
-  // 只放开 1/2/3 倍（FR-24）；非法倍率直接拒绝，不进渲染
-  if (scale !== 1 && scale !== 2 && scale !== 3) {
-    return fail('EXPORT_PNG_FAIL', `不支持的倍率 ${String(scale)}，仅支持 1×/2×/3×`)
+  // P4：倍率放宽为连续区间 0.5×–4×（原 FR-24 只放 1/2/3 档）；非法倍率直接拒绝，不进渲染
+  if (!(typeof scale === 'number' && scale >= 0.5 && scale <= 4)) {
+    return fail('EXPORT_PNG_FAIL', `不支持的倍率 ${String(scale)}，支持 0.5×–4×`)
   }
 
   const measured = measureContentSize(inst)
