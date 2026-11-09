@@ -394,6 +394,8 @@ describe('LibraryPage · FR-20 类型筛选（TC-070）：chips / 防误解小�
     const hints = wrapper.findAll('[data-testid="tpl-hint"]').map((p) => p.text())
     expect(hints.some((h) => h.includes('行数由模板定好；小计请自己填写，不会自动计算'))).toBe(true)
     expect(hints.some((h) => h.includes('列多时左右滑动，首列固定'))).toBe(true)
-    expect(hints).toHaveLength(2) // 仅价目 + 矩阵两类有防误解小字
+    // 仅价目 + 矩阵两类有防误解小字；矩阵类现有 2 张（matrix-v1 + 保险套件 duty-compare
+    // 保障责任对比，frozenColCount:1 同样成立）→ 共 3 条
+    expect(hints).toHaveLength(3)
   })
 })

@@ -219,4 +219,13 @@ export {
   PRICING_V1,
   MATRIX_V1,
   STAT_V1,
+  // 保险模板套件 8 张（增量设计-保险模板套件-2026-11-06 TP09 验收②；壳层/测试经此入口）
+  AGE_CARE_GUIDE,
+  MED_INS_LIST,
+  DUTY_COMPARE,
+  PRODUCT_CATALOG,
+  CARE_TIER_COMPARE,
+  CLAIM_STANDARDS,
+  CRITICAL_LIST_50,
+  PLAN_VS,
 } from './templates'

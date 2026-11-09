@@ -13,6 +13,14 @@ pnpm install
 pnpm dev
 ```
 
+默认地址 `http://127.0.0.1:5310/`（避开本机 nginx:80、phpstudy 9000-9004、其它项目 Vite:5173 等常驻端口）。
+
+端口规则：
+
+- 开发端口固定 5310，`strictPort` 为 true——端口被占用时 Vite **直接报错退出**，不会静默换端口导致访问到别的服务
+- 换端口：`pnpm dev --port 5320`，或 `set PT_PORT=5320` 后运行
+- Windows 双击 `启动开发服务.bat` 可一键启动：默认 5310，被占用时中文提示并自动顺延到下一个可用端口，打印地址与实际监听一致；`启动开发服务.bat check` 只检测端口不启动；脚本由 `python scripts/write_start_bat.py` 生成（GBK+CRLF，勿直接编辑 .bat）
+
 ```bash
 pnpm test:unit
 pnpm type-check

@@ -13,7 +13,8 @@ export default defineConfig({
   workers: 1,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:5173',
+    // 与 vite.config.ts 端口策略一致：默认 5310，可用 PT_PORT 覆盖
+    baseURL: `http://127.0.0.1:${Number(process.env.PT_PORT) || 5310}`,
     headless: false,
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 1,
@@ -21,7 +22,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run dev',
-    port: 5173,
+    port: Number(process.env.PT_PORT) || 5310,
     reuseExistingServer: true,
   },
 })

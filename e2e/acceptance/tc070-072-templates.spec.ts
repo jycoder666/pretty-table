@@ -42,9 +42,16 @@ test.describe('TC-PT-070 · 价目/矩阵入库：Chip、卡片、防误解小�
   // FR-20 §2.1-2.3 类型筛选（TC-070 原 FAIL 项，修复后转真实断言）
   test('类型筛选 chips、防误解小字、按类型空态、清空筛选', async ({ page }) => {
     await page.goto('/')
-    // Chip 顺序与文案（规格 §2.1）
+    // Chip 顺序与文案（规格 §2.1；stat-v1 注册后 6 项——2026-11-07 基线对齐，设计 TP10⑥）
     const chips = page.locator('[data-testid="type-filter"] button')
-    await expect(chips).toHaveText(['全部', '多列对比', '单主体明细', '价目清单', '宽表矩阵'])
+    await expect(chips).toHaveText([
+      '全部',
+      '多列对比',
+      '单主体明细',
+      '价目清单',
+      '宽表矩阵',
+      '统计看板',
+    ])
     // 防误解小字（§2.2）：价目「不会自动计算」、矩阵「列多时左右滑动，首列固定」
     await expect(
       page.locator('article.card', { has: page.locator('h3', { hasText: '价目清单' }) }),

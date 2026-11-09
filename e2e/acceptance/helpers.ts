@@ -58,8 +58,17 @@ async function installClipboardCapture(page: Page): Promise<void> {
           }
         }
       }
-      w.__ptLastExportHtml = html
-      return origWrite(items)
+        w.__ptLastExportHtml = html
+        // WebKit 无 clipboard-write 权限项：真机 write 仍会间歇性 NotAllowedError
+        //（tc100 ×9 实证：同用例时而成功、时而应用兜底 toast「浏览器没有允许写入剪贴板」）。
+        // 捕获载荷已先行落 __ptLastExportHtml，此处吞掉底层拒绝（chromium 正常路径不变），
+        // 使「复制成功」断言确定化；TC-087 的拒绝注入是整体替换 clipboard（无 write）→
+        // 捕获不安装（上方守卫），与其断言互不影响。
+        try {
+          return await origWrite(items)
+        } catch {
+          return undefined
+        }
     }
   })
 }

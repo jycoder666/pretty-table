@@ -11,7 +11,7 @@
  * 纯数据函数：无 Vue/Pinia/DOM 依赖（G-AR-01 壳→store→核）。
  */
 import type { TemplateInstance } from '../types'
-import { fail, ok, type CoreWarning, type Result } from '../errors'
+import { ok, type CoreWarning, type Result } from '../errors'
 import { cloneInstance, validateInstance } from '../schema/validate'
 import { migrateInstance, SCHEMA_VERSION_CURRENT } from '../schema/migrate'
 import { listPresetTemplates } from '../templates'

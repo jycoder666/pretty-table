@@ -12,6 +12,12 @@ process.env.NO_PROXY ??= 'localhost,127.0.0.1,::1'
 process.env.no_proxy ??= 'localhost,127.0.0.1,::1'
 
 /**
+ * 开发服务端口：与 vite.config.ts 的端口策略保持一致（默认 5310，可用 PT_PORT 覆盖）。
+ * 显式绑定 127.0.0.1，避免 localhost 先解析到 ::1 而连不上。
+ */
+const DEV_PORT = Number(process.env.PT_PORT) || 5310
+
+/**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
@@ -44,13 +50,14 @@ export default defineConfig({
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173',
+    baseURL: process.env.CI ? 'http://localhost:4173' : `http://127.0.0.1:${DEV_PORT}`,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
 
-    /* Only on CI systems run the tests headless */
-    headless: !!process.env.CI,
+    /* 默认无头运行（本地同样无头——工作流批量回归时反复弹有头窗口会打断日常使用）；
+       需要人工观察浏览器时显式设 PW_HEADED=1 */
+    headless: !process.env.PW_HEADED,
   },
 
   /* Configure projects for major browsers */
@@ -129,7 +136,7 @@ export default defineConfig({
      * Playwright will re-use the local server if there is already a dev-server running.
      */
     command: process.env.CI ? 'npm run preview' : 'npm run dev',
-    port: process.env.CI ? 4173 : 5173,
+    port: process.env.CI ? 4173 : DEV_PORT,
     reuseExistingServer: !process.env.CI,
   },
 })

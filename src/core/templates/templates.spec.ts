@@ -9,6 +9,14 @@ import {
   COMPARE_ALPHA_V1,
   DETAIL_ALPHA_V1,
   STAT_V1,
+  AGE_CARE_GUIDE,
+  MED_INS_LIST,
+  DUTY_COMPARE,
+  PRODUCT_CATALOG,
+  CARE_TIER_COMPARE,
+  CLAIM_STANDARDS,
+  CRITICAL_LIST_50,
+  PLAN_VS,
 } from './index'
 import { validateInstance, cloneInstance } from '../schema/validate'
 import { migrateInstance, SCHEMA_VERSION_CURRENT } from '../schema/migrate'
@@ -108,11 +116,15 @@ describe('价目 / 矩阵系统模板（T26 · U-1 §8）', () => {
     expect(MATRIX_V1.layout.allowedMerges).toContainEqual({ start: [0, 1], end: [0, 5] })
   })
 
-  it('登记后可从模板库取用，共 6 张系统预设（blank 居首，FR-C6；stat-v1 统计看板）', () => {
+  it('登记后可从模板库取用，共 14 张系统预设（blank 居首，FR-C6；stat-v1 统计看板；保险套件 8 张按 need 序）', () => {
     expect(getPresetTemplate('pricing-v1')?.meta?.templateType).toBe('pricing')
     expect(getPresetTemplate('matrix-v1')?.meta?.templateType).toBe('matrix')
     expect(getPresetTemplate('stat-v1')?.meta?.templateType).toBe('stat')
     expect(getPresetTemplate('pricing-v1')).not.toBeNull()
+    // 保险套件（增量设计-保险模板套件-2026-11-06 TP09 验收③）：8 张全部显式 templateType，
+    // 一律不落 'compare'（toOption 对 compare 型强制 [0,0] 角头「项目」会吞标题行）
+    expect(getPresetTemplate('age-care-guide')?.meta?.templateType).toBe('detail')
+    expect(getPresetTemplate('duty-compare')?.meta?.templateType).toBe('matrix')
     expect(listPresetTemplates().map((t) => t.templateId)).toEqual([
       'blank-v1',
       'compare-alpha-v1',
@@ -120,6 +132,14 @@ describe('价目 / 矩阵系统模板（T26 · U-1 §8）', () => {
       'pricing-v1',
       'matrix-v1',
       'stat-v1',
+      'age-care-guide',
+      'med-ins-list',
+      'duty-compare',
+      'product-catalog',
+      'care-tier-compare',
+      'claim-standards',
+      'critical-list-50',
+      'plan-vs',
     ])
   })
 
@@ -186,8 +206,23 @@ describe('blank-v1 新建空白表底稿（FR-C6 · Q-10）', () => {
 // ── 交互升级 T02：模板补 emphFooter / leftTag 槽（R-4）────────
 
 describe('模板补槽 · footer / leftTag（交互升级 R-4）', () => {
-  it('系统模板（含 blank / stat）都配 footer 槽：accept 仅 emphFooter、rowHint=after-末行', () => {
-    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, PRICING_V1, MATRIX_V1, STAT_V1]) {
+  it('系统模板（含 blank / stat / 保险套件 8 张）都配 footer 槽：accept 仅 emphFooter、rowHint=after-末行', () => {
+    for (const tpl of [
+      BLANK_V1,
+      COMPARE_ALPHA_V1,
+      DETAIL_ALPHA_V1,
+      PRICING_V1,
+      MATRIX_V1,
+      STAT_V1,
+      AGE_CARE_GUIDE,
+      MED_INS_LIST,
+      DUTY_COMPARE,
+      PRODUCT_CATALOG,
+      CARE_TIER_COMPARE,
+      CLAIM_STANDARDS,
+      CRITICAL_LIST_50,
+      PLAN_VS,
+    ]) {
       const footer = tpl.layout.blockSlots.find((s) => s.region === 'footer')
       expect(footer).toBeDefined()
       expect(footer!.accept).toEqual(['emphFooter'])
@@ -208,8 +243,40 @@ describe('模板补槽 · footer / leftTag（交互升级 R-4）', () => {
     expect(PRICING_V1.layout.blockSlots.filter((s) => s.region === 'left-tag')).toHaveLength(0)
   })
 
+  // 保险套件 8 张全部不配 leftTag 槽（增量设计 A2-① 统一近似口径）：首列要么是数据列、
+  // 要么是纵向合并组标签——leftTag 会把文字搬进区块 props 遮蔽槽值，统一走 label/白底加粗近似
+  it('保险套件 8 张不配 leftTag 槽（A2-①：首列为数据列/组标签，统一 label 加粗近似）', () => {
+    for (const tpl of [
+      AGE_CARE_GUIDE,
+      MED_INS_LIST,
+      DUTY_COMPARE,
+      PRODUCT_CATALOG,
+      CARE_TIER_COMPARE,
+      CLAIM_STANDARDS,
+      CRITICAL_LIST_50,
+      PLAN_VS,
+    ]) {
+      expect(tpl.layout.blockSlots.filter((s) => s.region === 'left-tag')).toHaveLength(0)
+    }
+  })
+
   it('补槽后全部模板 validate / migrate 仍通过；blockSlots 无重复 id', () => {
-    for (const tpl of [BLANK_V1, COMPARE_ALPHA_V1, DETAIL_ALPHA_V1, PRICING_V1, MATRIX_V1, STAT_V1]) {
+    for (const tpl of [
+      BLANK_V1,
+      COMPARE_ALPHA_V1,
+      DETAIL_ALPHA_V1,
+      PRICING_V1,
+      MATRIX_V1,
+      STAT_V1,
+      AGE_CARE_GUIDE,
+      MED_INS_LIST,
+      DUTY_COMPARE,
+      PRODUCT_CATALOG,
+      CARE_TIER_COMPARE,
+      CLAIM_STANDARDS,
+      CRITICAL_LIST_50,
+      PLAN_VS,
+    ]) {
       const v = validateInstance(cloneInstance(tpl))
       expect(v.ok).toBe(true)
       const m = migrateInstance(cloneInstance(tpl), listPresetTemplates())
