@@ -26,14 +26,14 @@ describe('validateInstance · schema 1.2 新可选字段（自定义格式）', 
     }
   }
 
-  it('layout.style 档位越界钳制到 1~3；列宽钳到 [64,360]', () => {
+  it('layout.style 档位越界钳制（行高 1~4、字号/内边距 1~3）；列宽钳到 [64,360]', () => {
     const r = validateInstance(
       baseWith({ rowHeightTier: 9, fontSizeTier: 0, paddingTier: 2, colWidths: [9999, 1, 120, null] }),
     )
     expect(r.ok).toBe(true)
     if (!r.ok) return
     expect(r.value.layout.style).toEqual({
-      rowHeightTier: 3,
+      rowHeightTier: 4,
       fontSizeTier: 1,
       paddingTier: 2,
       colWidths: [360, 64, 120, null],

@@ -9,6 +9,8 @@ export interface Palette {
   headerText: string
   zebra: string
   emphasis: string
+  /** 正向/成功语义色（「正常」青绿点等），token 可覆盖 */
+  success: string
   emphasisSoft: string
   border: string
   tag: string
@@ -24,6 +26,7 @@ export const PALETTES: Readonly<Record<ThemeId, Palette>> = {
     headerText: '#FFFFFF',
     zebra: '#EEF2F7',
     emphasis: '#C0392B',
+    success: '#1E9E6A',
     emphasisSoft: '#FDECEA',
     border: '#C5D0DE',
     tag: '#E8EEF6',
@@ -36,6 +39,7 @@ export const PALETTES: Readonly<Record<ThemeId, Palette>> = {
     headerText: '#F5F7F4',
     zebra: '#E8EDE8',
     emphasis: '#A65B2A',
+    success: '#2E8B6A',
     emphasisSoft: '#F5EDE4',
     border: '#B7C2B8',
     tag: '#DCE5DF',
@@ -48,6 +52,7 @@ export const PALETTES: Readonly<Record<ThemeId, Palette>> = {
     headerText: '#FAF7F2',
     zebra: '#F0EBE3',
     emphasis: '#8A6A2F',
+    success: '#5E8C4A',
     emphasisSoft: '#F5EDD8',
     border: '#D4CBBC',
     tag: '#EDE6DA',
@@ -135,9 +140,12 @@ export function resolveTheme(
   if (tokens?.headerText) base.headerText = tokens.headerText
   if (typeof tokens?.zebra === 'string') base.zebra = tokens.zebra
   if (tokens?.emphasis) base.emphasis = tokens.emphasis
+  if (tokens?.success) base.success = tokens.success
   if (tokens?.border) base.border = tokens.border
   if (tokens?.background) base.paper = tokens.background
   if (tokens?.tag) base.tag = tokens.tag
+  // 复刻通道微调（2026-11-10）：柔彩底补开 token 覆盖（'bg' mark 消费），与同级角色色对齐
+  if (tokens?.emphasisSoft) base.emphasisSoft = tokens.emphasisSoft
 
   const zebraOn = tokens?.zebra === false ? false : true
   return { themeId: resolved, palette: base, zebraOn, warning }

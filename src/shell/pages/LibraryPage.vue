@@ -389,7 +389,7 @@ async function confirmImport() {
 
     <section>
       <div class="mine-head">
-        <h2>我的模板</h2>
+        <h2>我的表格</h2>
         <div class="mine-tools">
           <!-- P2 全量备份：mine 全部 → 单文件 JSON 下载 -->
           <PtButton

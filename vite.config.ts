@@ -29,9 +29,14 @@ const vrenderSharedBrowserShim = fileURLToPath(new URL('./src/core/render/vrende
 /** T-slim lever2：精选 graphics installer（vrenderSharedBrowserShim 引用） */
 const vrenderGraphicsInstallerShim = fileURLToPath(new URL('./src/core/render/vrenderGraphicsInstallerLite.ts', import.meta.url))
 
-/** lever2 两个 shim 的 @visactor 传递依赖子路径，从 vtable 包上下文代解析（归一化正斜杠比对） */
+/** T-slim v2 招1：vrender-core graphic/richtext.js 桩（RichText 类帧布局引擎，应用零 inline 图标单元格） */
+const vrenderCoreRichTextGraphicStub = fileURLToPath(new URL('./src/core/render/vrenderCoreRichTextGraphicStub.ts', import.meta.url))
+
+/** lever2 两个 shim + 招1 richtext 类桩的 @visactor 传递依赖子路径，从 vtable 包上下文代解析（归一化正斜杠比对） */
 const vrenderSideShimImporters = new Set(
-  [vrenderSharedBrowserShim, vrenderGraphicsInstallerShim].map((p) => p.replace(/\\/g, '/')),
+  [vrenderSharedBrowserShim, vrenderGraphicsInstallerShim, vrenderCoreRichTextGraphicStub].map((p) =>
+    p.replace(/\\/g, '/'),
+  ),
 )
 
 /**
@@ -47,6 +52,24 @@ const chartUpdateChartStub = fileURLToPath(new URL('./src/core/render/updateChar
 const chartRenderHelperStub = fileURLToPath(new URL('./src/core/render/chartRenderHelperStub.ts', import.meta.url))
 const chartRenderContributionStub = fileURLToPath(new URL('./src/core/render/chartRenderContributionStub.ts', import.meta.url))
 const vchartGraphicPickerStub = fileURLToPath(new URL('./src/core/render/vchartGraphicPickerStub.ts', import.meta.url))
+
+/** T-slim v2 招1：vrender-kits register-richtext 链桩（顶层副作用持有整个 richtext 注册链，图内零调用） */
+const vrenderKitsRegisterRichtextStub = fileURLToPath(new URL('./src/core/render/vrenderKitsRegisterRichtextStub.ts', import.meta.url))
+
+/** T-slim v2 招1：vrender-kits canvas-picker richtext 绑定桩（RichText 命中检测器，本应用零 RichText 图形） */
+const vrenderKitsRichtextPickerBindStub = fileURLToPath(new URL('./src/core/render/vrenderKitsRichtextPickerBindStub.ts', import.meta.url))
+
+/** T-slim v2 招2：vrender-components poptip 子树桩（悬停气泡组件注册链两口全 no-op，行为面见桩文件头注释） */
+const vrenderComponentsPoptipStub = fileURLToPath(new URL('./src/core/render/vrenderComponentsPoptipStub.ts', import.meta.url))
+
+/** T-slim v2 招3：vrender-components checkbox 子树桩（应用零 cellType:'checkbox'，行为面见桩文件头注释） */
+const vrenderComponentsCheckboxStub = fileURLToPath(new URL('./src/core/render/vrenderComponentsCheckboxStub.ts', import.meta.url))
+
+/** T-slim v2 招5：vtable radio 状态机桩（ListTable 独家消费、应用零 radio 格，行为面见桩文件头注释） */
+const vtableRadioStateStub = fileURLToPath(new URL('./src/core/render/vtableRadioStateStub.ts', import.meta.url))
+
+/** T-slim v2 招6：vtable 媒体点击链桩（event.js 独家消费、应用零 link/媒体格，行为面见桩文件头注释） */
+const vtableMediaClickStub = fileURLToPath(new URL('./src/core/render/vtableMediaClickStub.ts', import.meta.url))
 
 /** shim 消费、需代解析的 vtable 传递依赖子路径 → 运行时入口 */
 const shimDeferredSubpaths = new Set([
@@ -76,15 +99,21 @@ const vtableBrowserEnvOnly = (): Plugin => {
       if (source === '@visactor/vrender/entries/shared-browser') {
         return vrenderSharedBrowserShim
       }
-      // T-slim lever2：两个 shim 文件的 @visactor 子路径从 vtable 包上下文代解析
-      // （vtable 直接依赖 vrender/vrender-core/vrender-kits，与既有 deferred 机制同一锚点、
-      // 同一 pnpm store 实例；pnpm 严格隔离下 src 无法直连这些子路径）
+      // T-slim lever2：两个 shim 文件 + 招1 richtext 类桩的 @visactor 子路径从 vtable 包
+      // 上下文代解析（vtable 直接依赖 vrender/vrender-core/vrender-kits，与既有 deferred
+      // 机制同一锚点、同一 pnpm store 实例；pnpm 严格隔离下 src 无法直连这些子路径）。
+      // vrender-app 尚未解析时（招1 桩经 core index.js Barrel 链先于 scenegraph 进图），
+      // 从 src 直接可解析的 @visactor/vtable/es/vrender 兜底锚定同一包上下文。
       if (
         vrenderSideShimImporters.has(importer.replace(/\\/g, '/')) &&
         /^@visactor\/(vrender|vrender-core|vrender-kits)(\/|$)/.test(source)
       ) {
         if (!vrenderAppModulePath) {
-          this.error('pt-vtable-browser-env-only: vrender-app 未先解析，无法代解析 lever2 shim 依赖')
+          const fallback = await this.resolve('@visactor/vtable/es/vrender', vtableBrowserShim, { skipSelf: true })
+          if (!fallback) {
+            this.error('pt-vtable-browser-env-only: 兜底锚点 @visactor/vtable/es/vrender 解析失败')
+          }
+          vrenderAppModulePath = fallback.id
         }
         const resolved = await this.resolve(source, vrenderAppModulePath, { skipSelf: true })
         if (!resolved) {
@@ -101,6 +130,66 @@ const vtableBrowserEnvOnly = (): Plugin => {
           this.error(`pt-vtable-browser-env-only: 无法从 vtable 包上下文解析 ${source}`)
         }
         return resolved.id
+      }
+      // T-slim v2 招1：richtext 残链收割——两个持有者分别桩掉（行为面见两个桩文件头注释）：
+      // 1) vrender-kits register-richtext（index-node.js 相对导入 + bootstrap*.js 裸说明符，
+      //    图内消费方均为 /@visactor/ 包内文件；vrender-core 同名 register/register-richtext.js
+      //    无顶层副作用、经 register/graphic.js Barrel 自然摇树，不在本重定向范围）
+      const richtextImporter = importer.replace(/\\/g, '/')
+      if (richtextImporter.includes('/@visactor/') && (source.endsWith('register/register-richtext') || source === '@visactor/vrender-kits/register/register-richtext')) {
+        return vrenderKitsRegisterRichtextStub
+      }
+      // 2) canvas-picker/richtext-module（消费方 installers/browser.js + installers/app.js +
+      //    register-richtext.js（相对/裸说明符两种形态）+ picker/canvas-module.js 的
+      //    loadCanvasPicker（env/browser.js loadBrowserEnv 默认 loadPicker=true 的活调用链，
+      //    相对导入形态 './contributions/canvas-picker/richtext-module'）；后缀统一匹配，
+      //    同目录 math-picker/richtext-module 由 1) 的桩断链后自然摇树，无需重定向）
+      if (richtextImporter.includes('/@visactor/vrender-kits/') && source.endsWith('canvas-picker/richtext-module')) {
+        return vrenderKitsRichtextPickerBindStub
+      }
+      // 3) graphic/richtext.js（RichText 类本体 + createRichText）：图内唯一活消费 =
+      //    vtable compute-row-height.js 顶层 utilRichTextMark 实例化（仅 inline 图标 +
+      //    autoWrapText 分支使用，应用零触达，见桩文件头注释）。消费方均在 vrender-core
+      //    包内（index.js './graphic/richtext' / graphic/index.js、graphic/creator.js
+      //    './richtext'）；同名相对说明符在 vrender-kits/vtable 包内不存在（全域探针）。
+      //    桩为 Graphic 基类直接子类，行为面见桩文件头注释。
+      if (richtextImporter.includes('/@visactor/vrender-core/') && (source === './richtext' || source.endsWith('graphic/richtext'))) {
+        return vrenderCoreRichTextGraphicStub
+      }
+      // T-slim v2 招2：poptip 双口同拔——vrender-components barrel（es/index.js）的两行
+      // poptip re-export（'./poptip' 整目录 + './poptip/module'）是 poptip 子树全图唯二
+      // 入图口：① vtable/es/vrender.js registerForVrender→loadPoptip；② vrenderAppBrowser
+      // shim installPoptipToApp。图内消费面仅 loadPoptip/installPoptipToApp/setPoptipTheme
+      // 三名（全域探针实查），桩全 no-op；installPoptipToApp 原版的通用安装步在本应用
+      // bootstrap（installCuratedGraphicsToApp）已先行完成，跳过无增量。行为面见桩文件头注释。
+      if (
+        importer.replace(/\\/g, '/').includes('/@visactor/vrender-components/es/index.js') &&
+        (source === './poptip' || source === './poptip/module')
+      ) {
+        return vrenderComponentsPoptipStub
+      }
+      // T-slim v2 招3：checkbox 子树收割——barrel `export * from "./checkbox"` 一行是全图
+      // 唯一入图口，名字仅被 vtable checkbox-content.js（instanceof 恒假分支）与
+      // checkbox-cell.js（cellType:'checkbox' 渲染路径）钉住；本应用 src/**、tables/*.json
+      // 零 cellType 用法，路径永不触发。行为面见桩文件头注释。
+      if (
+        importer.replace(/\\/g, '/').includes('/@visactor/vrender-components/es/index.js') &&
+        source === './checkbox'
+      ) {
+        return vrenderComponentsCheckboxStub
+      }
+      // T-slim v2 招5：radio 状态机收割——state/radio/radio.js 仅被 ListTable.js 一处
+      // 静态导入（两个公共 API 包装名），应用零 radio 格、路径永不触发；返回面兼容
+      // （getCellRadioState 非 radio 格恒 !1）。行为面见桩文件头注释。
+      if (importer.replace(/\\/g, '/').endsWith('/@visactor/vtable/es/ListTable.js') && source === './state/radio/radio') {
+        return vtableRadioStateStub
+      }
+      // T-slim v2 招6：媒体点击链收割——event/media-click.js 仅被 event/event.js 一处
+      // 静态导入（bindMediaClick 单名），初始化时挂媒体预览管理器 + CLICK_CELL 监听；
+      // 应用零 linkJump/link/video/audio 格（全域探针实查），监听回调零触达。
+      // 行为面见桩文件头注释。
+      if (importer.replace(/\\/g, '/').endsWith('/@visactor/vtable/es/event/event.js') && source === './media-click') {
+        return vtableMediaClickStub
       }
       // T-slim 动画链桩（行为面见两个桩文件头注释）：
       // 1) BaseTable.js 的 './animation'（TableAnimationManager）→ no-op 桩；

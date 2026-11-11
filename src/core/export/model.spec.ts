@@ -179,7 +179,13 @@ import { applyStructuralIntent } from '../store/structure'
 import { applyEditIntent } from '../store/intent'
 import { renderExportHtml } from './model'
 import { resolveTheme, PALETTES } from '../theme/palettes'
-import { FONT_SIZE_TIERS, PADDING_TIERS } from '../theme/layoutScales'
+import {
+  BAR_MARK_LEFT_WIDTH,
+  DISPLAY_FONT_SIZE,
+  FONT_SIZE_TIERS,
+  PADDING_TIERS,
+} from '../theme/layoutScales'
+import { SERIF_FONT_STACK } from '../theme/font'
 import type { TemplateInstance } from '../types'
 
 describe('buildExportModel · 排版档位与自定义色（T03）', () => {
@@ -463,5 +469,60 @@ describe('buildExportModel · 导出同源（交互升级 T03）', () => {
       registerCellGroupFactory(null)
       clearCropCanvasCache()
     }
+  })
+})
+
+// ── 2026-11-10 四新 emphasis mark（serif/display/muted/bar）：HTML 内联样式侧 ──
+// cellInlineStyle 消费面（buildExportModel → cellStyle）：与 toOption.styleForCell 画布侧同源同序
+
+describe('buildExportModel · 新增强调 mark 内联样式（serif/display/muted/bar）', () => {
+  it('四 mark 各自进 style 字符串，且可与既有 bold/bg 组合', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.slots['row.2.val.a'] = { text: '衬线格', emphasize: ['serif', 'bold'] }
+    inst.slots['row.3.val.a'] = { text: '大字格', emphasize: 'display' }
+    inst.slots['row.4.val.a'] = { text: '弱化格', emphasize: 'muted' }
+    inst.slots['row.5.val.a'] = { text: '竖条格', emphasize: ['bar', 'bg'] }
+    const m = buildExportModel(inst)
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    const byText = (t: string) => m.value.bodyRows.flat().find((c) => c.text === t)
+    expect(byText('衬线格')?.style).toContain(`font-family:${SERIF_FONT_STACK}`)
+    expect(byText('衬线格')?.style).toContain('font-weight:700')
+    expect(byText('大字格')?.style).toContain(`font-size:${DISPLAY_FONT_SIZE}px`)
+    expect(byText('弱化格')?.style).toContain(`color:${PALETTES['T-A'].muted}`)
+    expect(byText('竖条格')?.style).toContain(
+      `border-left:${BAR_MARK_LEFT_WIDTH}px solid ${PALETTES['T-A'].headerText}`,
+    )
+    expect(byText('竖条格')?.style).toContain(`background:${PALETTES['T-A'].emphasisSoft}`)
+  })
+
+  it('renderExportHtml：衬线栈双引号经 &quot; 实体化，不截断 style 属性（TC-088 同类）', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.slots['row.3.val.a'] = { text: '衬线格', emphasize: 'serif' }
+    const m = buildExportModel(inst)
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    const html = renderExportHtml(m.value)
+    expect(html).toContain('font-family:&quot;Noto Serif SC&quot;')
+    // 字体栈之后的声明未被截断出属性外（同一属性内 font-family 后仍有 font-size）
+    expect(html).toContain('serif;font-size:')
+  })
+
+  it('复刻通道微调 HTML 侧：gridLines rows 只留下横线 / rule 3px 重线 / zebraRange 注脚白底', () => {
+    const inst = cloneInstance(COMPARE_ALPHA_V1)
+    inst.layout.style = { gridLines: 'rows', zebraRange: [4, 6] }
+    inst.slots['row.3.val.a'] = { text: '重线格', emphasize: ['rule'] }
+    const m = buildExportModel(inst)
+    expect(m.ok).toBe(true)
+    if (!m.ok) return
+    const ruled = m.value.bodyRows.flat().find((c) => c.text === '重线格')
+    expect(ruled?.style).toContain(`border-bottom:3px solid ${PALETTES['T-A'].headerText}`)
+    expect(ruled?.style).toContain('border-bottom:1px solid')
+    expect(ruled?.style).not.toContain('border:1px solid') // 全网格简写不再出现
+    // zebraRange：区间外（visual 3 = bodyRows[1]）纸色无边线，区间内奇数行（visual 5 = bodyRows[3]）斑马+横线
+    expect(m.value.bodyRows[1]?.[1]?.style).toContain(`background:${PALETTES['T-A'].paper}`)
+    expect(m.value.bodyRows[1]?.[1]?.style).not.toContain('border-bottom')
+    expect(m.value.bodyRows[3]?.[1]?.style).toContain(`background:${PALETTES['T-A'].zebra}`)
+    expect(m.value.bodyRows[3]?.[1]?.style).toContain('border-bottom:1px solid')
   })
 })

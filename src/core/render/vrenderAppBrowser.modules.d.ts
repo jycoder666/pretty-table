@@ -193,3 +193,12 @@ declare module '@visactor/vrender/entries/runtime-contribution' {
   export function installPendingRuntimeContributionModulesToApp(app: ShimApp): void
   export function installRuntimeContributionModule(module: unknown, options?: Record<string, unknown>): void
 }
+
+// ── T-slim v2 招1：vrenderCoreRichTextGraphicStub 消费面（Graphic 基类，exports 放行子路径） ──
+
+declare module '@visactor/vrender-core/graphic/base' {
+  export class Graphic {
+    constructor(params?: Record<string, unknown>)
+    type: string
+  }
+}

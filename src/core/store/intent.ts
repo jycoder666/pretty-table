@@ -17,7 +17,7 @@ import type {
 import { canMerge, canSplit } from './mergeGuard'
 import { applyStructuralIntent } from './structure'
 import { resolveTheme, sanitizeHex } from '../theme/palettes'
-import { LIMITS, clampColWidth, clampTier, visibleRowCount } from '../theme/layoutScales'
+import { LIMITS, clampColWidth, clampTier, clampTier3, visibleRowCount } from '../theme/layoutScales'
 import { MARK_LABEL } from '../format/formatTokens'
 import { canSetImage, checkImageBudget, validateImageDataUrl } from '../image/imageGuard'
 import { KPI_CARD_MAX, sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
@@ -280,11 +280,11 @@ export function applyEditIntent(
       return ok(next)
     }
     case 'setFontSizeTier': {
-      next.layout.style = { ...next.layout.style, fontSizeTier: clampTier(intent.tier) }
+      next.layout.style = { ...next.layout.style, fontSizeTier: clampTier3(intent.tier) }
       return ok(next)
     }
     case 'setPaddingTier': {
-      next.layout.style = { ...next.layout.style, paddingTier: clampTier(intent.tier) }
+      next.layout.style = { ...next.layout.style, paddingTier: clampTier3(intent.tier) }
       return ok(next)
     }
     // ── FR-C3 结构编辑：转发结构核（一次意图 = 一套 remap = 一张撤销快照）──

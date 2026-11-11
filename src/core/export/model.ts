@@ -109,17 +109,21 @@ function cellStyle(
   ci: number,
   recommendCol: number | null,
   metrics: TypeMetrics,
+  layout?: { gridLines?: 'all' | 'rows'; zebraRange?: [number, number] },
 ): string {
+  const inZebraRange =
+    !layout?.zebraRange || (ri >= layout.zebraRange[0] && ri <= layout.zebraRange[1])
   const parts: string[] = [
     cellInlineStyle(
       palette,
       {
         role: inlineRole(cell),
-        zebraRow: zebraOn && ri % 2 === 1,
+        zebraRow: zebraOn && ri % 2 === 1 && inZebraRange,
         align: cell.align,
         emphasize: cell.emphasize,
       },
       metrics,
+      { gridLines: layout?.gridLines, hairline: layout?.gridLines === 'rows' ? inZebraRange : true },
     ),
   ]
   // R-4 左栏标签：tag 底色（深浅 2 档），与预览 styleForCell 同源（追加在后覆盖 body 底色）
@@ -229,7 +233,10 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
                 color: cell.bar.color || palette.primary,
               }
             : undefined
-        const style = cellStyle(cell, palette, effectiveZebra, ri, ci, recommendCol, metrics)
+        const style = cellStyle(cell, palette, effectiveZebra, ri, ci, recommendCol, metrics, {
+          gridLines: inst.layout.style?.gridLines,
+          zebraRange: inst.layout.style?.zebraRange,
+        })
         cells.push({
           text: cell.isPlaceholder ? '' : cell.text,
           tag,

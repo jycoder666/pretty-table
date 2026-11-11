@@ -1,6 +1,6 @@
 import { fail, ok, type CoreWarning, type Result } from '../errors'
 import type { LayoutStyle, TemplateInstance } from '../types'
-import { clampColWidth, clampTier } from '../theme/layoutScales'
+import { clampColWidth, clampRowHeight, clampTier, clampTier3 } from '../theme/layoutScales'
 import { sanitizeHex } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
 import { sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
@@ -11,9 +11,11 @@ const TOKEN_COLOR_KEYS: readonly string[] = [
   'headerText',
   'zebra',
   'emphasis',
+  'success',
   'border',
   'background',
   'tag',
+  'emphasisSoft',
 ]
 
 /** style 档位与列宽钳制（宽容未知键、越界收口，不报错崩） */
@@ -21,12 +23,19 @@ function sanitizeStyle(style: LayoutStyle | undefined): LayoutStyle | undefined 
   if (!style || typeof style !== 'object') return undefined
   const out: LayoutStyle = { ...style }
   if (out.rowHeightTier !== undefined) out.rowHeightTier = clampTier(Number(out.rowHeightTier))
-  if (out.fontSizeTier !== undefined) out.fontSizeTier = clampTier(Number(out.fontSizeTier))
-  if (out.paddingTier !== undefined) out.paddingTier = clampTier(Number(out.paddingTier))
+  if (out.fontSizeTier !== undefined) out.fontSizeTier = clampTier3(Number(out.fontSizeTier))
+  if (out.paddingTier !== undefined) out.paddingTier = clampTier3(Number(out.paddingTier))
   if (out.colWidths !== undefined) {
     out.colWidths = Array.isArray(out.colWidths)
       ? out.colWidths.map((w) =>
           typeof w === 'number' && Number.isFinite(w) ? clampColWidth(w) : null,
+        )
+      : undefined
+  }
+  if (out.rowHeights !== undefined) {
+    out.rowHeights = Array.isArray(out.rowHeights)
+      ? out.rowHeights.map((h) =>
+          typeof h === 'number' && Number.isFinite(h) ? clampRowHeight(h) : null,
         )
       : undefined
   }

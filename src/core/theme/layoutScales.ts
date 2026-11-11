@@ -28,25 +28,51 @@ export const MERGE_MAX_CLUSTERS = 30
 /** 列宽钳制范围（px） */
 export const COL_WIDTH_RANGE: readonly [number, number] = [64, 360]
 
-/** 行高档位：紧凑 / 标准 / 宽松 */
-export const ROW_HEIGHT_TIERS: readonly [number, number, number] = [32, 40, 48]
+/** 逐行行高钳制范围（px，LayoutStyle.rowHeights 用；上限容纳特高图文行） */
+export const ROW_HEIGHT_RANGE: readonly [number, number] = [24, 160]
+
+/** 行高档位：紧凑 / 标准 / 宽松 / 特高（多行单元格，如体检样张 88px 行） */
+export const ROW_HEIGHT_TIERS: readonly [number, number, number, number] = [32, 40, 48, 80]
 /** 字号档位：正文小 / 标准 / 大 */
 export const FONT_SIZE_TIERS: readonly [number, number, number] = [12, 13, 15]
 /** 内边距档位：紧 / 标准 / 松 */
 export const PADDING_TIERS: readonly [number, number, number] = [6, 10, 14]
 
-export type Tier = 1 | 2 | 3
+/**
+ * 强调 mark 设计常量（2026-11-10 四新 mark；画布 toOption / HTML inlineStyle 双链路同源单点）：
+ * - DISPLAY_FONT_SIZE：'display' 提档字号（独立于全局字号档位 FONT_SIZE_TIERS）
+ * - BAR_MARK_LEFT_WIDTH：'bar' 左强调竖条宽（画布左缘边框 / HTML border-left）
+ */
+export const DISPLAY_FONT_SIZE = 26
+export const BAR_MARK_LEFT_WIDTH = 6
 
-/** 档位钳制：非 1~3 的输入收口到最近合法档位 */
+export type Tier = 1 | 2 | 3 | 4
+
+/** 档位钳制：非 1~4 的输入收口到最近合法档位 */
 export function clampTier(t: number): Tier {
   const n = Math.round(Number(t))
   if (!Number.isFinite(n)) return 2
-  return (n < 1 ? 1 : n > 3 ? 3 : n) as Tier
+  return (n < 1 ? 1 : n > 4 ? 4 : n) as Tier
+}
+
+/** 三档钳制：字号/内边距仍只有 1~3 档（行高才有第 4 档特高），值超界收口到 3 */
+export function clampTier3(t: number): 1 | 2 | 3 {
+  const n = Math.round(Number(t))
+  if (!Number.isFinite(n)) return 2
+  return (n < 1 ? 1 : n > 3 ? 3 : n) as 1 | 2 | 3
 }
 
 /** 列宽钳制：超界收口到边界值，不报错崩（FR-C2 验收） */
 export function clampColWidth(px: number): number {
   const [min, max] = COL_WIDTH_RANGE
+  const n = Number(px)
+  if (!Number.isFinite(n)) return min
+  return Math.min(max, Math.max(min, Math.round(n)))
+}
+
+/** 逐行行高钳制（与 clampColWidth 对称；非法输入回退下界） */
+export function clampRowHeight(px: number): number {
+  const [min, max] = ROW_HEIGHT_RANGE
   const n = Number(px)
   if (!Number.isFinite(n)) return min
   return Math.min(max, Math.max(min, Math.round(n)))

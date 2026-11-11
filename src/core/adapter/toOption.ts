@@ -15,9 +15,16 @@ import type {
 } from '../types'
 import { resolveTheme, readableTextColor, type Palette } from '../theme/palettes'
 import { toVTableTheme } from '../theme/vtableTheme'
-import { FONT_STACK } from '../theme/font'
+import { FONT_STACK, SERIF_FONT_STACK } from '../theme/font'
 import { semanticColor } from '../theme/semantic'
-import { FONT_SIZE_TIERS, PADDING_TIERS, ROW_HEIGHT_TIERS } from '../theme/layoutScales'
+import {
+  BAR_MARK_LEFT_WIDTH,
+  DISPLAY_FONT_SIZE,
+  FONT_SIZE_TIERS,
+  PADDING_TIERS,
+  ROW_HEIGHT_TIERS,
+  clampRowHeight,
+} from '../theme/layoutScales'
 import { MARK_GLYPH, RECOMMEND_BADGE_TEXT, formatNumber } from '../format/formatTokens'
 import { coverCrop } from '../image/imageGuard'
 
@@ -167,6 +174,8 @@ export function buildVisualRows(inst: TemplateInstance): {
     }
   }
 
+  // 逐行行高（复刻 2026-11-10）：rowHeights[r] 优先，null/缺位回退行高档位；消费处统一钳制
+  const styleRowHeights = inst.layout.style?.rowHeights
   for (let r = 0; r < grid.length; r++) {
     const row = grid[r] ?? []
     const metaRow: CellMeta[] = []
@@ -237,7 +246,13 @@ export function buildVisualRows(inst: TemplateInstance): {
       })
     }
     metas.push(metaRow)
-    rowHeights.push(rowHeightOf(inst.layout.style, r < headerLevels))
+    // rowHeights 按可视行索引（与 colWidths 按列对称；区块 gap 行不在数组语义内，恒 32）
+    const styleRowHeight = styleRowHeights?.[metas.length - 1]
+    rowHeights.push(
+      typeof styleRowHeight === 'number'
+        ? clampRowHeight(styleRowHeight)
+        : rowHeightOf(inst.layout.style, r < headerLevels),
+    )
 
     const gapId = gapAfter.get(r)
     if (gapId) {
@@ -315,12 +330,22 @@ function styleForCell(
   mode: RenderContext['mode'],
   recommendCol: number | null,
   metrics: TypeMetrics,
+  layout: { gridLines?: 'all' | 'rows'; zebraRange?: [number, number] } = {},
 ): Record<string, unknown> {
+  // gridLines 'rows'（复刻 2026-11-10）：只留行间横线——竖向边宽 0、顶边 0（行线由下行 bottom 承担）；
+  // 横线随 zebraRange 限定数据区（区间外注脚/列头行无任何边线）
+  const rowsOnly = layout.gridLines === 'rows'
+  // zebraRange：斑马纹与行间横线只作用于区间内可视行（含端点）；缺省全表（既有行为）
+  const inZebraRange =
+    !layout.zebraRange || (row >= layout.zebraRange[0] && row <= layout.zebraRange[1])
+  const hairline = rowsOnly && inZebraRange ? 1 : 0
   const style: Record<string, unknown> = {
     fontFamily: FONT_STACK,
     fontSize: metrics.fontSize,
-    borderColor: palette.border,
-    borderLineWidth: 1,
+    borderColor: rowsOnly
+      ? [palette.border, palette.border, palette.border, palette.border]
+      : palette.border,
+    borderLineWidth: rowsOnly ? [0, 0, hairline, 0] : 1,
     padding: [metrics.padV, metrics.padH, metrics.padV, metrics.padH],
   }
   if (cell.role === 'header') {
@@ -353,7 +378,7 @@ function styleForCell(
       style.textAlign = 'left'
     }
   } else {
-    const zebra = zebraOn && row % 2 === 1
+    const zebra = zebraOn && row % 2 === 1 && inZebraRange
     const isRecCol = recommendCol !== null && col === recommendCol
     // 推荐列浅底优先于斑马纹（设计增量 §4.3）
     style.bgColor = isRecCol
@@ -370,7 +395,30 @@ function styleForCell(
   const em = cell.emphasize ?? []
   if (em.includes('bold')) style.fontWeight = 700
   if (em.includes('red')) style.color = palette.emphasis
+  if (em.includes('green')) style.color = palette.success
   if (em.includes('bg')) style.bgColor = palette.emphasisSoft
+  // 2026-11-10 四新 mark（全部加法，可与上方既有 mark 任意组合；同字段后写者赢，
+  // 色类顺序 red < green < muted 与既有 red < green 约定一致）：
+  if (em.includes('serif')) style.fontFamily = SERIF_FONT_STACK
+  if (em.includes('display')) style.fontSize = DISPLAY_FONT_SIZE
+  if (em.includes('muted')) style.color = palette.muted
+  if (em.includes('bar')) {
+    // 汇总带左强调竖条：vtable 1.26.8 逐格 style 支持单侧边框——per-cell borderLineWidth 数组
+    // → theme.group.strokeArrayWidth = getQuadProps（node_modules/@visactor/vtable/cjs/core/
+    // tableHelper.js:192），borderColor 数组 → strokeArrayColor（同 :194-196）；四元组序 =
+    // [上,右,下,左]（scenegraph/utils/padding.js normalizeQuadArray 原样透传，索引 3=左缘，
+    // 见 cell-helper.js 的 padding[3] 左内缩与 cell-border-stroke-width.js 对 [3] 置 0 的佐证）。
+    // rows 模式下与横线网格 compose：竖向/区间外底边随网格置 0
+    style.borderLineWidth = rowsOnly
+      ? [0, 0, hairline, BAR_MARK_LEFT_WIDTH]
+      : [1, 1, 1, BAR_MARK_LEFT_WIDTH]
+    style.borderColor = [palette.border, palette.border, palette.border, palette.headerText]
+  }
+  if (em.includes('rule')) {
+    // 下缘重强调线（复刻 2026-11-10，如列头行下的全宽深色粗线）：下边 3px headerText
+    style.borderLineWidth = rowsOnly ? [0, 0, 3, 0] : [1, 1, 3, 1]
+    style.borderColor = [palette.border, palette.border, palette.headerText, palette.border]
+  }
   if (cell.isPlaceholder && mode === 'preview') {
     style.color = '#9aa3af'
     style.fontStyle = 'italic'
@@ -603,7 +651,10 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
       style: (args: { row: number; col: number }) => {
         const cell = metas[args.row]?.[args.col]
         if (!cell) return {}
-        return styleForCell(cell, palette, effectiveZebra, args.row, args.col, ctx.mode, recommendCol, metrics)
+        return styleForCell(cell, palette, effectiveZebra, args.row, args.col, ctx.mode, recommendCol, metrics, {
+          gridLines: inst.layout.style?.gridLines,
+          zebraRange: inst.layout.style?.zebraRange,
+        })
       },
     }
     if (imageCols.has(c) || barCols.has(c)) {
@@ -625,6 +676,8 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     zebraOn: effectiveZebra,
     transparentUnderlay: ctx.transparentUnderlay,
     metrics,
+    gridLines: inst.layout.style?.gridLines,
+    zebraRange: inst.layout.style?.zebraRange,
   })
 
   const customMergeCell = (col: number, row: number) => {
@@ -654,6 +707,11 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     columns,
     widthMode: 'standard',
     heightMode: 'standard',
+    // 槽值含 \n（复刻实例标题行日期格/免责行等）：开 enableLineBreak 让 VTable breakString
+    // 按 \n 拆多行（vtable 1.26.8 BaseTable.js:148 消费 options.enableLineBreak）。本表
+    // standard 高度模式 + rowHeightConfig 逐行钉死，行高不受多行文本影响；无 \n 的格
+    // textArr 长度 1，渲染路径与此前完全一致。
+    enableLineBreak: true,
     defaultRowHeight: rowHeightOf(inst.layout.style, false),
     defaultHeaderRowHeight: 0,
     // 行高单点（PX-04 命中与渲染同源）：rowHeights 已喂给壳几何（命中/叠加层）与 PNG 尺寸，

@@ -1,0 +1,629 @@
+{
+  "schemaVersion": "1.2",
+  "templateId": "user-1794016568816-u5cjn",
+  "themeId": "T-B",
+  "zebraOn": true,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "年度体检 · 指标解读",
+    "description": "样图 1:1 复刻 v4（覆盖种子卡）：眉标/标题两行表头 + 汇总带三段（左竖条，列头之上）+ 列头重强调线 + 横线式无竖线网格 + 数据行斑马 + 跟进/保持两栏 + 免责声明与页码（16 行 5 列）",
+    "templateType": "blank",
+    "origin": "user",
+    "sourceTemplateId": "user-1793988695165-o25bg",
+    "savedAt": "2026-11-09T20:41:31.195Z"
+  },
+  "slots": {
+    "s1": {
+      "text": "H E A L T H   C H E C K  ·  K E Y   I N D I C A T O R S",
+      "emphasize": [
+        "green"
+      ]
+    },
+    "s2": {
+      "text": "年度体检 · 指标解读",
+      "emphasize": [
+        "serif",
+        "display",
+        "bold"
+      ]
+    },
+    "s3": {
+      "text": "检测日期 2026.04.18\n报告编号 HC-2026-0418",
+      "align": "right",
+      "emphasize": [
+        "muted"
+      ]
+    },
+    "s4": {
+      "text": "7 项指标中 4 项偏高",
+      "emphasize": [
+        "bar",
+        "bold",
+        "bg"
+      ]
+    },
+    "s5": {
+      "text": "均为生活方式相关，未提示器质性异常",
+      "emphasize": [
+        "muted",
+        "bg"
+      ]
+    },
+    "s6": {
+      "text": "建议 3 个月后复查",
+      "align": "right",
+      "emphasize": [
+        "green",
+        "bold",
+        "bg"
+      ]
+    },
+    "s7": {
+      "text": "指标 / ITEM",
+      "emphasize": [
+        "muted",
+        "rule"
+      ]
+    },
+    "s8": {
+      "text": "本次结果",
+      "emphasize": [
+        "muted",
+        "rule"
+      ]
+    },
+    "s9": {
+      "text": "参考区间",
+      "emphasize": [
+        "muted",
+        "rule"
+      ]
+    },
+    "s10": {
+      "text": "状态",
+      "emphasize": [
+        "muted",
+        "rule"
+      ]
+    },
+    "s11": {
+      "text": "建议",
+      "emphasize": [
+        "muted",
+        "rule"
+      ]
+    },
+    "s12": {
+      "text": "血压 BP",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "s13": {
+      "text": "128 / 82 mmHg",
+      "emphasize": [
+        "serif"
+      ]
+    },
+    "s14": {
+      "text": "< 120 / 80"
+    },
+    "s15": {
+      "text": "● 偏高",
+      "emphasize": [
+        "red",
+        "bold"
+      ]
+    },
+    "s16": {
+      "text": "限盐、每周 3 次有氧"
+    },
+    "s17": {
+      "text": "空腹血糖 GLU",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "s18": {
+      "text": "5.9 mmol/L",
+      "emphasize": [
+        "serif"
+      ]
+    },
+    "s19": {
+      "text": "3.9 – 6.1"
+    },
+    "s20": {
+      "text": "● 正常",
+      "emphasize": [
+        "green"
+      ]
+    },
+    "s21": {
+      "text": "保持现有饮食结构"
+    },
+    "s22": {
+      "text": "总胆固醇 TC",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "s23": {
+      "text": "5.8 mmol/L",
+      "emphasize": [
+        "serif"
+      ]
+    },
+    "s24": {
+      "text": "< 5.2"
+    },
+    "s25": {
+      "text": "● 偏高",
+      "emphasize": [
+        "red",
+        "bold"
+      ]
+    },
+    "s26": {
+      "text": "减少动物油脂，\n3 个月复查"
+    },
+    "s27": {
+      "text": "尿酸 UA",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "s28": {
+      "text": "468 µmol/L",
+      "emphasize": [
+        "serif"
+      ]
+    },
+    "s29": {
+      "text": "208 – 428"
+    },
+    "s30": {
+      "text": "● 偏高",
+      "emphasize": [
+        "red",
+        "bold"
+      ]
+    },
+    "s31": {
+      "text": "少喝含糖饮料与啤酒"
+    },
+    "s32": {
+      "text": "体质指数 BMI",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "s33": {
+      "text": "24.6 kg/m²",
+      "emphasize": [
+        "serif"
+      ]
+    },
+    "s34": {
+      "text": "18.5 – 23.9"
+    },
+    "s35": {
+      "text": "● 偏高",
+      "emphasize": [
+        "red",
+        "bold"
+      ]
+    },
+    "s36": {
+      "text": "减重 3–5 公斤更稳妥"
+    },
+    "s37": {
+      "text": "血红蛋白 HGB",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "s38": {
+      "text": "148 g/L",
+      "emphasize": [
+        "serif"
+      ]
+    },
+    "s39": {
+      "text": "130 – 175"
+    },
+    "s40": {
+      "text": "● 正常",
+      "emphasize": [
+        "green"
+      ]
+    },
+    "s41": {
+      "text": "无需干预"
+    },
+    "s42": {
+      "text": "谷丙转氨酶 ALT",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "s43": {
+      "text": "32 U/L",
+      "emphasize": [
+        "serif"
+      ]
+    },
+    "s44": {
+      "text": "9 – 50"
+    },
+    "s45": {
+      "text": "● 正常",
+      "emphasize": [
+        "green"
+      ]
+    },
+    "s46": {
+      "text": "无需干预"
+    },
+    "s47": {
+      "text": "需要跟进",
+      "emphasize": [
+        "red",
+        "bold"
+      ]
+    },
+    "s48": {
+      "text": "保持项目",
+      "emphasize": [
+        "green",
+        "bold"
+      ]
+    },
+    "s49": {
+      "text": "① 收缩压与舒张压同时接近上限，先做家庭自测记录。"
+    },
+    "s50": {
+      "text": "① 血糖、血红蛋白、转氨酶均在区间内，无需额外用药。"
+    },
+    "s51": {
+      "text": "② 血脂与尿酸偏高的组合，和体重、饮酒频度高度相关。"
+    },
+    "s52": {
+      "text": "② 睡眠与运动频率是这几项维持的主要因素。"
+    },
+    "s53": {
+      "text": "③ 建议 3 个月后复查血脂、尿酸与肝功能三项。"
+    },
+    "s54": {
+      "text": "③ 下一次体检沿用同一机构，便于纵向对比数值。"
+    },
+    "s55": {
+      "text": "参考区间采用常见成人标准区间，不同实验室略有差异。\n示例样张 · 数值仅作样张示意，不构成医学诊断，请以医生意见为准。",
+      "emphasize": [
+        "muted"
+      ]
+    },
+    "s56": {
+      "text": "07 / 08",
+      "align": "right",
+      "emphasize": [
+        "muted"
+      ]
+    }
+  },
+  "blocks": [],
+  "layout": {
+    "rowCount": 16,
+    "colCount": 5,
+    "headerLevels": 2,
+    "merges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          0,
+          4
+        ]
+      },
+      {
+        "start": [
+          1,
+          0
+        ],
+        "end": [
+          1,
+          2
+        ]
+      },
+      {
+        "start": [
+          1,
+          3
+        ],
+        "end": [
+          1,
+          4
+        ]
+      },
+      {
+        "start": [
+          2,
+          1
+        ],
+        "end": [
+          2,
+          3
+        ]
+      },
+      {
+        "start": [
+          11,
+          0
+        ],
+        "end": [
+          11,
+          1
+        ]
+      },
+      {
+        "start": [
+          11,
+          2
+        ],
+        "end": [
+          11,
+          4
+        ]
+      },
+      {
+        "start": [
+          12,
+          0
+        ],
+        "end": [
+          12,
+          1
+        ]
+      },
+      {
+        "start": [
+          12,
+          2
+        ],
+        "end": [
+          12,
+          4
+        ]
+      },
+      {
+        "start": [
+          13,
+          0
+        ],
+        "end": [
+          13,
+          1
+        ]
+      },
+      {
+        "start": [
+          13,
+          2
+        ],
+        "end": [
+          13,
+          4
+        ]
+      },
+      {
+        "start": [
+          14,
+          0
+        ],
+        "end": [
+          14,
+          1
+        ]
+      },
+      {
+        "start": [
+          14,
+          2
+        ],
+        "end": [
+          14,
+          4
+        ]
+      },
+      {
+        "start": [
+          15,
+          0
+        ],
+        "end": [
+          15,
+          3
+        ]
+      }
+    ],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          15,
+          4
+        ]
+      }
+    ],
+    "blockSlots": [],
+    "slotGrid": [
+      [
+        "s1",
+        "s1",
+        "s1",
+        "s1",
+        "s1"
+      ],
+      [
+        "s2",
+        "s2",
+        "s2",
+        "s3",
+        "s3"
+      ],
+      [
+        "s4",
+        "s5",
+        "s5",
+        "s5",
+        "s6"
+      ],
+      [
+        "s7",
+        "s8",
+        "s9",
+        "s10",
+        "s11"
+      ],
+      [
+        "s12",
+        "s13",
+        "s14",
+        "s15",
+        "s16"
+      ],
+      [
+        "s17",
+        "s18",
+        "s19",
+        "s20",
+        "s21"
+      ],
+      [
+        "s22",
+        "s23",
+        "s24",
+        "s25",
+        "s26"
+      ],
+      [
+        "s27",
+        "s28",
+        "s29",
+        "s30",
+        "s31"
+      ],
+      [
+        "s32",
+        "s33",
+        "s34",
+        "s35",
+        "s36"
+      ],
+      [
+        "s37",
+        "s38",
+        "s39",
+        "s40",
+        "s41"
+      ],
+      [
+        "s42",
+        "s43",
+        "s44",
+        "s45",
+        "s46"
+      ],
+      [
+        "s47",
+        "s47",
+        "s48",
+        "s48",
+        "s48"
+      ],
+      [
+        "s49",
+        "s49",
+        "s50",
+        "s50",
+        "s50"
+      ],
+      [
+        "s51",
+        "s51",
+        "s52",
+        "s52",
+        "s52"
+      ],
+      [
+        "s53",
+        "s53",
+        "s54",
+        "s54",
+        "s54"
+      ],
+      [
+        "s55",
+        "s55",
+        "s55",
+        "s55",
+        "s56"
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        205,
+        160,
+        160,
+        110,
+        155
+      ],
+      "rowHeights": [
+        40,
+        84,
+        52,
+        42,
+        86,
+        86,
+        86,
+        86,
+        86,
+        86,
+        86,
+        42,
+        42,
+        42,
+        42,
+        62
+      ],
+      "rowHeightTier": 4,
+      "fontSizeTier": 2,
+      "paddingTier": 2,
+      "gridLines": "rows",
+      "zebraRange": [
+        4,
+        10
+      ]
+    }
+  },
+  "themeTokens": {
+    "primary": "#ffffff",
+    "headerText": "#1f3a33",
+    "background": "#f9fbf9",
+    "zebra": "#f0f4f1",
+    "emphasis": "#c9762b",
+    "success": "#0e9f6e",
+    "border": "#d9e2dc",
+    "tag": "#e6efe9",
+    "emphasisSoft": "#edf1ee"
+  },
+  "slotDefs": {}
+}

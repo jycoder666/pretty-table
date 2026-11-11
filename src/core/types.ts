@@ -3,7 +3,17 @@
 export type ThemeId = 'T-A' | 'T-B' | 'T-C'
 export type BlockType = 'sectionBar' | 'groupHeader' | 'emphFooter' | 'leftTag'
 export type Align = 'left' | 'center' | 'right'
-export type Emphasis = 'bold' | 'red' | 'bg'
+/** 强调 mark：既有四项 + 2026-11-10 追加四项（全部加法，不改动既有语义）；'rule' = 下缘重强调线（复刻通道微调） */
+export type Emphasis =
+  | 'bold'
+  | 'red'
+  | 'green'
+  | 'bg'
+  | 'serif'
+  | 'display'
+  | 'muted'
+  | 'bar'
+  | 'rule'
 export type CellCoord = [row: number, col: number]
 
 export interface MergeRange {
@@ -80,18 +90,28 @@ export interface ThemeTokens {
   headerText?: string
   zebra?: boolean | string
   emphasis?: string
+  /** 正向/成功语义色（「正常」青绿点等），缺省回落主题内置 */
+  success?: string
   border?: string
   background?: string
   tag?: string
+  /** 柔彩底（'bg' mark 消费；复刻 2026-11-10 补开 token 覆盖，与同级角色色对齐） */
+  emphasisSoft?: string
 }
 
-/** 排版微调档位（全局；px 映射在 core/theme/layoutScales.ts） */
+/** 排版微调档位（全局；px 映射在 core/theme/layoutScales.ts，行高含第 4 档特高） */
 export interface LayoutStyle {
   /** 与列一一对应；null/缺位 = 该列用默认宽 */
   colWidths?: (number | null)[]
-  rowHeightTier?: 1 | 2 | 3
+  /** 与可视行一一对应（含端点行；null/缺位 = 按行高档位）；区块 gap 行恒 32 不受控 */
+  rowHeights?: (number | null)[]
+  rowHeightTier?: 1 | 2 | 3 | 4
   fontSizeTier?: 1 | 2 | 3
   paddingTier?: 1 | 2 | 3
+  /** 网格线模式（复刻 2026-11-10）：'rows' = 只留行间横线（无竖线、无外框），横线随 zebraRange 限定数据区；缺省 'all' 全网格 */
+  gridLines?: 'all' | 'rows'
+  /** 斑马纹/行间横线作用可视行区间（含端点；缺省全表）。注脚/列头等非数据行可排除在条纹与横线外 */
+  zebraRange?: [number, number]
 }
 
 export interface BlockDesc {
@@ -203,7 +223,7 @@ export type EditIntent =
   | { kind: 'resetThemeTokens' }
   /** FR-C2 排版档位（width=null 恢复默认宽） */
   | { kind: 'setColWidth'; col: number; width: number | null }
-  | { kind: 'setRowHeightTier'; tier: 1 | 2 | 3 }
+  | { kind: 'setRowHeightTier'; tier: 1 | 2 | 3 | 4 }
   | { kind: 'setFontSizeTier'; tier: 1 | 2 | 3 }
   | { kind: 'setPaddingTier'; tier: 1 | 2 | 3 }
   /** FR-C3 结构编辑（全部按钮式；一次意图 = 一张撤销快照 = 一套 remap） */
