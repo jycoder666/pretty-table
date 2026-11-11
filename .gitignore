@@ -46,3 +46,6 @@ reports/tables-20261107/_work/pw-profile/
 # GUI 冒烟临时脚本（不入库）
 .tmp-smoke/
 _quarantine_*/
+
+# 瘦身分析草稿（sourcemap 归因脚本与增量表，非构建产物）
+.slim-tmp/
