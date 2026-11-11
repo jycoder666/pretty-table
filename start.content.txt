@@ -25,6 +25,9 @@ rem   start.bat 1          start dev server, pnpm dev on port 5173
 rem   start.bat check      read-only self check, no server started
 rem Env:
 rem   NO_BROWSER=1         skip auto-opening the browser
+rem   PT_KILL=1            kill port occupier without asking (default: ask, Enter=Y)
+rem Port busy flow: ask to kill the occupier (taskkill /F /T) then restart;
+rem check mode stays read-only and never kills.
 rem ============================================================
 
 call :resolve_python
@@ -111,9 +114,21 @@ if errorlevel 1 (
 exit /b 0
 
 :check_port
-netstat -ano | findstr /R /C:":%~1 .*LISTENING" >nul 2>&1
-if errorlevel 1 exit /b 0
-call "%PY%" bat_msg.py err-port-busy %~1
+call "%PY%" bat_msg.py port-free %~1
+if not errorlevel 1 exit /b 0
+rem Port busy: check mode never kills; dev mode asks (Enter=Y), PT_KILL=1 skips the ask.
+if "%PT_KILL%"=="1" goto free_port_kill
+call "%PY%" bat_msg.py port-kill-ask %~1
+set "ANS="
+set /p "ANS="
+if errorlevel 1 goto free_port_declined
+if /i "!ANS!"=="N" goto free_port_declined
+:free_port_kill
+call "%PY%" bat_msg.py port-kill %~1
+if errorlevel 1 exit /b 1
+exit /b 0
+:free_port_declined
+call "%PY%" bat_msg.py port-kill-declined
 exit /b 1
 
 :resolve_python

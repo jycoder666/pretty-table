@@ -14,7 +14,8 @@
 - 重新生成后跑校验:
   python F:/docs/skills/windows-chinese-bat/scripts/verify_bat.py F:/pretty-table/start.bat --source F:/pretty-table/start.content.txt --strict --smoke-args check --expect-exit 0
 - 用法: start.bat 无参进交互菜单 | start.bat check 只读自检 | start.bat 1 启动 dev 端口 5173
-- 环境变量: NO_BROWSER=1 时不自动打开浏览器；端口 5173 被占用时只提示退出，绝不杀进程。
+- 环境变量: NO_BROWSER=1 时不自动打开浏览器；端口被占用时询问是否结束占用进程（回车默认结束），
+  PT_KILL=1 免询问直接清理；check 自检永远只读不杀。
 
 用法: python bat_msg.py <消息码> [端口]
 """
@@ -84,6 +85,36 @@ def selfcheck() -> int:
     return 0 if ok else 1
 
 
+
+def listeners_of(port: str) -> list[int]:
+    """监听指定端口的 PID 去重列表（IPv4/IPv6 都算；解析 netstat -ano）。"""
+    pids: list[int] = []
+    r = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
+    tag = f":{port} "
+    for line in (r.stdout or "").splitlines():
+        parts = line.split()
+        if len(parts) >= 5 and parts[3].upper() == "LISTENING" and tag in parts[1] + " ":
+            try:
+                pid = int(parts[4])
+            except ValueError:
+                continue
+            if pid not in pids:
+                pids.append(pid)
+    return pids
+
+
+def name_of(pid: int) -> str:
+    """PID 的进程名（查不到返回占位）。"""
+    r = subprocess.run(
+        ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+        capture_output=True, text=True,
+    )
+    line = (r.stdout or "").strip().splitlines()[0] if (r.stdout or "").strip() else ""
+    if line.startswith('"'):
+        return line.split('","')[0].strip('"')
+    return "未知进程"
+
+
 def main() -> int:
     if len(sys.argv) < 2:
         return 0
@@ -97,6 +128,7 @@ def main() -> int:
             "   pretty-table - 启动菜单",
             " ============================================",
             "   1  启动开发服务   pnpm dev, 端口 5173",
+             "   （端口被占用时会询问, 回车即清理后重启）",
             "   2  环境自检       只读检查, 不启动服务",
             "   0  退出",
             " --------------------------------------------",
@@ -129,6 +161,48 @@ def main() -> int:
         say("[错误] 未找到 pnpm, 请先安装: npm install -g pnpm")
     elif cmd == "err-bad-choice":
         say("[提示] 无效选项, 请输入 0-2")
+    elif cmd == "port-free":
+        # 只读：报告端口占用情况。空闲 return 0；被占 return 1（不杀）。
+        pids = listeners_of(port)
+        if not pids:
+            return 0
+        rows = [f"PID {pid} ({name_of(pid)})" for pid in pids]
+        say(f"[提示] 端口 {port} 已被占用: " + "、".join(rows))
+        say("       若正是本项目的旧服务, 可结束它后重启")
+        return 1
+
+    elif cmd == "port-kill":
+        # 清理：结束占用端口的进程树并复测。成功释放 return 0，否则 return 1。
+        killed = False
+        for pid in listeners_of(port):
+            if pid in (0, 4):
+                say(f"[跳过] PID {pid} 是系统进程, 不结束")
+                continue
+            name = name_of(pid)
+            r = subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                capture_output=True, text=True,
+            )
+            if r.returncode == 0:
+                say(f"[执行] 已结束占用进程 PID {pid} ({name})")
+                killed = True
+            else:
+                say(f"[错误] 结束 PID {pid} ({name}) 失败: {(r.stderr or r.stdout).strip()[:80]}")
+        if not killed:
+            say("[错误] 端口仍被占用, 无法自动清理")
+            return 1
+        if listeners_of(port):
+            say("[错误] 进程已结束但端口仍未释放, 请稍候重试或手动处理")
+            return 1
+        say(f"[成功] 端口 {port} 已释放, 继续启动")
+        return 0
+
+    elif cmd == "port-kill-ask":
+        print(f"端口 {port} 被占用。结束占用进程并重启? [Y/n] ", end="", flush=True)
+
+    elif cmd == "port-kill-declined":
+        say("[提示] 已保留占用进程, 本次不启动。关闭占用方或换端口后重试")
+
     elif cmd == "err-port-busy":
         say(
             f"[提示] 端口 {port} 已被占用",
