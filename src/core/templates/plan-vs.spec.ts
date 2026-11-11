@@ -39,7 +39,7 @@ function mergeAt(
 }
 
 describe('plan-vs 方案对比模板（保险模板套件 A3-8）', () => {
-  it('validate / migrate 通过，schemaVersion 1.2，templateType 显式 detail（不被词根兜底改写）', () => {
+  it('validate / migrate 通过，schemaVersion 1.3，templateType 显式 detail（不被词根兜底改写）', () => {
     expect(PLAN_VS.templateId).toBe('plan-vs')
     expect(PLAN_VS.schemaVersion).toBe('1.2')
     const v = validateInstance(cloneInstance(PLAN_VS))
@@ -49,7 +49,7 @@ describe('plan-vs 方案对比模板（保险模板套件 A3-8）', () => {
     const m = migrateInstance(cloneInstance(PLAN_VS), listPresetTemplates())
     expect(m.ok).toBe(true)
     expect(m.ok ? m.value.schemaVersion : undefined).toBe(SCHEMA_VERSION_CURRENT)
-    expect(SCHEMA_VERSION_CURRENT).toBe('1.2')
+    expect(SCHEMA_VERSION_CURRENT).toBe('1.3')
     // 'plan-vs' 无词根命中，migrate 兜底推断会落 compare——显式 detail 迁移后不得被改写
     expect(m.ok ? m.value.meta?.templateType : undefined).toBe('detail')
     expect(PLAN_VS.meta?.displayName).toBe('方案对比')

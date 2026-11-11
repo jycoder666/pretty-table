@@ -123,6 +123,10 @@ export interface ThemeTokens {
   headerText?: string
   zebra?: boolean | string
   emphasis?: string
+  /** 正向/成功语义色（「正常」青绿点等），validate 白名单与 palettes 消费均在 */
+  success?: string
+  /** 柔彩底覆盖（'bg' mark 消费） */
+  emphasisSoft?: string
   border?: string
   background?: string
   tag?: string
@@ -132,7 +136,7 @@ export interface ThemeTokens {
 export interface LayoutStyle {
   /** 与列一一对应；null/缺位 = 该列用默认宽 */
   colWidths?: (number | null)[]
-  rowHeightTier?: 1 | 2 | 3
+  rowHeightTier?: 1 | 2 | 3 | 4
   fontSizeTier?: 1 | 2 | 3
   paddingTier?: 1 | 2 | 3
   /** Schema 1.3：字体族（sans 无衬线 / serif 衬线；缺省 sans） */
@@ -293,7 +297,7 @@ export type EditIntent =
   | { kind: 'resetThemeTokens' }
   /** FR-C2 排版档位（width=null 恢复默认宽） */
   | { kind: 'setColWidth'; col: number; width: number | null }
-  | { kind: 'setRowHeightTier'; tier: 1 | 2 | 3 }
+  | { kind: 'setRowHeightTier'; tier: 1 | 2 | 3 | 4 }
   | { kind: 'setFontSizeTier'; tier: 1 | 2 | 3 }
   | { kind: 'setPaddingTier'; tier: 1 | 2 | 3 }
   /** FR-C3 结构编辑（全部按钮式；一次意图 = 一张撤销快照 = 一套 remap） */

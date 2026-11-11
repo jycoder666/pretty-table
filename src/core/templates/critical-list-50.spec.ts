@@ -58,7 +58,7 @@ const ROWS: Array<[string, string]> = [
 ]
 
 describe('critical-list-50 重疾险产品汇总模板（保险模板套件 A3-7）', () => {
-  it('validate / migrate 通过，schemaVersion 1.2，templateType 显式 detail（词根推断兜底会落 compare，不得被改写）', () => {
+  it('validate / migrate 通过，schemaVersion 1.3，templateType 显式 detail（词根推断兜底会落 compare，不得被改写）', () => {
     expect(CRITICAL_LIST_50.templateId).toBe('critical-list-50')
     expect(CRITICAL_LIST_50.schemaVersion).toBe('1.2')
     const v = validateInstance(cloneInstance(CRITICAL_LIST_50))

@@ -115,7 +115,7 @@ const BAND2_TEXT = '定期寿险 24款 · 养老年金险 45款 · 增额终身�
 const TITLE_TEXT = '六大险种在售产品精选'
 
 describe('product-catalog 六大险种产品精选（保险模板套件 need_03 · TP04）', () => {
-  it('validate / migrate 通过，schemaVersion 1.2，templateType detail；detail 旧表头回填不触发', () => {
+  it('validate / migrate 通过，schemaVersion 1.3，templateType detail；detail 旧表头回填不触发', () => {
     expect(PRODUCT_CATALOG.templateId).toBe('product-catalog')
     const v = validateInstance(cloneInstance(PRODUCT_CATALOG))
     expect(v.ok).toBe(true)

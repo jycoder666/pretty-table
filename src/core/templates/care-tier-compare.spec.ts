@@ -22,7 +22,7 @@ function gridSlotIds(tpl: TemplateInstance): Set<string> {
 }
 
 describe('care-tier-compare 医疗层级对比模板', () => {
-  it('validate / migrate 通过，schemaVersion 1.2，templateType=detail', () => {
+  it('validate / migrate 通过，schemaVersion 1.3，templateType=detail', () => {
     expect(CARE_TIER_COMPARE.templateId).toBe('care-tier-compare')
     const v = validateInstance(cloneInstance(CARE_TIER_COMPARE))
     expect(v.ok).toBe(true)

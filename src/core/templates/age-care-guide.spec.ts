@@ -22,7 +22,7 @@ function gridSlotIds(tpl: TemplateInstance): Set<string> {
 }
 
 describe('age-care-guide 各年龄段保障模板', () => {
-  it('validate / migrate 通过，schemaVersion 1.2，templateType=detail', () => {
+  it('validate / migrate 通过，schemaVersion 1.3，templateType=detail', () => {
     expect(AGE_CARE_GUIDE.templateId).toBe('age-care-guide')
     const v = validateInstance(cloneInstance(AGE_CARE_GUIDE))
     expect(v.ok).toBe(true)

@@ -162,7 +162,7 @@ describe('价目 / 矩阵系统模板（T26 · U-1 §8）', () => {
 })
 
 describe('blank-v1 新建空白表底稿（FR-C6 · Q-10）', () => {
-  it('validate / migrate 通过，schemaVersion 1.2，templateType blank', () => {
+  it('validate / migrate 通过，schemaVersion 1.3，templateType blank', () => {
     expect(BLANK_V1.templateId).toBe('blank-v1')
     const v = validateInstance(cloneInstance(BLANK_V1))
     expect(v.ok).toBe(true)

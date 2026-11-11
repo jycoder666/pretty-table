@@ -39,7 +39,7 @@ describe('med-ins-list 百万医疗险热门清单模板', () => {
     const m = migrateInstance(cloneInstance(MED_INS_LIST), listPresetTemplates())
     expect(m.ok).toBe(true)
     expect(m.ok ? m.value.schemaVersion : undefined).toBe(SCHEMA_VERSION_CURRENT)
-    expect(SCHEMA_VERSION_CURRENT).toBe('1.2')
+    expect(SCHEMA_VERSION_CURRENT).toBe('1.3')
     expect(MED_INS_LIST.meta?.templateType).toBe('detail')
     expect(MED_INS_LIST.meta?.displayName).toBe('百万医疗险热门清单')
     expect(MED_INS_LIST.meta?.origin).toBe('preset')

@@ -59,7 +59,7 @@ function cellStyle(opt: Record<string, unknown>, row: number, col: number): Reco
 }
 
 describe('claim-standards 重疾理赔标准模板（保险模板套件 need_05 · TP06）', () => {
-  it('validate / migrate 通过，schemaVersion 1.2，templateType 显式 detail；detail 旧表头回填不触发', () => {
+  it('validate / migrate 通过，schemaVersion 1.3，templateType 显式 detail；detail 旧表头回填不触发', () => {
     expect(CLAIM_STANDARDS.templateId).toBe('claim-standards')
     expect(CLAIM_STANDARDS.schemaVersion).toBe('1.2')
     const v = validateInstance(cloneInstance(CLAIM_STANDARDS))

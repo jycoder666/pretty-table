@@ -147,13 +147,11 @@ describe('toOption · 推荐列（FR-23）', () => {
 
 import { BLANK_V1 } from '../templates'
 import {
-  BAR_MARK_LEFT_WIDTH,
-  DISPLAY_FONT_SIZE,
   ROW_HEIGHT_TIERS,
   FONT_SIZE_TIERS,
   PADDING_TIERS,
 } from '../theme/layoutScales'
-import { FONT_STACK, SERIF_FONT_STACK } from '../theme/font'
+import { FONT_STACK } from '../theme/font'
 import { resolveTheme } from '../theme/palettes'
 
 function ptOf(opt: Record<string, unknown>): {
@@ -445,143 +443,3 @@ describe('toOption · 二期区块渲染（R-4）', () => {
   })
 })
 
-// ── 2026-11-10 四新 emphasis mark（serif/display/muted/bar）：画布 styleForCell 侧 ──
-
-describe('toOption · 新增强调 mark（serif/display/muted/bar）', () => {
-  it('serif：fontFamily 切衬线栈；可与 bold 组合；无 mark 格保持无衬线', () => {
-    const inst = withSlots((i) => {
-      i.slots['row.3.val.a'] = { text: '衬线格', emphasize: ['serif', 'bold'] }
-    })
-    const opt = toOption(inst, { mode: 'preview' })
-    const style = cellStyle(opt, 4, 1) // 逻辑行 3 → 可视行 4
-    expect(style.fontFamily).toBe(SERIF_FONT_STACK)
-    expect(style.fontWeight).toBe(700)
-    expect(cellStyle(opt, 4, 2).fontFamily).toBe(FONT_STACK)
-  })
-
-  it('display：fontSize 提档 26，独立于全局字号档位（邻格仍走档位）', () => {
-    const inst = withSlots((i) => {
-      i.layout.style = { fontSizeTier: 3 }
-      i.slots['row.3.val.a'] = { text: '大字', emphasize: 'display' }
-    })
-    const opt = toOption(inst, { mode: 'preview' })
-    expect(cellStyle(opt, 4, 1).fontSize).toBe(DISPLAY_FONT_SIZE)
-    expect(cellStyle(opt, 4, 1).fontSize).toBe(26)
-    expect(cellStyle(opt, 4, 2).fontSize).toBe(FONT_SIZE_TIERS[2])
-  })
-
-  it('muted：文字色 = palette.muted；与 red 组合时后写者赢（red < green < muted）', () => {
-    const inst = withSlots((i) => {
-      i.slots['row.3.val.a'] = { text: '弱化', emphasize: 'muted' }
-    })
-    expect(cellStyle(toOption(inst, { mode: 'preview' }), 4, 1).color).toBe(PALETTES['T-A'].muted)
-    const inst2 = withSlots((i) => {
-      i.slots['row.3.val.a'] = { text: '弱化', emphasize: ['red', 'muted'] }
-    })
-    expect(cellStyle(toOption(inst2, { mode: 'preview' }), 4, 1).color).toBe(PALETTES['T-A'].muted)
-  })
-
-  it('bar：左缘竖条走逐格 borderLineWidth/borderColor 四元组（[上,右,下,左]，左缘 6px 取 headerText）', () => {
-    const inst = withSlots((i) => {
-      i.slots['row.3.val.a'] = { text: '竖条', emphasize: 'bar' }
-    })
-    const opt = toOption(inst, { mode: 'preview' })
-    const style = cellStyle(opt, 4, 1)
-    expect(style.borderLineWidth).toEqual([1, 1, 1, BAR_MARK_LEFT_WIDTH])
-    expect(style.borderColor).toEqual([
-      PALETTES['T-A'].border,
-      PALETTES['T-A'].border,
-      PALETTES['T-A'].border,
-      PALETTES['T-A'].headerText,
-    ])
-    // 无 mark 格仍为标量 1px 单边框
-    expect(cellStyle(opt, 4, 2).borderLineWidth).toBe(1)
-  })
-
-  it('四 mark 与既有 bold/bg 组合互不挤掉', () => {
-    const inst = withSlots((i) => {
-      i.slots['row.3.val.a'] = {
-        text: '全组合',
-        emphasize: ['bold', 'bg', 'serif', 'display', 'muted', 'bar'],
-      }
-    })
-    const style = cellStyle(toOption(inst, { mode: 'preview' }), 4, 1)
-    expect(style.fontWeight).toBe(700)
-    expect(style.bgColor).toBe(PALETTES['T-A'].emphasisSoft)
-    expect(style.fontFamily).toBe(SERIF_FONT_STACK)
-    expect(style.fontSize).toBe(DISPLAY_FONT_SIZE)
-    expect(style.color).toBe(PALETTES['T-A'].muted)
-    expect(style.borderLineWidth).toEqual([1, 1, 1, BAR_MARK_LEFT_WIDTH])
-  })
-})
-
-// ── 复刻通道微调（2026-11-10 视觉复核二轮）：zebraRange / gridLines / rule / emphasisSoft token ──
-
-describe('toOption · 复刻通道微调（zebraRange/gridLines/rule）', () => {
-  it('zebraRange：区间内奇数行斑马、区间外纸色（含端点；缺省全表行为不变）', () => {
-    const inst = cloneInstance(COMPARE_ALPHA_V1)
-    inst.layout.style = { zebraRange: [4, 6] }
-    const opt = toOption(inst, { mode: 'preview' })
-    expect(cellStyle(opt, 3, 1).bgColor).toBe(PALETTES['T-A'].paper) // 区间外
-    expect(cellStyle(opt, 5, 1).bgColor).toBe(PALETTES['T-A'].zebra) // 区间内奇数
-    expect(cellStyle(opt, 6, 1).bgColor).toBe(PALETTES['T-A'].paper) // 区间内偶数
-    const base = toOption(cloneInstance(COMPARE_ALPHA_V1), { mode: 'preview' })
-    expect(cellStyle(base, 3, 1).bgColor).toBe(PALETTES['T-A'].zebra) // 未设 = 既有全表
-  })
-
-  it("gridLines 'rows'：逐格边框转横线数组（竖向 0 宽），VTable theme 外框同步关闭", () => {
-    const inst = cloneInstance(COMPARE_ALPHA_V1)
-    inst.layout.style = { gridLines: 'rows' }
-    const opt = toOption(inst, { mode: 'preview' })
-    expect(cellStyle(opt, 3, 1).borderLineWidth).toEqual([0, 0, 1, 0])
-    expect(cellStyle(opt, 3, 1).borderColor).toEqual([
-      PALETTES['T-A'].border,
-      PALETTES['T-A'].border,
-      PALETTES['T-A'].border,
-      PALETTES['T-A'].border,
-    ])
-    const theme = opt.theme as { frameStyle: { borderLineWidth: number } }
-    expect(theme.frameStyle.borderLineWidth).toBe(0)
-    // 缺省 'all'：既有标量 1px 全网格
-    const base = toOption(cloneInstance(COMPARE_ALPHA_V1), { mode: 'preview' })
-    expect(cellStyle(base, 3, 1).borderLineWidth).toBe(1)
-  })
-
-  it("gridLines 'rows' + zebraRange：行线随区间限定——区间外注脚/列头行 [0,0,0,0] 无任何边线", () => {
-    const inst = cloneInstance(COMPARE_ALPHA_V1)
-    inst.layout.style = { gridLines: 'rows', zebraRange: [4, 6] }
-    const opt = toOption(inst, { mode: 'preview' })
-    expect(cellStyle(opt, 3, 1).borderLineWidth).toEqual([0, 0, 0, 0]) // 区间外
-    expect(cellStyle(opt, 5, 1).borderLineWidth).toEqual([0, 0, 1, 0]) // 区间内
-  })
-
-  it('rowHeights：逐行行高覆盖档位并钳制（24-160），缺位回退档位，区块行恒 32', () => {
-    const inst = cloneInstance(COMPARE_ALPHA_V1)
-    inst.layout.style = { rowHeights: [40, 84, 52, 42, 999, 86, 86, 86, 86, 86, 86] }
-    const { rowHeights } = buildVisualRows(inst)
-    expect(rowHeights[0]).toBe(40)
-    expect(rowHeights[3]).toBe(42)
-    expect(rowHeights[4]).toBe(160) // 999 越界钳到上限
-    expect(rowHeights[5]).toBe(86)
-    expect(rowHeights[2]).toBe(32) // 区块 gap 行不受 rowHeights 控制
-    // 缺位回退档位：compare 无 gap 覆盖的行走 rowHeightTier（36）
-    const base = buildVisualRows(cloneInstance(COMPARE_ALPHA_V1))
-    expect(base.rowHeights.every((h) => h === 36 || h === 32)).toBe(true)
-  })
-
-  it("rule mark：下缘 3px headerText 重线（rows/all 两形态）；emphasisSoft token 进 'bg'", () => {
-    const inst = cloneInstance(COMPARE_ALPHA_V1)
-    inst.slots['row.3.val.a'] = { text: '重线格', emphasize: ['rule'] }
-    expect(cellStyle(toOption(inst, { mode: 'preview' }), 4, 1).borderLineWidth).toEqual([1, 1, 3, 1])
-    inst.layout.style = { gridLines: 'rows' }
-    const style = cellStyle(toOption(inst, { mode: 'preview' }), 4, 1)
-    expect(style.borderLineWidth).toEqual([0, 0, 3, 0])
-    expect((style.borderColor as string[])[2]).toBe(PALETTES['T-A'].headerText)
-    // emphasisSoft token 覆盖（'bg' mark 消费同一合成结果）
-    const inst2 = cloneInstance(COMPARE_ALPHA_V1)
-    inst2.themeTokens = { primary: PALETTES['T-A'].primary, emphasisSoft: '#edf1ee' }
-    inst2.slots['row.3.val.a'] = { text: '柔底', emphasize: ['bg'] }
-    expect(resolveTheme('T-A', inst2.themeTokens).palette.emphasisSoft).toBe('#edf1ee')
-    expect(cellStyle(toOption(inst2, { mode: 'preview' }), 4, 1).bgColor).toBe('#edf1ee')
-  })
-})

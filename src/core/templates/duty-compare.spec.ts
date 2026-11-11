@@ -34,7 +34,7 @@ function cell(n: number, key: string): unknown {
 }
 
 describe('duty-compare 保障责任对比模板（保险模板套件 A3-3）', () => {
-  it('validate / migrate 通过，schemaVersion 1.2，templateType 显式 matrix（规避 compare 词根误判）', () => {
+  it('validate / migrate 通过，schemaVersion 1.3，templateType 显式 matrix（规避 compare 词根误判）', () => {
     expect(DUTY_COMPARE.templateId).toBe('duty-compare')
     // 库卡显示名（设计文档 A1 表）
     expect(DUTY_COMPARE.meta?.displayName).toBe('保障责任对比')

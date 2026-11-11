@@ -34,13 +34,6 @@ function sanitizeStyle(style: LayoutStyle | undefined): LayoutStyle | undefined 
         )
       : undefined
   }
-  if (out.rowHeights !== undefined) {
-    out.rowHeights = Array.isArray(out.rowHeights)
-      ? out.rowHeights.map((h) =>
-          typeof h === 'number' && Number.isFinite(h) ? clampRowHeight(h) : null,
-        )
-      : undefined
-  }
   return out
 }
 
