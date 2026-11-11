@@ -4,6 +4,8 @@ import { clampColWidth, clampTier } from '../theme/layoutScales'
 import { sanitizeHex } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
 import { sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
+import { sanitizePoster } from '../theme/posterStyle'
+import { isRichSlotObject, sanitizeSlotDeco, sanitizeStyle13 } from './sanitize13'
 
 /** themeTokens 里的角色色键（schema 1.2），hex 值需要清洗 */
 const TOKEN_COLOR_KEYS: readonly string[] = [
@@ -74,6 +76,8 @@ export function validateInstance(json: unknown): Result<TemplateInstance> {
   if (inst.layout.style) {
     const style = sanitizeStyle(inst.layout.style)
     if (style) {
+      // schema 1.3：字体族 / 边框方案 / 表头形状枚举清洗
+      sanitizeStyle13(style)
       inst.layout = { ...inst.layout, style }
     } else {
       inst.layout = { ...inst.layout }
@@ -134,12 +138,29 @@ export function validateInstance(json: unknown): Result<TemplateInstance> {
       else obj.bar = cleaned
       void id
     }
+    // Schema 1.3 扩展：格内装饰字段清洗（sub/逐格色/星级/圆点/甘特/时间轴/点线/描边盒）
+    for (const v of Object.values(slots)) {
+      if (!isRichSlotObject(v)) continue
+      sanitizeSlotDeco(v as unknown as Record<string, unknown>)
+    }
   }
 
   // Schema 1.2 扩展：kpiCards 清洗（非数组删字段；项级清洗与截断在 sanitizeKpiCards 内）
   const kpiClean = sanitizeKpiCards(inst.kpiCards)
   if (kpiClean === null) delete inst.kpiCards
   else inst.kpiCards = kpiClean
+
+  // Schema 1.3：kpiStyle 枚举清洗（cards/strip 之外删键）
+  if (inst.kpiStyle !== undefined && inst.kpiStyle !== 'cards' && inst.kpiStyle !== 'strip') {
+    delete inst.kpiStyle
+  }
+
+  // Schema 1.3：poster 海报层清洗（枚举/hex/行数/留白钳制；全空删字段零占位）
+  if (inst.poster !== undefined) {
+    const poster = sanitizePoster(inst.poster)
+    if (poster) inst.poster = poster
+    else delete inst.poster
+  }
 
   return ok(cloneInstance(inst), warnings.length ? warnings : undefined)
 }

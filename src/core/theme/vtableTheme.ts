@@ -10,6 +10,7 @@ export function toVTableTheme(
   const fs = opts.metrics?.fontSize ?? 13
   const pv = opts.metrics?.padV ?? 8
   const ph = opts.metrics?.padH ?? 10
+  const ff = opts.metrics?.fontFamily ?? FONT_STACK
   return {
     underlayBackgroundColor: underlay,
     defaultStyle: {
@@ -17,7 +18,7 @@ export function toVTableTheme(
       bgColor: palette.paper,
       borderColor: palette.border,
       fontSize: fs,
-      fontFamily: FONT_STACK,
+      fontFamily: ff,
       padding: [pv, ph, pv, ph],
     },
     headerStyle: {
@@ -25,7 +26,7 @@ export function toVTableTheme(
       bgColor: palette.primary,
       fontWeight: 'bold',
       borderColor: palette.border,
-      fontFamily: FONT_STACK,
+      fontFamily: ff,
     },
     bodyStyle: {
       color: '#1a1a1a',
@@ -34,7 +35,7 @@ export function toVTableTheme(
         return args.row % 2 === 0 ? palette.paper : palette.zebra
       },
       borderColor: palette.border,
-      fontFamily: FONT_STACK,
+      fontFamily: ff,
     },
     frameStyle: {
       borderColor: palette.border,

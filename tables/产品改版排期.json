@@ -1,233 +1,281 @@
 {
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.3",
   "templateId": "user-1794022639629-k5mq7",
-  "themeId": "T-C",
-  "zebraOn": true,
+  "themeId": "T-B",
+  "zebraOn": false,
   "highlight": {
     "recommendCol": null
   },
   "meta": {
-    "displayName": "产品改版项目排期",
-    "description": "从零开始的 12 行 5 列空表，行列与表头层级都可以再调",
+    "displayName": "产品改版 项目排期",
+    "description": "月列甘特条 · 里程碑菱形 · 阶段双行（一比一复刻设计稿）",
     "templateType": "blank",
     "origin": "preset"
   },
   "slots": {
     "u1": {
-      "text": "产品改版项目排期 · 2026 Q3-Q4"
+      "text": "阶段 / TASK"
     },
-    "u2": "",
-    "u3": "",
-    "u4": "",
-    "u5": "",
+    "u2": {
+      "text": "5月 MAY"
+    },
+    "u3": {
+      "text": "6月 JUN"
+    },
+    "u4": {
+      "text": "7月 JUL"
+    },
+    "u5": {
+      "text": "8月 AUG"
+    },
     "u6": {
-      "text": "任务 TASK"
+      "text": "9月 SEP"
     },
     "u7": {
-      "text": "周期"
+      "text": "10月 OCT"
     },
     "u8": {
-      "text": "里程碑"
+      "text": "01  需求调研 · 用户访谈",
+      "sub": "产品组 · 14 场访谈"
     },
     "u9": {
-      "text": "负责角色"
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     },
     "u10": {
-      "text": "关键产出"
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 0.02,
+        "color": "#2f3630"
+      }
     },
-    "u11": {
-      "text": "需求调研 · 用户访谈"
-    },
-    "u12": {
-      "text": "5/1 – 5/12"
-    },
-    "u13": {
-      "text": ""
-    },
-    "u14": {
-      "text": "产品"
-    },
+    "u11": "",
+    "u12": "",
+    "u13": "",
+    "u14": "",
     "u15": {
-      "text": "14 场用户访谈"
+      "text": "02  竞品分析与功能清单",
+      "sub": "产品组 · 输出 68 条需求"
     },
     "u16": {
-      "text": "竞品分析与功能清单"
+      "text": "",
+      "gantt": {
+        "from": 0.72,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     },
     "u17": {
-      "text": "5/13 – 5/26"
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 0.8,
+        "color": "#2f3630"
+      }
     },
-    "u18": {
-      "text": ""
-    },
-    "u19": {
-      "text": "产品"
-    },
-    "u20": {
-      "text": "输出 68 条需求"
-    },
-    "u21": {
-      "text": "交互原型与视觉稿"
-    },
+    "u18": "",
+    "u19": "",
+    "u20": "",
+    "u21": "",
     "u22": {
-      "text": "5/27 – 6/16"
+      "text": "03  交互原型与视觉稿",
+      "sub": "设计组 · 32 个页面"
     },
-    "u23": {
-      "text": ""
-    },
+    "u23": "",
     "u24": {
-      "text": "设计"
+      "text": "",
+      "gantt": {
+        "from": 0.5,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     },
     "u25": {
-      "text": "32 个界面"
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 0.82,
+        "color": "#2f3630"
+      }
     },
-    "u26": {
-      "text": "技术方案与架构评审"
-    },
-    "u27": {
-      "text": "6/17 – 6/30"
-    },
-    "u28": {
-      "text": "M1",
-      "emphasize": [
-        "bold",
-        "red"
-      ]
-    },
+    "u26": "",
+    "u27": "",
+    "u28": "",
     "u29": {
-      "text": "技术"
+      "text": "04  技术方案与架构评审",
+      "sub": "技术组 · 里程碑 M1"
     },
-    "u30": {
-      "text": "评审通过 · M1",
-      "emphasize": [
-        "bold"
-      ]
-    },
-    "u31": {
-      "text": "核心模块开发"
-    },
+    "u30": "",
+    "u31": "",
     "u32": {
-      "text": "7/1 – 8/11"
+      "text": "",
+      "gantt": {
+        "from": 0.28,
+        "to": 1.0,
+        "color": "#2f3630",
+        "milestone": true
+      }
     },
-    "u33": {
-      "text": ""
-    },
-    "u34": {
-      "text": "研发 · 前端 4 人 + 后端 3 人"
-    },
-    "u35": {
-      "text": "核心功能交付"
-    },
+    "u33": "",
+    "u34": "",
+    "u35": "",
     "u36": {
-      "text": "后台与数据看板"
+      "text": "05  核心模块开发",
+      "sub": "前端 4 人 · 后端 3 人"
     },
-    "u37": {
-      "text": "7/15 – 8/18"
-    },
-    "u38": {
-      "text": ""
-    },
+    "u37": "",
+    "u38": "",
     "u39": {
-      "text": "数据 · 3 人"
+      "text": "",
+      "gantt": {
+        "from": 0.88,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     },
     "u40": {
-      "text": "看板上线"
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     },
     "u41": {
-      "text": "联调与性能优化"
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 0.8,
+        "color": "#2f3630"
+      }
     },
-    "u42": {
-      "text": "8/19 – 9/8"
-    },
+    "u42": "",
     "u43": {
-      "text": ""
+      "text": "06  后台与数据看板",
+      "sub": "数据组 · 3 人"
     },
-    "u44": {
-      "text": "全员"
-    },
-    "u45": {
-      "text": "首屏 1.2 秒内"
-    },
-    "u46": {
-      "text": "全量测试与缺陷修复"
-    },
+    "u44": "",
+    "u45": "",
+    "u46": "",
     "u47": {
-      "text": "9/9 – 9/28"
+      "text": "",
+      "gantt": {
+        "from": 0.3,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     },
     "u48": {
-      "text": "M2",
-      "emphasize": [
-        "bold",
-        "red"
-      ]
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     },
     "u49": {
-      "text": "测试"
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 0.1,
+        "color": "#2f3630"
+      }
     },
     "u50": {
-      "text": "回归 3 轮 · M2",
-      "emphasize": [
-        "bold"
-      ]
+      "text": "07  联调与性能优化",
+      "sub": "全员 · 首屏 1.2 秒内"
     },
-    "u51": {
-      "text": "灰度上线"
-    },
-    "u52": {
-      "text": "9/29 – 10/12"
-    },
-    "u53": {
-      "text": ""
-    },
-    "u54": {
-      "text": "运维"
-    },
+    "u51": "",
+    "u52": "",
+    "u53": "",
+    "u54": "",
     "u55": {
-      "text": "灰度 2 批"
+      "text": "",
+      "gantt": {
+        "from": 0.32,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     },
     "u56": {
-      "text": "复盘与下一期规划"
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 0.52,
+        "color": "#2f3630"
+      }
     },
     "u57": {
-      "text": "10/13 – 10/30"
+      "text": "08  全量测试与缺陷修复",
+      "sub": "测试组 · 回归 3 轮"
     },
-    "u58": {
-      "text": ""
+    "u58": "",
+    "u59": "",
+    "u60": "",
+    "u61": "",
+    "u62": {
+      "text": "",
+      "gantt": {
+        "from": 0.92,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     },
-    "u59": {
-      "text": "产品"
+    "u63": {
+      "text": "",
+      "gantt": {
+        "from": 0.0,
+        "to": 0.82,
+        "color": "#2f3630"
+      }
     },
-    "u60": {
-      "text": "输出待办单"
+    "u64": {
+      "text": "09  灰度上线",
+      "sub": "运维组 · 里程碑 M2"
+    },
+    "u65": "",
+    "u66": "",
+    "u67": "",
+    "u68": "",
+    "u69": "",
+    "u70": {
+      "text": "",
+      "gantt": {
+        "from": 0.28,
+        "to": 0.88,
+        "color": "#2f3630",
+        "milestone": true
+      }
+    },
+    "u71": {
+      "text": "10  复盘与下一期规划",
+      "sub": "产品组 · 输出迭代清单"
+    },
+    "u72": "",
+    "u73": "",
+    "u74": "",
+    "u75": "",
+    "u76": "",
+    "u77": {
+      "text": "",
+      "gantt": {
+        "from": 0.82,
+        "to": 1.0,
+        "color": "#2f3630"
+      }
     }
   },
-  "blocks": [
-    {
-      "id": "blk-1794022613824",
-      "type": "emphFooter",
-      "slotId": "footer-1",
-      "props": {
-        "label": "",
-        "text": "注：工期按自然日，节假日已扣除 · 示例样张：项目名、任务与工期仅作排版示意",
-        "styleTier": 1
-      }
-    }
-  ],
+  "blocks": [],
   "layout": {
-    "rowCount": 12,
-    "colCount": 5,
-    "headerLevels": 2,
-    "merges": [
-      {
-        "start": [
-          0,
-          0
-        ],
-        "end": [
-          0,
-          4
-        ]
-      }
-    ],
+    "rowCount": 11,
+    "colCount": 7,
+    "headerLevels": 1,
+    "merges": [],
     "structuralMerges": [],
     "allowedMerges": [
       {
@@ -236,145 +284,52 @@
           0
         ],
         "end": [
-          11,
-          4
+          10,
+          6
         ]
       }
     ],
-    "blockSlots": [
-      {
-        "id": "footer-1",
-        "accept": [
-          "emphFooter"
-        ],
-        "region": "footer",
-        "rowHint": "after-11"
-      },
-      {
-        "id": "left-r2",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-2"
-      },
-      {
-        "id": "left-r3",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-3"
-      },
-      {
-        "id": "left-r4",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-4"
-      },
-      {
-        "id": "left-r5",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-5"
-      },
-      {
-        "id": "left-r6",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-6"
-      },
-      {
-        "id": "left-r7",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-7"
-      },
-      {
-        "id": "left-r8",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-8"
-      },
-      {
-        "id": "left-r9",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-9"
-      },
-      {
-        "id": "left-r10",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-10"
-      },
-      {
-        "id": "left-r11",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-11"
-      }
-    ],
+    "blockSlots": [],
     "slotGrid": [
       [
         "u1",
         "u2",
         "u3",
         "u4",
-        "u5"
+        "u5",
+        "u6",
+        "u7"
       ],
       [
-        "u6",
-        "u7",
         "u8",
         "u9",
-        "u10"
-      ],
-      [
+        "u10",
         "u11",
         "u12",
         "u13",
-        "u14",
-        "u15"
+        "u14"
       ],
       [
+        "u15",
         "u16",
         "u17",
         "u18",
         "u19",
-        "u20"
+        "u20",
+        "u21"
       ],
       [
-        "u21",
         "u22",
         "u23",
         "u24",
-        "u25"
-      ],
-      [
+        "u25",
         "u26",
         "u27",
-        "u28",
-        "u29",
-        "u30"
+        "u28"
       ],
       [
+        "u29",
+        "u30",
         "u31",
         "u32",
         "u33",
@@ -386,73 +341,98 @@
         "u37",
         "u38",
         "u39",
-        "u40"
+        "u40",
+        "u41",
+        "u42"
       ],
       [
-        "u41",
-        "u42",
         "u43",
         "u44",
-        "u45"
-      ],
-      [
+        "u45",
         "u46",
         "u47",
         "u48",
-        "u49",
-        "u50"
+        "u49"
       ],
       [
+        "u50",
         "u51",
         "u52",
         "u53",
         "u54",
-        "u55"
+        "u55",
+        "u56"
       ],
       [
-        "u56",
         "u57",
         "u58",
         "u59",
-        "u60"
+        "u60",
+        "u61",
+        "u62",
+        "u63"
+      ],
+      [
+        "u64",
+        "u65",
+        "u66",
+        "u67",
+        "u68",
+        "u69",
+        "u70"
+      ],
+      [
+        "u71",
+        "u72",
+        "u73",
+        "u74",
+        "u75",
+        "u76",
+        "u77"
       ]
     ],
     "style": {
       "colWidths": [
-        225,
-        135,
-        90,
-        180,
-        185
-      ]
+        240,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110
+      ],
+      "rowHeightTier": 3,
+      "fontSizeTier": 2,
+      "paddingTier": 2,
+      "borderScheme": "full",
+      "plainHeader": true
     }
   },
+  "slotDefs": {},
   "themeTokens": {
-    "primary": "#0b211c",
-    "headerText": "#ffffff",
-    "zebra": "#f1e9d8",
-    "emphasis": "#b4532a",
-    "border": "#d8cdb8",
-    "background": "#f6f0e3"
+    "primary": "#2f3630",
+    "headerText": "#f5f4ef",
+    "zebra": "#efece2",
+    "emphasis": "#e8632c",
+    "border": "#ddd8ca",
+    "background": "#f7f5ec"
   },
-  "kpiCards": [
-    {
-      "id": "kpi-1794022630533",
-      "label": "周期",
-      "value": "5/1 – 10/30"
-    },
-    {
-      "id": "kpi-1794022630957",
-      "label": "总工期",
-      "value": 26,
-      "unit": "周"
-    },
-    {
-      "id": "kpi-1794022631399",
-      "label": "参与",
-      "value": "产品组 12",
-      "unit": "人"
-    }
-  ],
-  "slotDefs": {}
+  "kpiCards": [],
+  "poster": {
+    "bg": "solid",
+    "bgColor": "#f7f5ec",
+    "kicker": "PROJECT SCHEDULE · 2026 Q3 – Q4",
+    "title": "产品改版 项目排期",
+    "subtitle": "周期 5 月 1 日 – 10 月 30 日 · 26 周 · 负责人产品组 · 参与 12 人",
+    "metaLines": [],
+    "footerLines": [
+      "图例：■ 计划工期 · ◆ 里程碑　注：工期按自然日估算，节假日已扣。",
+      "示例样张 · 项目名、任务与工期仅作排版示意。"
+    ],
+    "pageBadge": "06 / 08",
+    "accent": "#e8632c",
+    "textColor": "#2f3630",
+    "titleFont": "sans",
+    "padding": 44
+  }
 }

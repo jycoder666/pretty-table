@@ -1,445 +1,447 @@
 {
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.3",
   "templateId": "user-1794016558294-cxcpi",
   "themeId": "T-B",
-  "zebraOn": true,
-  "slotDefs": {
-    "u1": {
-      "kind": "text"
-    },
-    "u2": {
-      "kind": "text"
-    },
-    "u3": {
-      "kind": "text"
-    },
-    "u4": {
-      "kind": "text"
-    },
-    "u5": {
-      "kind": "text"
-    },
-    "u6": {
-      "kind": "text"
-    },
-    "u7": {
-      "kind": "text"
-    },
-    "u8": {
-      "kind": "text"
-    },
-    "u9": {
-      "kind": "text"
-    },
-    "u10": {
-      "kind": "text"
-    },
-    "u11": {
-      "kind": "text"
-    },
-    "u12": {
-      "kind": "text"
-    },
-    "u13": {
-      "kind": "text"
-    },
-    "u14": {
-      "kind": "text"
-    },
-    "u15": {
-      "kind": "text"
-    },
-    "u16": {
-      "kind": "text"
-    },
-    "u17": {
-      "kind": "text"
-    },
-    "u18": {
-      "kind": "text"
-    },
-    "u19": {
-      "kind": "text"
-    },
-    "u20": {
-      "kind": "text"
-    },
-    "u21": {
-      "kind": "text"
-    },
-    "u22": {
-      "kind": "text"
-    },
-    "u23": {
-      "kind": "text"
-    },
-    "u24": {
-      "kind": "text"
-    },
-    "u25": {
-      "kind": "text"
-    },
-    "u26": {
-      "kind": "text"
-    }
-  },
+  "zebraOn": false,
   "highlight": {
     "recommendCol": null
   },
-  "kpiCards": [
-    {
-      "id": "kpi-1",
-      "label": "本月收入",
-      "value": "21,800",
-      "unit": "元"
-    },
-    {
-      "id": "kpi-1793988611302",
-      "label": "本月支出",
-      "value": "15,280",
-      "unit": "元"
-    },
-    {
-      "id": "kpi-1793988611617",
-      "label": "本月结余",
-      "value": "6,520",
-      "unit": "元",
-      "accent": true
-    },
-    {
-      "id": "kpi-2",
-      "label": "结余率",
-      "value": 29.9,
-      "unit": "%",
-      "accent": true
-    }
-  ],
   "meta": {
-    "displayName": "十月·家庭收支账",
-    "description": "顶部统计卡 + 分组明细，适合收支/行程等看板类信息图",
+    "displayName": "十月 · 家庭收支账",
+    "description": "横线纸面 · strip 统计条 · 收支双色条形（一比一复刻设计稿）",
     "templateType": "stat",
-    "origin": "user",
-    "sourceTemplateId": "user-1793988648887-vzqwr",
-    "savedAt": "2026-11-07T01:55:58.294Z"
+    "origin": "preset"
   },
   "slots": {
-    "stat.title": {
-      "text": "十月 · 家庭收支账"
-    },
-    "stat.h.item": {
+    "u1": {
       "text": "项目 / ITEM"
     },
-    "stat.item.1": {
-      "text": "工资"
-    },
-    "stat.item.2": {
-      "text": "副业"
-    },
-    "stat.item.3": {
-      "text": "理财与其他"
-    },
-    "stat.item.4": {
-      "text": "房贷"
-    },
-    "stat.item.5": {
-      "text": "餐饮"
-    },
-    "stat.item.6": {
-      "text": "收入合计"
-    },
-    "u1": {
-      "text": "占比"
-    },
     "u2": {
-      "text": "85.3%",
-      "bar": {
-        "ratio": 0.853
-      }
-    },
-    "u3": {
-      "text": "11.0%",
-      "bar": {
-        "ratio": 0.11
-      }
-    },
-    "u4": {
-      "text": "3.7%",
-      "bar": {
-        "ratio": 0.037000000000000005
-      }
-    },
-    "u5": {
-      "text": "40.6%",
-      "bar": {
-        "ratio": 0.406
-      }
-    },
-    "u6": {
-      "text": "20.6%",
-      "bar": {
-        "ratio": 0.20600000000000002
-      }
-    },
-    "u7": {
-      "text": "—"
-    },
-    "u8": {
       "text": "金额（元）"
     },
+    "u3": {
+      "text": "结构"
+    },
+    "u4": {
+      "text": "占比"
+    },
+    "u5": "",
+    "u6": "",
+    "u7": {
+      "text": "工资"
+    },
+    "u8": {
+      "num": 18600,
+      "align": "right"
+    },
     "u9": {
-      "text": "18,600"
+      "text": "",
+      "bar": {
+        "ratio": 0.853,
+        "color": "#3e7d5e"
+      }
     },
     "u10": {
-      "text": "2,400"
+      "text": "85.3%",
+      "align": "right"
     },
     "u11": {
-      "text": "800"
+      "text": "副业"
     },
     "u12": {
-      "text": "6,200"
+      "num": 2400,
+      "align": "right"
     },
     "u13": {
-      "text": "3,150"
+      "text": "",
+      "bar": {
+        "ratio": 0.11,
+        "color": "#3e7d5e"
+      }
     },
     "u14": {
-      "text": "21,800",
-      "emphasize": [
-        "bold"
-      ]
+      "text": "11.0%",
+      "align": "right"
     },
     "u15": {
-      "text": "支出合计"
+      "text": "理财与其他"
     },
     "u16": {
-      "text": "15,280",
+      "num": 800,
+      "align": "right"
+    },
+    "u17": {
+      "text": "",
+      "bar": {
+        "ratio": 0.037,
+        "color": "#3e7d5e"
+      }
+    },
+    "u18": {
+      "text": "3.7%",
+      "align": "right"
+    },
+    "u19": {
+      "text": "收入合计",
       "emphasize": [
         "bold"
       ]
     },
-    "u17": {
-      "text": "—"
-    },
-    "u18": {
-      "text": "保险及其他"
-    },
-    "u19": {
-      "text": "2,550"
-    },
     "u20": {
-      "text": "16.7%",
-      "bar": {
-        "ratio": 0.16699999999999998
-      }
+      "num": 21800,
+      "align": "right",
+      "emphasize": [
+        "bold"
+      ]
     },
-    "u21": {
-      "text": "交通与通勤"
-    },
+    "u21": "",
     "u22": {
-      "text": "980"
+      "text": "100%",
+      "align": "right",
+      "emphasize": [
+        "bold"
+      ]
     },
     "u23": {
-      "text": "6.4%",
-      "bar": {
-        "ratio": 0.064
-      }
+      "text": "房贷"
     },
     "u24": {
-      "text": "教育"
+      "num": 6200,
+      "align": "right"
     },
     "u25": {
-      "text": "2,400"
+      "text": "",
+      "bar": {
+        "ratio": 0.406,
+        "color": "#b4532a"
+      }
     },
     "u26": {
-      "text": "15.7%",
+      "text": "40.6%",
+      "align": "right"
+    },
+    "u27": {
+      "text": "餐饮"
+    },
+    "u28": {
+      "num": 3150,
+      "align": "right"
+    },
+    "u29": {
+      "text": "",
       "bar": {
-        "ratio": 0.157
+        "ratio": 0.206,
+        "color": "#b4532a"
       }
+    },
+    "u30": {
+      "text": "20.6%",
+      "align": "right"
+    },
+    "u31": {
+      "text": "教育"
+    },
+    "u32": {
+      "num": 2400,
+      "align": "right"
+    },
+    "u33": {
+      "text": "",
+      "bar": {
+        "ratio": 0.157,
+        "color": "#b4532a"
+      }
+    },
+    "u34": {
+      "text": "15.7%",
+      "align": "right"
+    },
+    "u35": {
+      "text": "交通与通勤"
+    },
+    "u36": {
+      "num": 980,
+      "align": "right"
+    },
+    "u37": {
+      "text": "",
+      "bar": {
+        "ratio": 0.064,
+        "color": "#b4532a"
+      }
+    },
+    "u38": {
+      "text": "6.4%",
+      "align": "right"
+    },
+    "u39": {
+      "text": "保险及其他"
+    },
+    "u40": {
+      "num": 2550,
+      "align": "right"
+    },
+    "u41": {
+      "text": "",
+      "bar": {
+        "ratio": 0.167,
+        "color": "#b4532a"
+      }
+    },
+    "u42": {
+      "text": "16.7%",
+      "align": "right"
+    },
+    "u43": {
+      "text": "支出合计",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u44": {
+      "num": 15280,
+      "align": "right",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u45": "",
+    "u46": {
+      "text": "100%",
+      "align": "right",
+      "emphasize": [
+        "bold"
+      ]
     }
   },
   "blocks": [
     {
-      "id": "blk-1793988614767",
-      "type": "groupHeader",
-      "slotId": "gap-s1",
+      "id": "blk-inc",
+      "type": "banner",
+      "slotId": "u5",
       "props": {
-        "label": "",
         "text": "收入 · INCOME",
-        "styleTier": 1
+        "color": "#f2ecdb",
+        "barColor": "#3e7d5e"
       }
     },
     {
-      "id": "blk-1793988616500",
-      "type": "emphFooter",
-      "slotId": "footer-1",
+      "id": "blk-exp",
+      "type": "banner",
+      "slotId": "u6",
       "props": {
-        "label": "",
-        "text": "小目标：月结余 6,000 元以上✓已达成，超 520 元。\n示例样张·收支数据均为排版示例，不涉及真实家庭。",
-        "styleTier": 1
-      }
-    },
-    {
-      "id": "blk-1793988618200",
-      "type": "groupHeader",
-      "slotId": "gap-s2",
-      "props": {
-        "label": "",
         "text": "支出 · SPENDING",
-        "styleTier": 1
+        "color": "#f2ecdb",
+        "barColor": "#b4532a"
       }
     }
   ],
   "layout": {
     "rowCount": 11,
-    "colCount": 3,
-    "frozenColCount": 1,
+    "colCount": 4,
     "headerLevels": 1,
-    "captionSlot": "stat.title",
     "merges": [],
     "structuralMerges": [],
-    "allowedMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          10,
+          3
+        ]
+      }
+    ],
     "blockSlots": [
       {
-        "id": "gap-s1",
+        "id": "u5",
         "accept": [
-          "sectionBar",
-          "groupHeader"
+          "banner"
         ],
-        "region": "between-rows",
-        "mutexGroup": "s1",
         "rowHint": "after-0"
       },
       {
-        "id": "gap-s2",
+        "id": "u6",
         "accept": [
-          "sectionBar",
-          "groupHeader"
+          "banner"
         ],
-        "region": "between-rows",
-        "mutexGroup": "s2",
-        "rowHint": "after-3"
-      },
-      {
-        "id": "footer-1",
-        "accept": [
-          "emphFooter"
-        ],
-        "region": "footer",
-        "rowHint": "after-10"
-      },
-      {
-        "id": "left-r1",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-1"
-      },
-      {
-        "id": "left-r2",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-2"
-      },
-      {
-        "id": "left-r3",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-3"
-      },
-      {
-        "id": "left-r4",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-4"
-      },
-      {
-        "id": "left-r5",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-5"
-      },
-      {
-        "id": "left-r6",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-10"
+        "rowHint": "after-4"
       }
     ],
     "slotGrid": [
       [
-        "stat.h.item",
-        "u8",
-        "u1"
-      ],
-      [
-        "stat.item.1",
-        "u9",
-        "u2"
-      ],
-      [
-        "stat.item.2",
-        "u10",
-        "u3"
-      ],
-      [
-        "stat.item.3",
-        "u11",
+        "u1",
+        "u2",
+        "u3",
         "u4"
       ],
       [
-        "stat.item.4",
+        "u7",
+        "u8",
+        "u9",
+        "u10"
+      ],
+      [
+        "u11",
         "u12",
-        "u5"
-      ],
-      [
-        "stat.item.5",
         "u13",
-        "u6"
+        "u14"
       ],
       [
+        "u15",
+        "u16",
+        "u17",
+        "u18"
+      ],
+      [
+        "u19",
+        "u20",
+        "u21",
+        "u22"
+      ],
+      [
+        "u23",
         "u24",
         "u25",
         "u26"
       ],
       [
-        "u21",
-        "u22",
-        "u23"
+        "u27",
+        "u28",
+        "u29",
+        "u30"
       ],
       [
-        "u18",
-        "u19",
-        "u20"
+        "u31",
+        "u32",
+        "u33",
+        "u34"
       ],
       [
-        "u15",
-        "u16",
-        "u17"
+        "u35",
+        "u36",
+        "u37",
+        "u38"
       ],
       [
-        "stat.item.6",
-        "u14",
-        "u7"
+        "u39",
+        "u40",
+        "u41",
+        "u42"
+      ],
+      [
+        "u43",
+        "u44",
+        "u45",
+        "u46"
       ]
     ],
-    "readonlyCells": []
+    "style": {
+      "colWidths": [
+        300,
+        150,
+        330,
+        110
+      ],
+      "rowHeightTier": 2,
+      "fontSizeTier": 2,
+      "paddingTier": 3,
+      "borderScheme": "rows",
+      "plainHeader": true
+    }
+  },
+  "slotDefs": {
+    "u8": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u12": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u16": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u20": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u24": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u28": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u32": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u36": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u40": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u44": {
+      "kind": "number",
+      "format": "number"
+    }
   },
   "themeTokens": {
-    "primary": "#0b211c",
-    "headerText": "#ffffff",
-    "zebra": "#f1e9d8",
+    "primary": "#2e4a3e",
+    "headerText": "#f5f1e2",
+    "zebra": "#f1ead8",
     "emphasis": "#b4532a",
-    "border": "#d8cdb8",
-    "background": "#f6f0e3"
+    "border": "#d8cdb4",
+    "background": "#faf6ea"
+  },
+  "kpiStyle": "strip",
+  "kpiCards": [
+    {
+      "id": "kpi-inc",
+      "label": "INCOME · 本月收入",
+      "value": "21,800",
+      "unit": "元"
+    },
+    {
+      "id": "kpi-exp",
+      "label": "SPENDING · 本月支出",
+      "value": "15,280",
+      "unit": "元"
+    },
+    {
+      "id": "kpi-bal",
+      "label": "BALANCE · 本月结余 · 结余率 29.9%",
+      "value": "6,520",
+      "unit": "元",
+      "accent": true
+    }
+  ],
+  "poster": {
+    "bg": "ruled",
+    "bgColor": "#f7f2e5",
+    "bgAccent": "#e7ddc3",
+    "kicker": "MONTHLY LEDGER · 2026.10",
+    "title": "十月 · 家庭收支账",
+    "subtitle": "两人一娃 · 示例家庭 · 结余率先看，再看结构",
+    "metaLines": [
+      "记账第 30 个月 · 第 10 期"
+    ],
+    "footerLines": [
+      "小目标：每月结余 6,000 元以上 → 已达成，超 520 元。",
+      "示例样张 · 收入项与金额均为排版示例，不涉及真实家庭数据。"
+    ],
+    "pageBadge": "04 / 04",
+    "accent": "#3e7d5e",
+    "textColor": "#2e4a3e",
+    "titleFont": "sans",
+    "padding": 44
   }
 }

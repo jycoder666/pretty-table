@@ -1,0 +1,265 @@
+import type { PosterSpec, TemplateInstance } from '../types'
+import type { Palette } from './palettes'
+import { sanitizeHex } from './palettes'
+import { fontStackOf } from './font'
+
+/**
+ * Schema 1.3：页面海报层几何 / 内联样式 / 语义色的单点（GC-11 同口径：新增 hex 只在此）。
+ * 预览 DOM（PreviewHost）、PNG 合成（png.ts drawPoster）、HTML 导出（model.ts）三方消费；
+ * PNG 无法用 CSS，纹理几何常量（点距 / 横线间距）在此对齐，drawPoster 按同值手绘。
+ */
+
+/** 纸面四周留白：缺省 40px，读入钳制 16-80 */
+export const POSTER_PAD_DEFAULT = 40
+export const POSTER_PAD_MIN = 16
+export const POSTER_PAD_MAX = 80
+
+/** 文字规格（px，scale=1；PNG 按 scale 乘）——预览 / HTML / PNG 三方同源 */
+export const POSTER_KICKER_FONT = 11
+export const POSTER_TITLE_FONT = 34
+export const POSTER_SUBTITLE_FONT = 14
+export const POSTER_META_FONT = 11
+export const POSTER_FOOTER_FONT = 11
+
+/** 纹理几何常量（CSS 与 canvas 手绘同值） */
+export const POSTER_DOTS_SIZE = 22
+export const POSTER_DOTS_R = 1
+export const POSTER_RULED_GAP = 34
+export const POSTER_RULED_W = 1
+
+/** 标题块与表格 / 注脚与表格的间距 */
+export const POSTER_HEADER_GAP = 20
+export const POSTER_FOOTER_GAP = 16
+
+export function posterPadding(poster: PosterSpec | undefined): number {
+  const p = poster?.padding
+  if (typeof p !== 'number' || !Number.isFinite(p)) return POSTER_PAD_DEFAULT
+  return Math.min(POSTER_PAD_MAX, Math.max(POSTER_PAD_MIN, Math.round(p)))
+}
+
+/** 海报语义色派生（全部从 palette 落地，数据 hex 仅覆盖） */
+export function posterColors(
+  poster: PosterSpec | undefined,
+  palette: Palette,
+): {
+  bg: string
+  texture: string
+  accent: string
+  title: string
+  sub: string
+  meta: string
+  footer: string
+} {
+  const bg = (poster?.bgColor && sanitizeHex(poster.bgColor)) || palette.paper
+  const accent = (poster?.accent && sanitizeHex(poster.accent)) || palette.emphasis
+  const texture = (poster?.bgAccent && sanitizeHex(poster.bgAccent)) || palette.border
+  return {
+    bg,
+    texture,
+    accent,
+    title: (poster?.textColor && sanitizeHex(poster.textColor)) || palette.primary,
+    sub: palette.muted,
+    meta: palette.muted,
+    footer: palette.muted,
+  }
+}
+
+/** 海报字体栈（标题可衬线） */
+export function posterTitleFont(poster: PosterSpec | undefined): string {
+  return fontStackOf(poster?.titleFont)
+}
+
+/** 海报有无内容（决定 PNG / HTML 是否多出标题区与注脚区高度） */
+export function hasPoster(inst: TemplateInstance): boolean {
+  const p = inst.poster
+  if (!p || typeof p !== 'object') return false
+  return Boolean(
+    p.kicker || p.title || p.subtitle || p.metaLines?.length || p.footerLines?.length || p.pageBadge,
+  )
+}
+
+/**
+ * 标题区高度（px @scale1）：左块（眉标/标题/副标题）与右块（meta 行）取大者 + 下间距；
+ * 无任何标题内容 → 0。内容宽度只影响折行（meta/标题按单行估算，几何恒定，三方一致）。
+ */
+export function posterHeaderHeight(poster: PosterSpec | undefined): number {
+  if (!poster) return 0
+  const left =
+    (poster.kicker ? POSTER_KICKER_FONT * 1.5 + 6 : 0) +
+    (poster.title ? POSTER_TITLE_FONT * 1.3 + 8 : 0) +
+    (poster.subtitle ? POSTER_SUBTITLE_FONT * 1.6 + 4 : 0)
+  const right = poster.metaLines?.length
+    ? poster.metaLines.length * POSTER_META_FONT * 1.7 + 4
+    : 0
+  if (left <= 0 && right <= 0) return 0
+  return Math.max(left, right) + POSTER_HEADER_GAP
+}
+
+/** 注脚区高度（行数 × 行高 + 上间距）；无内容 → 0 */
+export function posterFooterHeight(poster: PosterSpec | undefined): number {
+  const n = poster?.footerLines?.length ?? 0
+  const badge = poster?.pageBadge ? 1 : 0
+  const lines = Math.max(n, badge)
+  if (lines === 0) return 0
+  return lines * POSTER_FOOTER_FONT * 1.7 + POSTER_FOOTER_GAP
+}
+
+/** 纹理 CSS（inline background-image；solid / 缺省 → '' 零占位） */
+export function posterTextureCss(poster: PosterSpec | undefined, palette: Palette): string {
+  const mode = poster?.bg ?? 'solid'
+  if (mode === 'solid') return ''
+  const c = posterColors(poster, palette)
+  if (mode === 'dots') {
+    return `radial-gradient(circle, ${c.texture} ${POSTER_DOTS_R}px, transparent ${POSTER_DOTS_R}px)`
+  }
+  if (mode === 'ruled') {
+    return `repeating-linear-gradient(to bottom, transparent 0 ${POSTER_RULED_GAP - POSTER_RULED_W}px, ${c.texture} ${POSTER_RULED_GAP - POSTER_RULED_W}px ${POSTER_RULED_GAP}px)`
+  }
+  // gradient：基色 → bgAccent 第二色
+  return `linear-gradient(160deg, ${c.bg} 0%, ${c.texture} 100%)`
+}
+
+/** 纹理 CSS 的 background-size / repeat 追加（dots 需要平铺尺寸；其余铺满） */
+export function posterTextureCssExtra(poster: PosterSpec | undefined): string {
+  const mode = poster?.bg ?? 'solid'
+  if (mode === 'dots') {
+    return `background-size:${POSTER_DOTS_SIZE}px ${POSTER_DOTS_SIZE}px;background-repeat:repeat`
+  }
+  if (mode === 'solid') return ''
+  return 'background-size:100% 100%;background-repeat:no-repeat'
+}
+
+/** 海报层容器内联样式（预览 / HTML 同源：bg + 纹理 + 留白） */
+export function posterWrapStyle(poster: PosterSpec | undefined, palette: Palette): string {
+  const c = posterColors(poster, palette)
+  const pad = posterPadding(poster)
+  const parts = [
+    `background-color:${c.bg}`,
+    `padding:${pad}px`,
+    `font-family:${fontStackOf(poster?.titleFont)}`,
+  ]
+  const tex = posterTextureCss(poster, palette)
+  if (tex) {
+    parts.push(`background-image:${tex}`)
+    const extra = posterTextureCssExtra(poster)
+    if (extra) parts.push(...(extra.split(';') as string[]))
+  }
+  return parts.join(';')
+}
+
+/** 标题区各元素内联样式（预览 / HTML 同源；PNG 用同名字号常量手绘） */
+export function posterHeaderStyles(
+  poster: PosterSpec | undefined,
+  palette: Palette,
+): { wrap: string; kicker: string; title: string; subtitle: string; meta: string } {
+  const c = posterColors(poster, palette)
+  return {
+    wrap: [
+      'display:flex',
+      'justify-content:space-between',
+      'align-items:flex-start',
+      `margin:0 0 ${POSTER_HEADER_GAP}px`,
+    ].join(';'),
+    kicker: [
+      `font-size:${POSTER_KICKER_FONT}px`,
+      `color:${c.accent}`,
+      'letter-spacing:0.32em',
+      'margin:0 0 6px',
+    ].join(';'),
+    title: [
+      `font-size:${POSTER_TITLE_FONT}px`,
+      'font-weight:700',
+      'line-height:1.3',
+      `color:${c.title}`,
+      `font-family:${posterTitleFont(poster)}`,
+      'margin:0',
+    ].join(';'),
+    subtitle: [
+      `font-size:${POSTER_SUBTITLE_FONT}px`,
+      `color:${c.sub}`,
+      'margin:4px 0 0',
+      'line-height:1.6',
+    ].join(';'),
+    meta: [
+      `font-size:${POSTER_META_FONT}px`,
+      `color:${c.meta}`,
+      'text-align:right',
+      'line-height:1.7',
+      'margin:0',
+      'white-space:pre-line',
+    ].join(';'),
+  }
+}
+
+/** 注脚区各元素内联样式 */
+export function posterFooterStyles(
+  poster: PosterSpec | undefined,
+  palette: Palette,
+): { wrap: string; line: string; badge: string } {
+  const c = posterColors(poster, palette)
+  return {
+    wrap: [
+      'display:flex',
+      'justify-content:space-between',
+      'align-items:flex-end',
+      `margin:${POSTER_FOOTER_GAP}px 0 0`,
+    ].join(';'),
+    line: [
+      `font-size:${POSTER_FOOTER_FONT}px`,
+      `color:${c.footer}`,
+      'line-height:1.7',
+      'margin:0',
+      'white-space:pre-line',
+    ].join(';'),
+    badge: [
+      `font-size:${POSTER_FOOTER_FONT}px`,
+      `color:${c.accent}`,
+      'letter-spacing:0.2em',
+      'white-space:nowrap',
+    ].join(';'),
+  }
+}
+
+/**
+ * poster 清洗（validate / migrate 共用）：非对象 → null（删字段）；
+ * 枚举越界落缺省；hex 非法删键；字符串截断到 200 字符；metaLines/footerLines 逐行清洗、
+ * 上限 6 行；padding 钳制。宽容不拒（与 sanitizeKpiCards 同口径）。
+ */
+export function sanitizePoster(raw: unknown): PosterSpec | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const o = raw as Record<string, unknown>
+  const out: PosterSpec = {}
+  const str = (v: unknown): string | undefined =>
+    typeof v === 'string' ? v.slice(0, 200) : undefined
+  const hex = (v: unknown): string | undefined =>
+    typeof v === 'string' ? (sanitizeHex(v) ?? undefined) : undefined
+  // solid 为缺省形态（与无 poster 同视觉），不计为有效内容；仅非 solid 纹理入档
+  if (o.bg === 'dots' || o.bg === 'ruled' || o.bg === 'gradient') out.bg = o.bg
+  out.bgColor = hex(o.bgColor)
+  out.bgAccent = hex(o.bgAccent)
+  out.accent = hex(o.accent)
+  out.textColor = hex(o.textColor)
+  out.kicker = str(o.kicker)
+  out.title = str(o.title)
+  out.subtitle = str(o.subtitle)
+  out.pageBadge = str(o.pageBadge)
+  out.titleFont = o.titleFont === 'serif' ? 'serif' : o.titleFont === 'sans' ? 'sans' : undefined
+  const lines = (v: unknown): string[] | undefined => {
+    if (!Array.isArray(v)) return undefined
+    const arr = v
+      .map((x) => (typeof x === 'string' ? x.slice(0, 200) : ''))
+      .filter((x) => x !== '')
+      .slice(0, 6)
+    return arr.length > 0 ? arr : undefined
+  }
+  out.metaLines = lines(o.metaLines)
+  out.footerLines = lines(o.footerLines)
+  if (typeof o.padding === 'number' && Number.isFinite(o.padding)) {
+    out.padding = Math.min(POSTER_PAD_MAX, Math.max(POSTER_PAD_MIN, Math.round(o.padding)))
+  }
+  // 全空 → null（删字段，零占位）
+  const empty = !out.bg && !out.bgColor && !out.bgAccent && !out.accent && !out.textColor &&
+    !out.kicker && !out.title && !out.subtitle && !out.pageBadge && !out.titleFont &&
+    !out.metaLines && !out.footerLines && out.padding === undefined
+  return empty ? null : out
+}

@@ -1,207 +1,343 @@
 {
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.3",
   "templateId": "user-1794022607224-bxlgd",
   "themeId": "T-C",
-  "zebraOn": true,
+  "zebraOn": false,
   "highlight": {
     "recommendCol": null
   },
   "meta": {
     "displayName": "三年级 2 班 · 课程表",
-    "description": "从零开始的 10 行 6 列空表，行列与表头层级都可以再调",
+    "description": "点纹纸面 · 药丸表头 · 逐科 pastel 彩块（一比一复刻设计稿）",
     "templateType": "blank",
     "origin": "preset"
   },
   "slots": {
     "u1": {
-      "text": "三年级 2 班 · 课程表"
+      "text": "周一",
+      "sub": "MONDAY"
     },
-    "u2": "",
-    "u3": "",
-    "u4": "",
-    "u5": "",
-    "u6": "",
+    "u2": {
+      "text": "周二",
+      "sub": "TUESDAY"
+    },
+    "u3": {
+      "text": "周三",
+      "sub": "WEDNESDAY"
+    },
+    "u4": {
+      "text": "周四",
+      "sub": "THURSDAY"
+    },
+    "u5": {
+      "text": "周五",
+      "sub": "FRIDAY"
+    },
+    "u6": {
+      "text": "第 1 节",
+      "sub": "08:20 – 09:00"
+    },
     "u7": {
-      "text": "节次 / 星期"
+      "text": "语文",
+      "sub": "周老师 · 302",
+      "bg": "#f8ddc4",
+      "color": "#b4532a",
+      "align": "center"
     },
     "u8": {
-      "text": "周一"
+      "text": "数学",
+      "sub": "李老师 · 302",
+      "bg": "#d9e8d4",
+      "color": "#3e6b4f",
+      "align": "center"
     },
     "u9": {
-      "text": "周二"
+      "text": "英语",
+      "sub": "陈老师 · 302",
+      "bg": "#dbe7f6",
+      "color": "#4a6fa5",
+      "align": "center"
     },
     "u10": {
-      "text": "周三"
+      "text": "语文",
+      "sub": "周老师 · 302",
+      "bg": "#f8ddc4",
+      "color": "#b4532a",
+      "align": "center"
     },
     "u11": {
-      "text": "周四"
+      "text": "数学",
+      "sub": "李老师 · 302",
+      "bg": "#d9e8d4",
+      "color": "#3e6b4f",
+      "align": "center"
     },
     "u12": {
-      "text": "周五"
+      "text": "第 2 节",
+      "sub": "09:10 – 09:50"
     },
     "u13": {
-      "text": "第 1 节\r\n08:20–09:00"
+      "text": "数学",
+      "sub": "李老师 · 302",
+      "bg": "#d9e8d4",
+      "color": "#3e6b4f",
+      "align": "center"
     },
     "u14": {
-      "text": "语文\r\n心老师 · 302"
+      "text": "语文",
+      "sub": "周老师 · 302",
+      "bg": "#f8ddc4",
+      "color": "#b4532a",
+      "align": "center"
     },
     "u15": {
-      "text": "数学\r\n李老师 · 302"
+      "text": "科学",
+      "sub": "刘老师 · 实验室",
+      "bg": "#e4def5",
+      "color": "#6b5b9e",
+      "align": "center"
     },
     "u16": {
-      "text": "英语\r\n陈老师 · 302"
+      "text": "体育",
+      "sub": "赵老师 · 操场",
+      "bg": "#f6d8de",
+      "color": "#b04a62",
+      "align": "center"
     },
     "u17": {
-      "text": "语文\r\n心老师 · 302"
+      "text": "英语",
+      "sub": "陈老师 · 302",
+      "bg": "#dbe7f6",
+      "color": "#4a6fa5",
+      "align": "center"
     },
     "u18": {
-      "text": "数学\r\n李老师 · 302"
+      "text": "第 3 节",
+      "sub": "10:20 – 11:00"
     },
     "u19": {
-      "text": "第 2 节\r\n09:10–09:50"
+      "text": "英语",
+      "sub": "陈老师 · 302",
+      "bg": "#dbe7f6",
+      "color": "#4a6fa5",
+      "align": "center"
     },
     "u20": {
-      "text": "数学\r\n李老师 · 302"
+      "text": "科学",
+      "sub": "刘老师 · 实验室",
+      "bg": "#e4def5",
+      "color": "#6b5b9e",
+      "align": "center"
     },
     "u21": {
-      "text": "语文\r\n心老师 · 302"
+      "text": "语文",
+      "sub": "周老师 · 302",
+      "bg": "#f8ddc4",
+      "color": "#b4532a",
+      "align": "center"
     },
     "u22": {
-      "text": "科学\r\n刘老师 · 实验室"
+      "text": "音乐",
+      "sub": "孙老师 · 音乐室",
+      "bg": "#f7ecd2",
+      "color": "#a8762a",
+      "align": "center"
     },
     "u23": {
-      "text": "体育\r\n赵老师 · 操场"
+      "text": "语文",
+      "sub": "周老师 · 302",
+      "bg": "#f8ddc4",
+      "color": "#b4532a",
+      "align": "center"
     },
     "u24": {
-      "text": "英语\r\n陈老师 · 302"
+      "text": "第 4 节",
+      "sub": "11:10 – 11:50"
     },
     "u25": {
-      "text": "第 3 节\r\n10:20–11:00"
+      "text": "美术",
+      "sub": "吴老师 · 美术室",
+      "bg": "#d8ece9",
+      "color": "#3e7d72",
+      "align": "center"
     },
     "u26": {
-      "text": "英语\r\n陈老师 · 302"
+      "text": "音乐",
+      "sub": "孙老师 · 音乐室",
+      "bg": "#f7ecd2",
+      "color": "#a8762a",
+      "align": "center"
     },
     "u27": {
-      "text": "科学\r\n刘老师 · 实验室"
+      "text": "体育",
+      "sub": "赵老师 · 操场",
+      "bg": "#f6d8de",
+      "color": "#b04a62",
+      "align": "center"
     },
     "u28": {
-      "text": "语文\r\n心老师 · 302"
+      "text": "信息技术",
+      "sub": "郑老师 · 机房",
+      "bg": "#dde4ee",
+      "color": "#5a6b85",
+      "align": "center"
     },
     "u29": {
-      "text": "音乐\r\n孙老师 · 音乐室"
+      "text": "数学",
+      "sub": "李老师 · 302",
+      "bg": "#d9e8d4",
+      "color": "#3e6b4f",
+      "align": "center"
     },
     "u30": {
-      "text": "语文\r\n心老师 · 302"
+      "text": "第 5 节",
+      "sub": "14:00 – 14:40"
     },
     "u31": {
-      "text": "第 4 节\r\n11:10–11:50"
+      "text": "音乐",
+      "sub": "孙老师 · 音乐室",
+      "bg": "#f7ecd2",
+      "color": "#a8762a",
+      "align": "center"
     },
     "u32": {
-      "text": "美术\r\n吴老师 · 美术室"
+      "text": "科学",
+      "sub": "刘老师 · 实验室",
+      "bg": "#e4def5",
+      "color": "#6b5b9e",
+      "align": "center"
     },
     "u33": {
-      "text": "音乐\r\n孙老师 · 音乐室"
+      "text": "数学",
+      "sub": "李老师 · 302",
+      "bg": "#d9e8d4",
+      "color": "#3e6b4f",
+      "align": "center"
     },
     "u34": {
-      "text": "体育\r\n赵老师 · 操场"
+      "text": "体育",
+      "sub": "赵老师 · 操场",
+      "bg": "#f6d8de",
+      "color": "#b04a62",
+      "align": "center"
     },
     "u35": {
-      "text": "信息技术\r\n郑老师 · 机房"
+      "text": "体育",
+      "sub": "赵老师 · 操场",
+      "bg": "#f6d8de",
+      "color": "#b04a62",
+      "align": "center"
     },
     "u36": {
-      "text": "数学\r\n李老师 · 302"
+      "text": "第 6 节",
+      "sub": "14:50 – 15:30"
     },
     "u37": {
-      "text": "午休 11:50–14:00 · 午饭午睡"
+      "text": "英语",
+      "sub": "陈老师 · 302",
+      "bg": "#dbe7f6",
+      "color": "#4a6fa5",
+      "align": "center"
     },
-    "u38": "",
-    "u39": "",
-    "u40": "",
-    "u41": "",
-    "u42": "",
+    "u38": {
+      "text": "美术",
+      "sub": "吴老师 · 美术室",
+      "bg": "#d8ece9",
+      "color": "#3e7d72",
+      "align": "center"
+    },
+    "u39": {
+      "text": "音乐",
+      "sub": "孙老师 · 音乐室",
+      "bg": "#f7ecd2",
+      "color": "#a8762a",
+      "align": "center"
+    },
+    "u40": {
+      "text": "自习",
+      "sub": "周老师 · 302",
+      "bg": "#e9e7e0",
+      "color": "#6b6b60",
+      "align": "center"
+    },
+    "u41": {
+      "text": "班会",
+      "sub": "班主任 · 302",
+      "bg": "#efe4d4",
+      "color": "#7a5c38",
+      "align": "center"
+    },
+    "u42": {
+      "text": "第 7 节",
+      "sub": "15:40 – 16:20"
+    },
     "u43": {
-      "text": "第 5 节\r\n14:00–14:40"
+      "text": "班会",
+      "sub": "班主任 · 302",
+      "bg": "#efe4d4",
+      "color": "#7a5c38",
+      "align": "center"
     },
     "u44": {
-      "text": "音乐\r\n孙老师 · 音乐室"
+      "text": "自习",
+      "sub": "李老师 · 302",
+      "bg": "#e9e7e0",
+      "color": "#6b6b60",
+      "align": "center"
     },
     "u45": {
-      "text": "科学\r\n刘老师 · 实验室"
+      "text": "美术",
+      "sub": "吴老师 · 美术室",
+      "bg": "#d8ece9",
+      "color": "#3e7d72",
+      "align": "center"
     },
     "u46": {
-      "text": "数学\r\n李老师 · 302"
+      "text": "自习",
+      "sub": "陈老师 · 302",
+      "bg": "#e9e7e0",
+      "color": "#6b6b60",
+      "align": "center"
     },
     "u47": {
-      "text": "体育\r\n赵老师 · 操场"
+      "text": "科学",
+      "sub": "刘老师 · 实验室",
+      "bg": "#e4def5",
+      "color": "#6b5b9e",
+      "align": "center"
     },
-    "u48": {
-      "text": "体育\r\n赵老师 · 操场"
-    },
-    "u49": {
-      "text": "第 6 节\r\n14:50–15:30"
-    },
-    "u50": {
-      "text": "英语\r\n陈老师 · 302"
-    },
-    "u51": {
-      "text": "美术\r\n吴老师 · 美术室"
-    },
-    "u52": {
-      "text": "音乐\r\n孙老师 · 音乐室"
-    },
-    "u53": {
-      "text": "自习\r\n心老师 · 302"
-    },
-    "u54": {
-      "text": "班会\r\n班主任 · 302"
-    },
-    "u55": {
-      "text": "第 7 节\r\n15:40–16:20"
-    },
-    "u56": {
-      "text": "班会\r\n班主任 · 302"
-    },
-    "u57": {
-      "text": "自习\r\n李老师 · 302"
-    },
-    "u58": {
-      "text": "美术\r\n吴老师 · 美术室"
-    },
-    "u59": {
-      "text": "自习\r\n陈老师 · 302"
-    },
-    "u60": {
-      "text": "科学\r\n刘老师 · 实验室"
-    }
+    "u48": "",
+    "u49": ""
   },
   "blocks": [
     {
-      "id": "blk-1794022588559",
-      "type": "emphFooter",
-      "slotId": "footer-1",
+      "id": "blk-gap-kejian",
+      "type": "banner",
+      "slotId": "u48",
       "props": {
-        "label": "",
-        "text": "注：上午四节、下午三节；午休 11:50–14:00。如需调课请联系年级组 · 示例样张：校名、班级与教师仅作排版示意",
-        "styleTier": 1
+        "text": "课间操  09:50 – 10:20 · 操场集合",
+        "color": "#efe9d6",
+        "barColor": "#efe9d6",
+        "bannerAlign": "center"
+      }
+    },
+    {
+      "id": "blk-gap-wuxiu",
+      "type": "banner",
+      "slotId": "u49",
+      "props": {
+        "text": "午  休  11:50 – 14:00 · 午饭与午睡",
+        "color": "#efe9d6",
+        "barColor": "#efe9d6",
+        "bannerAlign": "center"
       }
     }
   ],
   "layout": {
-    "rowCount": 10,
+    "rowCount": 8,
     "colCount": 6,
-    "headerLevels": 2,
-    "merges": [
-      {
-        "start": [
-          6,
-          0
-        ],
-        "end": [
-          6,
-          5
-        ]
-      }
-    ],
+    "headerLevels": 1,
+    "merges": [],
     "structuralMerges": [],
     "allowedMerges": [
       {
@@ -210,202 +346,143 @@
           0
         ],
         "end": [
-          9,
+          7,
           5
         ]
       }
     ],
     "blockSlots": [
       {
-        "id": "footer-1",
+        "id": "u48",
         "accept": [
-          "emphFooter"
+          "banner"
         ],
-        "region": "footer",
-        "rowHint": "after-9"
+        "rowHint": "after-2"
       },
       {
-        "id": "left-r2",
+        "id": "u49",
         "accept": [
-          "leftTag"
+          "banner"
         ],
-        "region": "left-tag",
-        "rowHint": "left-2"
-      },
-      {
-        "id": "left-r3",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-3"
-      },
-      {
-        "id": "left-r4",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-4"
-      },
-      {
-        "id": "left-r5",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-5"
-      },
-      {
-        "id": "left-r6",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-6"
-      },
-      {
-        "id": "left-r7",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-7"
-      },
-      {
-        "id": "left-r8",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-8"
-      },
-      {
-        "id": "left-r9",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-9"
+        "rowHint": "after-4"
       }
+    ],
+    "readonlyCells": [
+      [
+        0,
+        0
+      ]
     ],
     "slotGrid": [
       [
+        null,
         "u1",
         "u2",
         "u3",
         "u4",
-        "u5",
-        "u6"
+        "u5"
       ],
       [
+        "u6",
         "u7",
         "u8",
         "u9",
         "u10",
-        "u11",
-        "u12"
+        "u11"
       ],
       [
+        "u12",
         "u13",
         "u14",
         "u15",
         "u16",
-        "u17",
-        "u18"
+        "u17"
       ],
       [
+        "u18",
         "u19",
         "u20",
         "u21",
         "u22",
-        "u23",
-        "u24"
+        "u23"
       ],
       [
+        "u24",
         "u25",
         "u26",
         "u27",
         "u28",
-        "u29",
-        "u30"
+        "u29"
       ],
       [
+        "u30",
         "u31",
         "u32",
         "u33",
         "u34",
-        "u35",
-        "u36"
+        "u35"
       ],
       [
+        "u36",
         "u37",
         "u38",
         "u39",
         "u40",
-        "u41",
-        "u42"
+        "u41"
       ],
       [
+        "u42",
         "u43",
         "u44",
         "u45",
         "u46",
-        "u47",
-        "u48"
-      ],
-      [
-        "u49",
-        "u50",
-        "u51",
-        "u52",
-        "u53",
-        "u54"
-      ],
-      [
-        "u55",
-        "u56",
-        "u57",
-        "u58",
-        "u59",
-        "u60"
+        "u47"
       ]
     ],
     "style": {
       "colWidths": [
-        118,
-        null,
-        null,
-        null,
-        null,
-        null
-      ]
+        126,
+        182,
+        182,
+        182,
+        182,
+        182
+      ],
+      "rowHeightTier": 3,
+      "fontSizeTier": 2,
+      "paddingTier": 3,
+      "borderScheme": "none",
+      "headerShape": "pill"
     }
   },
+  "slotDefs": {},
   "themeTokens": {
-    "primary": "#0b211c",
+    "primary": "#2e5949",
     "headerText": "#ffffff",
-    "zebra": "#f1e9d8",
-    "emphasis": "#b4532a",
-    "border": "#d8cdb8",
-    "background": "#f6f0e3"
+    "zebra": "#f1ecdc",
+    "emphasis": "#3e7d5e",
+    "border": "#ddd5c2",
+    "background": "#f7f3e6"
   },
-  "kpiCards": [
-    {
-      "id": "kpi-1794022598419",
-      "label": "学期",
-      "value": "2026 秋季"
-    },
-    {
-      "id": "kpi-1794022598858",
-      "label": "学校",
-      "value": "阳光小学"
-    },
-    {
-      "id": "kpi-1794022599284",
-      "label": "周次",
-      "value": "第 12 周"
-    }
-  ],
-  "slotDefs": {}
+  "kpiCards": [],
+  "poster": {
+    "bg": "dots",
+    "bgColor": "#f7f3e6",
+    "bgAccent": "#dcd5bf",
+    "kicker": "CLASS TIMETABLE · AUTUMN 2026",
+    "title": "三年级 2 班 · 课程表",
+    "metaLines": [
+      "阳光小学",
+      "2026 秋季学期 · 第 12 周 · 全周课表"
+    ],
+    "footerLines": [
+      "注：上午 09:50 课间操，下午 15:30 眼保健操；如需调课请联系年级组。",
+      "示例样张 · 校名、班级、任课教师与课表内容仅作排版示意。"
+    ],
+    "pageBadge": "02 / 04",
+    "accent": "#3e7d5e",
+    "textColor": "#24534a",
+    "titleFont": "sans",
+    "padding": 44
+  }
 }

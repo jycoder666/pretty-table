@@ -182,9 +182,9 @@ describe('migrateInstance · schema 1.2（自定义格式）', () => {
     expect(r.value.slots['a.1']).toBe('文本')
   })
 
-  it('读 1.3（minor > 2）宽容 warn 不拒', () => {
+  it('读 1.4（minor > 3）宽容 warn 不拒', () => {
     const json = base100()
-    json.schemaVersion = '1.3'
+    json.schemaVersion = '1.4'
     const r = migrateInstance(json, PRESETS)
     expect(r.ok).toBe(true)
     if (!r.ok) return

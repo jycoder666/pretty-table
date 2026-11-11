@@ -1,7 +1,13 @@
-import type { SlotValue, TemplateInstance } from '../types'
+import type { SlotValue, TemplateInstance, PosterSpec } from '../types'
 import { resolveTheme, readableTextColor, type Palette } from '../theme/palettes'
 import { cellInlineStyle } from '../theme/inlineStyle'
 import { FONT_STACK } from '../theme/font'
+import { DECO_STAR, DECO_STAR_EMPTY } from '../theme/decoDefaults'
+import {
+  posterWrapStyle,
+  posterHeaderStyles,
+  posterFooterStyles,
+} from '../theme/posterStyle'
 import { MARK_LABEL } from '../format/formatTokens'
 import { isImageDataUrl } from '../image/imageGuard'
 import { effectiveKpiCards, renderKpiHeroHtml } from '../kpi/kpiCards'
@@ -40,6 +46,25 @@ export interface ExportCell {
   heightPx?: number
   /** Schema 1.2 扩展：横条格式（color 已解析：自定义 hex 或主题 primary） */
   bar?: { ratio: number; color: string }
+  /** Schema 1.3：副行小字 */
+  sub?: string
+  /** Schema 1.3：星级 0-5 */
+  stars?: number
+  /** Schema 1.3：状态圆点色（已解析：自定义 hex 或主题 emphasis） */
+  dotColor?: string
+  /** Schema 1.3：时间轴节点（first/last 裁剪贯穿线） */
+  node?: { first?: boolean; last?: boolean; color: string }
+  /** Schema 1.3：点线引导（点色 = 主题 border） */
+  leader?: boolean
+  /** Schema 1.3：甘特条（color 已解析） */
+  gantt?: { from: number; to: number; color: string; milestone: boolean }
+  /** Schema 1.3：banner 区块右侧强调文本 */
+  bannerRight?: string
+  /** Schema 1.3：装饰辅助色（构建期从 palette 解析：node/leader 点线色、sub 副行色） */
+  lineColor?: string
+  subColor?: string
+  /** Schema 1.3：单位小字（同行跟在主值后） */
+  unit?: string
 }
 
 export interface ExportModel {
@@ -51,6 +76,8 @@ export interface ExportModel {
   footRows: ExportCell[][]
   frozenColCount: number
   minWidthPx: number
+  /** Schema 1.3：海报层（wrapStyle 容器内联样式 + 已渲染 header/footer HTML；缺省 = 无海报层） */
+  poster?: { wrapStyle: string; headerHtml: string; footerHtml: string }
 }
 
 function escapeHtml(s: string): string {
@@ -75,9 +102,9 @@ export function captionText(inst: TemplateInstance): string {
   return inst.meta?.displayName ?? '表格'
 }
 
-function inlineRole(cell: CellMeta): 'header' | 'body' | 'label' | 'block' {
+function inlineRole(cell: CellMeta, plainHeader: boolean): 'header' | 'headerPlain' | 'body' | 'label' | 'block' {
   if (cell.role === 'block') return 'block'
-  if (cell.role === 'header') return 'header'
+  if (cell.role === 'header') return plainHeader ? 'headerPlain' : 'header'
   if (cell.role === 'label' || cell.role === 'readonly') return 'label'
   return 'body'
 }
@@ -109,12 +136,14 @@ function cellStyle(
   ci: number,
   recommendCol: number | null,
   metrics: TypeMetrics,
+  borderScheme: 'full' | 'rows' | 'cols' | 'none',
+  plainHeader: boolean,
 ): string {
   const parts: string[] = [
     cellInlineStyle(
       palette,
       {
-        role: inlineRole(cell),
+        role: inlineRole(cell, plainHeader),
         zebraRow: zebraOn && ri % 2 === 1,
         align: cell.align,
         emphasize: cell.emphasize,
@@ -122,6 +151,10 @@ function cellStyle(
       metrics,
     ),
   ]
+  // Schema 1.3：边框方案（rows 仅横线 / cols 仅竖线 / none 无框；宽度覆写在基础 border 之后）
+  if (borderScheme === 'rows') parts.push('border-width:1px 0')
+  else if (borderScheme === 'cols') parts.push('border-width:0 1px')
+  else if (borderScheme === 'none') parts.push('border-width:0')
   // R-4 左栏标签：tag 底色（深浅 2 档），与预览 styleForCell 同源（追加在后覆盖 body 底色）
   if (cell.role === 'leftTag') {
     parts.push(`background:${cell.styleTier === 2 ? palette.zebra : palette.tag}`)
@@ -132,9 +165,67 @@ function cellStyle(
   if (recommendCol !== null && ci === recommendCol) {
     parts.push(`border:2px solid ${palette.primary}`)
   }
+  // Schema 1.3：逐格底色 / 文字色 / 字号倍率（作者意图优先级最高）
+  if (cell.bg) parts.push(`background:${cell.bg}`)
+  if (cell.color) parts.push(`color:${cell.color}`)
+  if (cell.cellScale && cell.cellScale !== 1) {
+    parts.push(`font-size:${Math.round(metrics.fontSize * cell.cellScale)}px`)
+  }
+  // Schema 1.3：描边盒（无框方案下的独立描边格）
+  if (cell.boxed) parts.push(`border:1px solid ${palette.border}`)
   // 窄屏首列 sticky（FR-26）：首列固定，其余横滚
   if (ci === 0) parts.push('position:sticky;left:0')
   return parts.join(';')
+}
+
+/** Schema 1.3：banner 区块行样式（柔色底 + 左强调竖条；主/右文本由 cellHtml flex 排布） */
+function bannerStyle(
+  cell: CellMeta,
+  palette: Palette,
+  metrics: TypeMetrics,
+): string {
+  return [
+    `font-family:${metrics.fontFamily}`,
+    `font-size:${metrics.fontSize}px`,
+    `padding:${metrics.padV}px ${metrics.padH}px`,
+    `background:${cell.blockColor ?? palette.zebra}`,
+    `border-left:4px solid ${palette.emphasis}`,
+    `color:${palette.primary}`,
+    'text-align:left',
+    'font-weight:600',
+  ].join(';')
+}
+
+/** Schema 1.3：海报标题区 HTML（posterHeaderStyles 同源） */
+function posterHeaderHtml(poster: PosterSpec, palette: Palette): string {
+  const has = poster.kicker || poster.title || poster.subtitle || poster.metaLines?.length
+  if (!has) return ''
+  const s = posterHeaderStyles(poster, palette)
+  const left = [
+    poster.kicker ? `<p style="${escapeHtml(s.kicker)}">${escapeHtml(poster.kicker)}</p>` : '',
+    poster.title ? `<h1 style="${escapeHtml(s.title)}">${escapeHtml(poster.title)}</h1>` : '',
+    poster.subtitle
+      ? `<p style="${escapeHtml(s.subtitle)}">${escapeHtml(poster.subtitle)}</p>`
+      : '',
+  ].join('')
+  const right = poster.metaLines?.length
+    ? `<div style="${escapeHtml(s.meta)}">${poster.metaLines.map(escapeHtml).join('<br>')}</div>`
+    : ''
+  return `<div style="${escapeHtml(s.wrap)}"><div>${left}</div>${right}</div>`
+}
+
+/** Schema 1.3：海报注脚区 HTML */
+function posterFooterHtml(poster: PosterSpec, palette: Palette): string {
+  const has = poster.footerLines?.length || poster.pageBadge
+  if (!has) return ''
+  const s = posterFooterStyles(poster, palette)
+  const lines = poster.footerLines?.length
+    ? `<div style="${escapeHtml(s.line)}">${poster.footerLines.map(escapeHtml).join('<br>')}</div>`
+    : '<div></div>'
+  const badge = poster.pageBadge
+    ? `<div style="${escapeHtml(s.badge)}">${escapeHtml(poster.pageBadge)}</div>`
+    : '<div></div>'
+  return `<div style="${escapeHtml(s.wrap)}">${lines}${badge}</div>`
 }
 
 /**
@@ -152,6 +243,8 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
     const headerLevels = inst.layout.headerLevels ?? 1
     const recommendCol = inst.highlight?.recommendCol ?? null
     const metrics = typeMetrics(inst.layout.style)
+    const borderScheme = inst.layout.style?.borderScheme ?? 'full'
+    const plainHeader = inst.layout.style?.plainHeader === true
     const headRows: ExportCell[][] = []
     const bodyRows: ExportCell[][] = []
     const footRows: ExportCell[][] = []
@@ -183,20 +276,23 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
         emittedBlockSlots.add(slotId)
         // 区块级底色（sectionBar / groupHeader）：追加覆盖主色；文字色按亮度自动黑白（与预览同源）
         const blockColorOverride =
-          head && head.blockType !== 'emphFooter' && head.blockColor
+          head && head.blockType !== 'emphFooter' && head.blockType !== 'banner' && head.blockColor
             ? `background:${head.blockColor};color:${readableTextColor(head.blockColor)}`
             : ''
         const cell: ExportCell = {
           text: head?.isPlaceholder ? '' : (head?.text ?? ''),
           tag: 'th',
           colSpan: colCount,
+          bannerRight: head?.bannerRight,
           style:
             head?.blockType === 'emphFooter'
               ? emphFooterStyle(palette, metrics, head?.styleTier)
-              : [
-                  cellInlineStyle(palette, { role: 'block' }, metrics),
-                  blockColorOverride,
-                ]
+              : head?.blockType === 'banner'
+                ? bannerStyle(head, palette, metrics)
+                : [
+                    cellInlineStyle(palette, { role: 'block' }, metrics),
+                    blockColorOverride,
+                  ]
                     .filter(Boolean)
                     .join(';'),
         }
@@ -229,7 +325,37 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
                 color: cell.bar.color || palette.primary,
               }
             : undefined
-        const style = cellStyle(cell, palette, effectiveZebra, ri, ci, recommendCol, metrics)
+        // Schema 1.3：格内装饰提取（色值 palette 派生，作者 hex 优先）
+        const dotColor =
+          !inHeader && cell.dot ? cell.dot.color || palette.emphasis : undefined
+        const node =
+          !inHeader && cell.node
+            ? {
+                first: cell.nodeFirst === true,
+                last: cell.nodeLast === true,
+                color: cell.color || palette.emphasis,
+              }
+            : undefined
+        const gantt =
+          !inHeader && cell.gantt
+            ? {
+                from: Math.min(1, Math.max(0, cell.gantt.from)),
+                to: Math.min(1, Math.max(0, cell.gantt.to)),
+                color: cell.gantt.color || palette.primary,
+                milestone: cell.gantt.milestone === true,
+              }
+            : undefined
+        const style = cellStyle(
+          cell,
+          palette,
+          effectiveZebra,
+          ri,
+          ci,
+          recommendCol,
+          metrics,
+          borderScheme,
+          plainHeader,
+        )
         cells.push({
           text: cell.isPlaceholder ? '' : cell.text,
           tag,
@@ -242,6 +368,15 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
           image,
           heightPx,
           bar,
+          sub: cell.sub ? cell.sub : undefined,
+          stars: !inHeader && cell.stars !== undefined ? cell.stars : undefined,
+          dotColor,
+          node,
+          gantt,
+          leader: !inHeader && cell.leader === true ? true : undefined,
+          lineColor: palette.border,
+          subColor: palette.muted,
+          unit: !inHeader && cell.unit ? cell.unit : undefined,
         })
       })
       if (inHeader) headRows.push(cells)
@@ -270,14 +405,25 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
 
     // Schema 1.2 扩展：KPI hero 区在模型构建期渲染成内联样式 HTML（与表格同 palette 派生）
     const kpiCards = effectiveKpiCards(inst)
+    // Schema 1.3：海报层 HTML（wrap / header / footer 三段，渲染期包住横滚容器）
+    const posterSpec = inst.poster
+    const poster = posterSpec
+      ? {
+          wrapStyle: posterWrapStyle(posterSpec, palette),
+          headerHtml: posterHeaderHtml(posterSpec, palette),
+          footerHtml: posterFooterHtml(posterSpec, palette),
+        }
+      : undefined
     return ok({
       caption: captionText(inst),
-      kpiHeroHtml: kpiCards.length > 0 ? renderKpiHeroHtml(kpiCards, palette) : undefined,
+      kpiHeroHtml:
+        kpiCards.length > 0 ? renderKpiHeroHtml(kpiCards, palette, inst.kpiStyle) : undefined,
       headRows,
       bodyRows,
       footRows,
       frozenColCount: inst.layout.frozenColCount ?? 0,
       minWidthPx,
+      poster,
     })
   } catch (e) {
     return fail('EXPORT_HTML_FAIL', e instanceof Error ? e.message : '导出模型构建失败')
@@ -303,13 +449,45 @@ export function renderExportHtml(model: ExportModel): string {
     const barInner = cell.bar
       ? `<div style="position:absolute;left:0;top:20%;height:60%;width:${Math.round(cell.bar.ratio * 100)}%;background:${attr(cell.bar.color)};border-radius:3px"></div>`
       : ''
-    // GC-22：src 只可能来自 isImageDataUrl 白名单校验通过的值（buildExportModel 已闸），
-    // 白名单正则保证无引号/无标签注入，data URI 本身不转义
+    // Schema 1.3：格内装饰 HTML（与 canvas 通道同一几何/语义色口径）
+    const ganttInner = cell.gantt
+      ? `<div style="position:relative;height:14px;background:transparent"><div style="position:absolute;left:0;right:0;top:50%;height:14px;transform:translateY(-50%);border-radius:7px;background:color-mix(in srgb, ${attr(cell.gantt.color)} 16%, transparent)"></div><div style="position:absolute;left:${(cell.gantt.from * 100).toFixed(1)}%;width:${((cell.gantt.to - cell.gantt.from) * 100).toFixed(1)}%;top:50%;height:14px;transform:translateY(-50%);border-radius:7px;background:${attr(cell.gantt.color)}"></div>${cell.gantt.milestone ? `<span style="position:absolute;left:${(cell.gantt.to * 100).toFixed(1)}%;top:50%;width:10px;height:10px;transform:translate(-50%,-50%) rotate(45deg);background:${attr(cell.gantt.color)}"></span>` : ''}</div>`
+      : ''
+    const nodeInner = cell.node
+      ? `<div style="position:relative;padding-left:22px"><span style="position:absolute;left:5px;${cell.node.first ? 'top:50%' : 'top:0'};${cell.node.last ? 'bottom:50%' : 'bottom:0'};border-left:1px dashed ${attr(cell.lineColor ?? '')}"></span><span style="position:absolute;left:2px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:4px;background:${attr(cell.node.color)}"></span><span>${escapeHtml(cell.text)}</span></div>`
+      : ''
+    const dotInner = cell.dotColor
+      ? `<span style="display:inline-block;width:9px;height:9px;border-radius:5px;background:${attr(cell.dotColor)};margin-right:8px;vertical-align:middle"></span><span style="vertical-align:middle">${escapeHtml(cell.text)}</span>`
+      : ''
+    const starsInner = cell.stars !== undefined
+      ? `<span style="color:${attr(DECO_STAR)}">${'★'.repeat(cell.stars)}</span><span style="color:${attr(DECO_STAR_EMPTY)}">${'☆'.repeat(Math.max(0, 5 - cell.stars))}</span>`
+      : ''
+    const leaderInner = cell.leader
+      ? `<div style="display:flex;align-items:center;gap:8px;min-width:0"><span style="white-space:nowrap">${escapeHtml(cell.text)}</span><span style="flex:1;border-bottom:1px dotted ${attr(cell.lineColor ?? '')};transform:translateY(2px)"></span></div>`
+      : ''
+    const subInner = !cell.sub
+      ? ''
+      : `<div style="font-size:11px;color:${attr(cell.subColor ?? '')};margin-top:2px;line-height:1.35">${escapeHtml(cell.sub)}</div>`
+    const bannerInner = cell.bannerRight
+      ? `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><span>${escapeHtml(cell.text)}</span><span style="font-weight:700">${escapeHtml(cell.bannerRight)}</span></div>`
+      : ''
     const inner = cell.image
       ? `<img src="${cell.image}" alt="" style="display:block;width:100%;height:100%;object-fit:cover">`
       : cell.bar
         ? `<div style="position:relative">${barInner}<span style="position:relative">${escapeHtml(cell.text)}${badge}</span></div>`
-        : `${escapeHtml(cell.text)}${badge}`
+        : cell.gantt
+          ? ganttInner
+          : cell.node
+            ? nodeInner
+            : cell.dotColor
+              ? dotInner
+              : cell.stars !== undefined
+                ? starsInner
+                : cell.leader
+                  ? leaderInner
+                  : cell.bannerRight
+                    ? bannerInner
+                    : `${escapeHtml(cell.text)}${cell.unit ? `<span style="font-size:0.72em;color:${attr(cell.subColor ?? '')}"> ${escapeHtml(cell.unit)}</span>` : ''}${badge}${subInner}`
     return `<${cell.tag} ${attrs.join(' ')}>${inner}</${cell.tag}>`
   }
   const rowHtml = (row: ExportCell[]): string => `<tr>${row.map(cellHtml).join('')}</tr>`
@@ -322,7 +500,12 @@ export function renderExportHtml(model: ExportModel): string {
   const table = `<table style="border-collapse:collapse;width:100%;max-width:100%;min-width:${model.minWidthPx}px">${caption}${thead}${tbody}${tfoot}</table>`
   // 窄屏（FR-26）：外包横滚容器 + table min-width，页面不撑破；编辑器剥掉 sticky/overflow 时优雅降级
   // Schema 1.2 扩展：KPI hero 区置于横滚容器内、表格上方（无卡片零占位）
-  return `<div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch">${model.kpiHeroHtml ?? ''}${table}</div>`
+  const scrollWrap = `<div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch">${model.kpiHeroHtml ?? ''}${table}</div>`
+  // Schema 1.3：海报层包裹（bg + 标题区 + 横滚容器 + 注脚区；无海报 = 原样输出）
+  if (model.poster) {
+    return `<div style="${attr(model.poster.wrapStyle)}">${model.poster.headerHtml}${scrollWrap}${model.poster.footerHtml}</div>`
+  }
+  return scrollWrap
 }
 
 /**

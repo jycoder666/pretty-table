@@ -1,553 +1,293 @@
 {
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.3",
   "templateId": "user-1793988536437-p0uwb",
   "themeId": "T-B",
   "zebraOn": true,
-  "slotDefs": {
-    "u1": {
-      "kind": "text"
-    },
-    "u2": {
-      "kind": "text"
-    },
-    "u4": {
-      "kind": "text"
-    },
-    "u5": {
-      "kind": "text"
-    },
-    "u7": {
-      "kind": "text"
-    },
-    "u8": {
-      "kind": "text"
-    },
-    "u9": {
-      "kind": "text"
-    },
-    "u10": {
-      "kind": "text"
-    },
-    "u11": {
-      "kind": "text"
-    },
-    "u12": {
-      "kind": "text"
-    },
-    "u14": {
-      "kind": "text"
-    },
-    "u15": {
-      "kind": "text"
-    },
-    "u17": {
-      "kind": "text"
-    },
-    "u18": {
-      "kind": "text"
-    },
-    "u19": {
-      "kind": "text"
-    },
-    "u20": {
-      "kind": "text"
-    },
-    "u21": {
-      "kind": "text"
-    },
-    "u22": {
-      "kind": "text"
-    },
-    "u23": {
-      "kind": "text"
-    },
-    "u24": {
-      "kind": "text"
-    },
-    "u25": {
-      "kind": "text"
-    },
-    "u26": {
-      "kind": "text"
-    },
-    "u27": {
-      "kind": "text"
-    },
-    "u28": {
-      "kind": "text"
-    },
-    "u29": {
-      "kind": "text"
-    },
-    "u30": {
-      "kind": "text"
-    },
-    "u31": {
-      "kind": "text"
-    },
-    "u32": {
-      "kind": "text"
-    },
-    "u33": {
-      "kind": "text"
-    },
-    "u34": {
-      "kind": "text"
-    },
-    "u35": {
-      "kind": "text"
-    }
-  },
   "highlight": {
     "recommendCol": 3
   },
   "meta": {
-    "displayName": "百万医疗险·横向测评",
-    "description": "三方案并排对比，适合参数/条款对照",
+    "displayName": "百万医疗险 · 横向测评",
+    "description": "深绿渐变页 · 衬线体 · 星标评级 · 推荐列（一比一复刻设计稿）",
     "templateType": "compare",
-    "origin": "user",
-    "sourceTemplateId": "compare-alpha-v1",
-    "savedAt": "2026-11-06T18:08:56.438Z"
+    "origin": "preset"
   },
   "slots": {
-    "band.2": {
-      "text": "康健守护"
-    },
-    "obj.name.a": {
-      "text": "性价比款"
-    },
-    "obj.name.c": {
-      "text": "大保款"
-    },
-    "row.3.label": {
-      "text": "首年保费"
-    },
-    "row.3.val.a": {
-      "text": "268"
-    },
-    "row.3.val.c": {
-      "text": "386"
-    },
-    "row.4.label": {
-      "text": "一般住院保额"
-    },
-    "row.4.val.a": {
-      "text": "200万"
-    },
-    "row.4.val.c": {
-      "text": "300万"
-    },
-    "row.6.label": {
-      "text": "重疾医疗保额"
-    },
-    "row.6.val.a": {
-      "text": "400万"
-    },
-    "row.6.val.c": {
-      "text": "600万"
-    },
-    "row.7.label": {
-      "text": "年免赔额"
-    },
-    "row.7.val.a": {
-      "text": "1万元"
-    },
-    "row.7.val.c": {
-      "text": "1万元"
-    },
-    "row.8.label": {
-      "text": "住院垫付"
-    },
-    "row.8.val.a": {
-      "text": "支持"
-    },
-    "row.8.val.c": {
-      "text": "支持"
-    },
-    "row.9.label": {
-      "text": "综合评级"
-    },
-    "row.9.val.a": {
-      "text": "★★★★☆"
-    },
-    "row.9.val.c": {
-      "text": "★★★★☆"
-    },
     "u1": {
-      "text": "明悦优选"
+      "text": "评估维度 / 产品"
     },
     "u2": {
-      "text": "服务型"
+      "text": "安心 e 生",
+      "sub": "性价比款"
+    },
+    "u3": {
+      "text": "康健守护",
+      "sub": "大保额款"
     },
     "u4": {
-      "text": "445"
+      "text": "无忧人生",
+      "sub": "长期续保"
     },
     "u5": {
-      "text": "250万"
+      "text": "明悦优选",
+      "sub": "服务型"
+    },
+    "u6": {
+      "text": "首年保费"
     },
     "u7": {
-      "text": "450万"
+      "num": 268,
+      "align": "center"
     },
     "u8": {
-      "text": "8000元"
+      "num": 386,
+      "align": "center"
     },
     "u9": {
-      "text": "不支持"
+      "num": 512,
+      "align": "center"
     },
     "u10": {
-      "text": "★★★☆☆"
+      "num": 445,
+      "align": "center"
     },
     "u11": {
-      "text": "无忧人生"
+      "text": "一般住院保额"
     },
     "u12": {
-      "text": "长期续保"
+      "num": 200,
+      "align": "center"
+    },
+    "u13": {
+      "num": 300,
+      "align": "center"
     },
     "u14": {
-      "text": "512"
+      "num": 300,
+      "align": "center"
     },
     "u15": {
-      "text": "300万"
+      "num": 250,
+      "align": "center"
+    },
+    "u16": {
+      "text": "重疾医疗保额"
     },
     "u17": {
-      "text": "500万"
+      "num": 400,
+      "align": "center"
     },
     "u18": {
-      "text": "5000元"
+      "num": 600,
+      "align": "center"
     },
     "u19": {
-      "text": "支持"
+      "num": 500,
+      "align": "center"
     },
     "u20": {
-      "text": "★★★★★"
+      "num": 450,
+      "align": "center"
     },
     "u21": {
-      "text": "保证续保期"
+      "text": "年免赔额"
     },
     "u22": {
-      "text": "6年"
+      "num": 1,
+      "align": "center"
     },
     "u23": {
-      "text": "10年"
+      "num": 1,
+      "align": "center"
     },
     "u24": {
-      "text": "20年"
+      "num": 5000,
+      "align": "center"
     },
     "u25": {
-      "text": "5年"
+      "num": 8000,
+      "align": "center"
     },
     "u26": {
-      "text": "院外特药目录"
-    },
-    "u27": {
-      "text": "102种"
-    },
-    "u28": {
-      "text": "128种"
-    },
-    "u29": {
-      "text": "118种"
-    },
-    "u30": {
-      "text": "96种"
-    },
-    "u31": {
       "text": "报销比例（经社保）"
     },
+    "u27": {
+      "num": 100,
+      "align": "center"
+    },
+    "u28": {
+      "num": 100,
+      "align": "center"
+    },
+    "u29": {
+      "num": 100,
+      "align": "center"
+    },
+    "u30": {
+      "num": 90,
+      "align": "center"
+    },
+    "u31": {
+      "text": "院外特药目录"
+    },
     "u32": {
-      "text": "100%"
+      "num": 102,
+      "align": "center"
     },
     "u33": {
-      "text": "100%"
+      "num": 128,
+      "align": "center"
     },
     "u34": {
-      "text": "100%"
+      "num": 118,
+      "align": "center"
     },
     "u35": {
-      "text": "90%"
+      "num": 96,
+      "align": "center"
     },
-    "band.1": {
-      "text": "安心e生"
-    }
+    "u36": {
+      "text": "保证续保期"
+    },
+    "u37": {
+      "num": 6,
+      "align": "center"
+    },
+    "u38": {
+      "num": 10,
+      "align": "center"
+    },
+    "u39": {
+      "num": 20,
+      "align": "center",
+      "color": "#c8a24a",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u40": {
+      "num": 5,
+      "align": "center"
+    },
+    "u41": {
+      "text": "住院垫付"
+    },
+    "u42": {
+      "text": "支持",
+      "align": "center"
+    },
+    "u43": {
+      "text": "支持",
+      "align": "center"
+    },
+    "u44": {
+      "text": "支持",
+      "align": "center"
+    },
+    "u45": {
+      "text": "不支持",
+      "color": "#98a29a",
+      "align": "center"
+    },
+    "u46": {
+      "text": "综合评级"
+    },
+    "u47": {
+      "stars": 4,
+      "align": "center",
+      "color": "#c8a24a"
+    },
+    "u48": {
+      "stars": 4,
+      "align": "center",
+      "color": "#c8a24a"
+    },
+    "u49": {
+      "stars": 5,
+      "align": "center",
+      "color": "#c8a24a"
+    },
+    "u50": {
+      "stars": 3,
+      "align": "center",
+      "color": "#c8a24a"
+    },
+    "u51": ""
   },
   "blocks": [
     {
-      "id": "blk-1793988493805",
-      "type": "groupHeader",
-      "slotId": "gap-g1",
-      "props": {
-        "label": "",
-        "text": "核心指标对照",
-        "styleTier": 1
-      }
-    },
-    {
-      "id": "blk-1793988495554",
+      "id": "blk-footer",
       "type": "emphFooter",
-      "slotId": "footer-1",
+      "slotId": "u51",
       "props": {
-        "label": "",
-        "text": "注：保费为30岁男性、有社保、首年保费口径；保障为年累计上限，实际赔付以条款为准。\n示例样张·产品名与数据仅作排版示意，不构成任何产品评价或推荐。",
-        "styleTier": 1
-      }
-    },
-    {
-      "id": "blk-1793988497264",
-      "type": "sectionBar",
-      "slotId": "gap-g2",
-      "props": {
-        "label": "",
-        "text": "分区",
+        "text": "注：保费为 30 岁男性、有社保、首年保费口径；保额为年度累计上限，实际赔付以条款为准。",
         "styleTier": 1
       }
     }
   ],
   "layout": {
-    "rowCount": 11,
+    "rowCount": 10,
     "colCount": 5,
+    "headerLevels": 1,
     "frozenColCount": 1,
-    "headerLevels": 2,
-    "recommendableCols": [
-      1,
-      2,
-      3
-    ],
-    "merges": [
-      {
-        "start": [
-          0,
-          0
-        ],
-        "end": [
-          1,
-          0
-        ]
-      }
-    ],
-    "structuralMerges": [
-      {
-        "start": [
-          0,
-          0
-        ],
-        "end": [
-          1,
-          0
-        ]
-      }
-    ],
+    "merges": [],
+    "structuralMerges": [],
     "allowedMerges": [
       {
         "start": [
           0,
-          1
+          0
         ],
         "end": [
-          0,
-          2
-        ]
-      },
-      {
-        "start": [
-          2,
-          1
-        ],
-        "end": [
-          3,
-          1
-        ]
-      },
-      {
-        "start": [
-          2,
-          2
-        ],
-        "end": [
-          3,
-          2
-        ]
-      },
-      {
-        "start": [
-          4,
-          1
-        ],
-        "end": [
-          10,
-          1
-        ]
-      },
-      {
-        "start": [
-          4,
-          2
-        ],
-        "end": [
-          10,
-          2
+          9,
+          4
         ]
       }
     ],
     "blockSlots": [
       {
-        "id": "gap-g1",
-        "accept": [
-          "sectionBar",
-          "groupHeader"
-        ],
-        "region": "between-rows",
-        "mutexGroup": "g1",
-        "rowHint": "after-1"
-      },
-      {
-        "id": "gap-g2",
-        "accept": [
-          "sectionBar",
-          "groupHeader"
-        ],
-        "region": "between-rows",
-        "mutexGroup": "g2",
-        "rowHint": "after-4"
-      },
-      {
-        "id": "footer-1",
+        "id": "u51",
         "accept": [
           "emphFooter"
         ],
         "region": "footer",
-        "rowHint": "after-10"
-      },
-      {
-        "id": "left-r2",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-2"
-      },
-      {
-        "id": "left-r3",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-2"
-      },
-      {
-        "id": "left-r4",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-3"
-      },
-      {
-        "id": "left-r5",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-4"
-      },
-      {
-        "id": "left-r6",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-4"
-      },
-      {
-        "id": "left-r7",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-5"
-      },
-      {
-        "id": "left-r8",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-9"
-      },
-      {
-        "id": "left-r9",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-10"
+        "rowHint": "after-9"
       }
     ],
-    "readonlyCells": [
-      [
-        0,
-        0
-      ],
-      [
-        1,
-        0
-      ]
+    "recommendableCols": [
+      1,
+      2,
+      3,
+      4
     ],
     "slotGrid": [
       [
-        null,
-        "band.1",
-        "band.2",
-        "u11",
-        "u1"
-      ],
-      [
-        null,
-        "obj.name.a",
-        "obj.name.c",
-        "u12",
-        "u2"
-      ],
-      [
-        "row.3.label",
-        "row.3.val.a",
-        "row.3.val.c",
-        "u14",
-        "u4"
-      ],
-      [
-        "row.4.label",
-        "row.4.val.a",
-        "row.4.val.c",
-        "u15",
+        "u1",
+        "u2",
+        "u3",
+        "u4",
         "u5"
       ],
       [
-        "row.6.label",
-        "row.6.val.a",
-        "row.6.val.c",
+        "u6",
+        "u7",
+        "u8",
+        "u9",
+        "u10"
+      ],
+      [
+        "u11",
+        "u12",
+        "u13",
+        "u14",
+        "u15"
+      ],
+      [
+        "u16",
         "u17",
-        "u7"
-      ],
-      [
-        "row.7.label",
-        "row.7.val.a",
-        "row.7.val.c",
         "u18",
-        "u8"
-      ],
-      [
-        "u31",
-        "u32",
-        "u33",
-        "u34",
-        "u35"
-      ],
-      [
-        "u26",
-        "u27",
-        "u28",
-        "u29",
-        "u30"
+        "u19",
+        "u20"
       ],
       [
         "u21",
@@ -557,27 +297,237 @@
         "u25"
       ],
       [
-        "row.8.label",
-        "row.8.val.a",
-        "row.8.val.c",
-        "u19",
-        "u9"
+        "u26",
+        "u27",
+        "u28",
+        "u29",
+        "u30"
       ],
       [
-        "row.9.label",
-        "row.9.val.a",
-        "row.9.val.c",
-        "u20",
-        "u10"
+        "u31",
+        "u32",
+        "u33",
+        "u34",
+        "u35"
+      ],
+      [
+        "u36",
+        "u37",
+        "u38",
+        "u39",
+        "u40"
+      ],
+      [
+        "u41",
+        "u42",
+        "u43",
+        "u44",
+        "u45"
+      ],
+      [
+        "u46",
+        "u47",
+        "u48",
+        "u49",
+        "u50"
       ]
-    ]
+    ],
+    "style": {
+      "colWidths": [
+        190,
+        158,
+        158,
+        158,
+        158
+      ],
+      "rowHeightTier": 3,
+      "fontSizeTier": 2,
+      "paddingTier": 3,
+      "fontFamily": "serif",
+      "borderScheme": "full"
+    }
+  },
+  "slotDefs": {
+    "u7": {
+      "kind": "number",
+      "format": "number",
+      "unit": "元"
+    },
+    "u8": {
+      "kind": "number",
+      "format": "number",
+      "unit": "元"
+    },
+    "u9": {
+      "kind": "number",
+      "format": "number",
+      "unit": "元"
+    },
+    "u10": {
+      "kind": "number",
+      "format": "number",
+      "unit": "元"
+    },
+    "u12": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万"
+    },
+    "u13": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万"
+    },
+    "u14": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万"
+    },
+    "u15": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万"
+    },
+    "u17": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万"
+    },
+    "u18": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万"
+    },
+    "u19": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万"
+    },
+    "u20": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万"
+    },
+    "u22": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万元"
+    },
+    "u23": {
+      "kind": "number",
+      "format": "number",
+      "unit": "万元"
+    },
+    "u24": {
+      "kind": "number",
+      "format": "number",
+      "unit": "元"
+    },
+    "u25": {
+      "kind": "number",
+      "format": "number",
+      "unit": "元"
+    },
+    "u27": {
+      "kind": "number",
+      "format": "number",
+      "unit": "%"
+    },
+    "u28": {
+      "kind": "number",
+      "format": "number",
+      "unit": "%"
+    },
+    "u29": {
+      "kind": "number",
+      "format": "number",
+      "unit": "%"
+    },
+    "u30": {
+      "kind": "number",
+      "format": "number",
+      "unit": "%"
+    },
+    "u32": {
+      "kind": "number",
+      "format": "number",
+      "unit": "种"
+    },
+    "u33": {
+      "kind": "number",
+      "format": "number",
+      "unit": "种"
+    },
+    "u34": {
+      "kind": "number",
+      "format": "number",
+      "unit": "种"
+    },
+    "u35": {
+      "kind": "number",
+      "format": "number",
+      "unit": "种"
+    },
+    "u37": {
+      "kind": "number",
+      "format": "number",
+      "unit": "年"
+    },
+    "u38": {
+      "kind": "number",
+      "format": "number",
+      "unit": "年"
+    },
+    "u39": {
+      "kind": "number",
+      "format": "number",
+      "unit": "年"
+    },
+    "u40": {
+      "kind": "number",
+      "format": "number",
+      "unit": "年"
+    },
+    "u47": {
+      "kind": "text"
+    },
+    "u48": {
+      "kind": "text"
+    },
+    "u49": {
+      "kind": "text"
+    },
+    "u50": {
+      "kind": "text"
+    }
   },
   "themeTokens": {
-    "primary": "#0b211c",
-    "headerText": "#ffffff",
-    "zebra": "#f1e9d8",
+    "primary": "#1d4a38",
+    "headerText": "#f3efdd",
+    "zebra": "#f0e8d3",
     "emphasis": "#b4532a",
-    "border": "#d8cdb8",
-    "background": "#f6f0e3"
+    "border": "#ddd2b8",
+    "background": "#f8f2e2"
+  },
+  "kpiCards": [],
+  "poster": {
+    "bg": "gradient",
+    "bgColor": "#0b1f15",
+    "bgAccent": "#17342a",
+    "kicker": "INSURANCE REVIEW · 2026",
+    "title": "百万医疗险 · 横向测评",
+    "subtitle": "同一份保障结构下，4 款主流产品的 9 项核心指标对照",
+    "metaLines": [
+      "保费口径 · 30 岁男性 / 有社保 / 首年保费",
+      "评级口径 · 保障范围 · 价格 · 续保稳定性"
+    ],
+    "pageBadge": "01 / 04",
+    "accent": "#c8a24a",
+    "textColor": "#f3efdd",
+    "titleFont": "serif",
+    "padding": 44,
+    "footerLines": [
+      "示例样张 · 产品名称与数据仅作排版示意，不构成任何产品测评或推荐。"
+    ]
   }
 }

@@ -15,8 +15,10 @@ import { TPL_KEY_PREFIX } from './idbTemplateRepo'
  * - 跨标签页同时首播的竞态窗口内可能同键重复写同内容，最终幂等无重复卡，可接受。
  */
 
-/** 种子注册键前缀：值为种子文件名（调试友好），存在即表示该种子已处理过 */
-const SEED_KEY_PREFIX = 'seed:'
+/** 种子注册键前缀：值为种子文件名（调试友好），存在即表示该种子已处理过。
+ * Schema 1.3（2026-11-11）：键升级 seed:v3: —— 8 张种子重写为一比一视觉复刻版，
+ * 旧键不匹配 → 全部重播种覆盖（用户删除后键仍在旧前缀下，同样会被 v3 覆盖一次，属预期升级） */
+const SEED_KEY_PREFIX = 'seed:v3:'
 
 export interface SeedTemplate {
   /** 文件名去扩展名，播种时的 displayName */

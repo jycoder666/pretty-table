@@ -154,7 +154,7 @@ describe('T05 · 含图实例全链路（新建 → 传图 → 换图 → 撤销
     expect(storeMap.has(`tpl:${saved.templateId}`)).toBe(true)
     const raw = storeMap.get(`tpl:${saved.templateId}`) as unknown as TemplateInstance
     const mig = migrateInstance(JSON.parse(JSON.stringify(raw)), listPresetTemplates())
-    expect(mig.ok && mig.value.schemaVersion).toBe('1.2')
+    expect(mig.ok && mig.value.schemaVersion).toBe('1.3')
     editor.openTemplate(mig.ok ? mig.value : raw)
     expect(editor.current!.slots[imgSlot]).toMatchObject({ image: IMG_A })
     expect(editor.current!.layout.merges).toContainEqual({ start: [3, 0], end: [3, 2] })

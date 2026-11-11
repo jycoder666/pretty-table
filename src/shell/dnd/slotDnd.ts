@@ -33,6 +33,7 @@ export const BLOCK_TYPE_LABEL: Record<BlockType, string> = {
   groupHeader: '分组标题行',
   emphFooter: '强调注脚',
   leftTag: '左栏标签块',
+  banner: '横幅行',
 }
 
 /** 生效列宽合计（PX-04：与 toOption 渲染同源，colWidths / 默认宽都从这里走） */

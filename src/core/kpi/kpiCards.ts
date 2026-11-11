@@ -25,14 +25,21 @@ export const KPI_MARGIN_BOTTOM = 10
 /** hero 区总增量高度：卡片 + 与表格的间距 */
 export const KPI_HERO_EXTRA = KPI_CARD_HEIGHT + KPI_MARGIN_BOTTOM
 
+/** Schema 1.3：strip 统计条几何（细分隔条形态，收支账稿） */
+export const KPI_STRIP_VALUE_FONT = 26
+export const KPI_STRIP_LABEL_FONT = 12
+export const KPI_STRIP_PAD_V = 14
+export const KPI_STRIP_HEIGHT = 84
+
+/** hero 区高度（PNG 画布增量；无卡片 = 0；strip 形态略高） */
+export function kpiHeroHeight(cards: KpiCard[], style?: 'cards' | 'strip'): number {
+  if (cards.length === 0) return 0
+  return style === 'strip' ? KPI_STRIP_HEIGHT + KPI_MARGIN_BOTTOM : KPI_HERO_EXTRA
+}
+
 /** 有效卡片（缺省 / 空数组 → 空数组；无卡片零占位） */
 export function effectiveKpiCards(inst: TemplateInstance): KpiCard[] {
   return Array.isArray(inst.kpiCards) ? inst.kpiCards : []
-}
-
-/** hero 区高度（PNG 画布增量；无卡片 = 0） */
-export function kpiHeroHeight(cards: KpiCard[]): number {
-  return cards.length > 0 ? KPI_HERO_EXTRA : 0
 }
 
 /**
@@ -151,7 +158,12 @@ function esc(s: string): string {
 }
 
 /** hero 区 HTML（全内联样式；model.ts 渲染进导出产物，置于表格上方） */
-export function renderKpiHeroHtml(cards: KpiCard[], palette: Palette): string {
+export function renderKpiHeroHtml(
+  cards: KpiCard[],
+  palette: Palette,
+  style?: 'cards' | 'strip',
+): string {
+  if (style === 'strip') return renderKpiStripHtml(cards, palette)
   const cardHtml = cards
     .map((card) => {
       const unit = card.unit
@@ -163,9 +175,67 @@ export function renderKpiHeroHtml(cards: KpiCard[], palette: Palette): string {
   return `<div class="pt-kpi" data-pt-kpi="1" style="${esc(kpiHeroStyle(palette))}">${cardHtml}</div>`
 }
 
+// ── Schema 1.3：strip 统计条（细分隔条形态；HTML / PNG / 预览三方同源，几何常量上方）──
+
+/** strip 容器内联样式 */
+export function kpiStripStyle(palette: Palette): string {
+  return [
+    'display:flex',
+    `margin:0 0 ${KPI_MARGIN_BOTTOM}px`,
+    `font-family:${FONT_STACK}`,
+  ].join(';')
+}
+
+/** strip 单项内联样式（首项无分隔线，其余左侧 1px 细线） */
+export function kpiStripItemStyle(_card: KpiCard, palette: Palette, index: number): string {
+  return [
+    'flex:1 1 0',
+    'min-width:0',
+    `padding:${KPI_STRIP_PAD_V}px 16px`,
+    ...(index > 0 ? [`border-left:1px solid ${palette.border}`] : []),
+  ].join(';')
+}
+
+export function kpiStripLabelStyle(palette: Palette): string {
+  return [
+    `font-size:${KPI_STRIP_LABEL_FONT}px`,
+    `color:${palette.muted}`,
+    'letter-spacing:0.08em',
+    'margin:0 0 6px',
+  ].join(';')
+}
+
+/** strip 数值行内联样式（accent 卡：数值带主题柔色荧光底，收支账结余稿） */
+export function kpiStripValueStyle(card: KpiCard, palette: Palette): string {
+  const base = [
+    `font-size:${KPI_STRIP_VALUE_FONT}px`,
+    'font-weight:700',
+    'line-height:1.2',
+    `color:${card.accent ? palette.emphasis : palette.primary}`,
+    'font-variant-numeric:tabular-nums',
+  ]
+  if (card.accent) {
+    base.push(`background:${palette.emphasisSoft}`, 'padding:0 6px', 'border-radius:3px')
+  }
+  return base.join(';')
+}
+
+/** strip 区 HTML */
+export function renderKpiStripHtml(cards: KpiCard[], palette: Palette): string {
+  const items = cards
+    .map((card, i) => {
+      const unit = card.unit
+        ? ` <span style="${esc(kpiUnitStyle(palette))}">${esc(card.unit)}</span>`
+        : ''
+      return `<div style="${esc(kpiStripItemStyle(card, palette, i))}"><p style="${esc(kpiStripLabelStyle(palette))}">${esc(card.label)}</p><div style="${esc(kpiStripValueStyle(card, palette))}">${esc(kpiValueText(card))}${unit}</div></div>`
+    })
+    .join('')
+  return `<div class="pt-kpi" data-pt-kpi="1" style="${esc(kpiStripStyle(palette))}">${items}</div>`
+}
+
 /**
- * PNG 合成时绘制 hero 区（canvas 2d；与 HTML 同一几何常量与语义色）。
- * 返回绘制占用高度（含下方间距）；无卡片返回 0。
+ * PNG 合成时绘制 strip 统计条（canvas 2d；与 HTML 同一几何常量与语义色）。
+ * 返回绘制占用高度（含下方间距）；无卡片返回 0。签名带 style 与 kpiHeroHeight 对齐。
  */
 export function drawKpiHero(
   ctx: CanvasRenderingContext2D,
@@ -175,8 +245,10 @@ export function drawKpiHero(
   y: number,
   contentWidth: number,
   scale: number,
+  style?: 'cards' | 'strip',
 ): number {
   if (cards.length === 0) return 0
+  if (style === 'strip') return drawKpiStrip(ctx, cards, palette, x, y, contentWidth, scale)
   const n = cards.length
   const gap = KPI_GAP * scale
   const cardW = (contentWidth - gap * (n - 1)) / n
@@ -222,6 +294,66 @@ export function drawKpiHero(
     ctx.fillText(card.label, cx + padH, y + padV + KPI_VALUE_FONT * 1.25 * scale)
   })
   return KPI_HERO_EXTRA * scale
+}
+
+/** strip 形态 canvas 绘制（标签上行 / 大数值下行 / 项间细分隔线 / accent 荧光底） */
+function drawKpiStrip(
+  ctx: CanvasRenderingContext2D,
+  cards: KpiCard[],
+  palette: Palette,
+  x: number,
+  y: number,
+  contentWidth: number,
+  scale: number,
+): number {
+  const n = cards.length
+  const itemW = contentWidth / n
+  const padV = KPI_STRIP_PAD_V * scale
+  const padH = 16 * scale
+  cards.forEach((card, i) => {
+    const cx = x + i * itemW
+    if (i > 0) {
+      ctx.strokeStyle = palette.border
+      ctx.lineWidth = scale
+      ctx.beginPath()
+      ctx.moveTo(cx, y + padV * 0.6)
+      ctx.lineTo(cx, y + KPI_STRIP_HEIGHT * scale - padV * 0.6)
+      ctx.stroke()
+    }
+    ctx.textBaseline = 'top'
+    ctx.textAlign = 'left'
+    ctx.fillStyle = palette.muted
+    ctx.font = `${KPI_STRIP_LABEL_FONT * scale}px ${FONT_STACK}`
+    ctx.fillText(card.label, cx + padH, y + padV * 0.6)
+    const valueY = y + padV * 0.6 + KPI_STRIP_LABEL_FONT * 1.4 * scale
+    const valueText = kpiValueText(card)
+    ctx.font = `700 ${KPI_STRIP_VALUE_FONT * scale}px ${FONT_STACK}`
+    if (card.accent) {
+      // 荧光底（与 HTML kpiStripValueStyle 同源：emphasisSoft 圆角矩形垫在数值下）
+      const vw = ctx.measureText(valueText).width
+      ctx.fillStyle = palette.emphasisSoft
+      const hlH = KPI_STRIP_VALUE_FONT * 1.25 * scale
+      const hlY = valueY + KPI_STRIP_VALUE_FONT * scale * 0.12
+      const r = Math.min(3 * scale, hlH / 2)
+      ctx.beginPath()
+      ctx.moveTo(cx + padH - 3 * scale + r, hlY)
+      ctx.arcTo(cx + padH - 3 * scale + vw + 3 * scale, hlY, cx + padH - 3 * scale + vw + 3 * scale, hlY + hlH, r)
+      ctx.arcTo(cx + padH - 3 * scale + vw + 3 * scale, hlY + hlH, cx + padH - 3 * scale, hlY + hlH, r)
+      ctx.arcTo(cx + padH - 3 * scale, hlY + hlH, cx + padH - 3 * scale, hlY, r)
+      ctx.arcTo(cx + padH - 3 * scale, hlY, cx + padH - 3 * scale + vw + 3 * scale, hlY, r)
+      ctx.closePath()
+      ctx.fill()
+    }
+    ctx.fillStyle = card.accent ? palette.emphasis : palette.primary
+    ctx.fillText(valueText, cx + padH, valueY)
+    if (card.unit) {
+      const vw = ctx.measureText(valueText).width
+      ctx.fillStyle = palette.muted
+      ctx.font = `${KPI_UNIT_FONT * scale}px ${FONT_STACK}`
+      ctx.fillText(card.unit, cx + padH + vw + 3 * scale, valueY + (KPI_STRIP_VALUE_FONT - KPI_UNIT_FONT) * 0.9 * scale)
+    }
+  })
+  return (KPI_STRIP_HEIGHT + KPI_MARGIN_BOTTOM) * scale
 }
 
 /**

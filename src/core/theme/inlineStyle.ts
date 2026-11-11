@@ -6,7 +6,7 @@ import type { TypeMetrics } from '../adapter/toOption'
 export function cellInlineStyle(
   palette: Palette,
   cell: {
-    role: 'header' | 'body' | 'label' | 'block'
+    role: 'header' | 'headerPlain' | 'body' | 'label' | 'block'
     zebraRow?: boolean
     align?: Align
     emphasize?: Emphasis[]
@@ -16,8 +16,9 @@ export function cellInlineStyle(
   const fs = metrics?.fontSize ?? 13
   const pv = metrics?.padV ?? 8
   const ph = metrics?.padH ?? 10
+  const ff = metrics?.fontFamily ?? FONT_STACK
   const parts: string[] = [
-    `font-family:${FONT_STACK}`,
+    `font-family:${ff}`,
     `font-size:${fs}px`,
     `padding:${pv}px ${ph}px`,
     `border:1px solid ${palette.border}`,
@@ -25,6 +26,13 @@ export function cellInlineStyle(
 
   if (cell.role === 'header') {
     parts.push(`background:${palette.primary}`, `color:${palette.headerText}`, 'font-weight:bold')
+  } else if (cell.role === 'headerPlain') {
+    // Schema 1.3：无底色表头（纸底深字，字色走主题 primary）
+    parts.push(
+      `background:${palette.paper}`,
+      `color:${palette.primary}`,
+      'font-weight:bold',
+    )
   } else if (cell.role === 'block') {
     parts.push(`background:${palette.primary}`, `color:${palette.headerText}`, 'font-weight:600')
   } else if (cell.role === 'label') {
