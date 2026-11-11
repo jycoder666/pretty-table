@@ -11,10 +11,11 @@ import { reactive } from 'vue'
  *   高频的行列增删与换位入口移至画布旁行/列轨道，组体只留低频设置。
  *   默认收起语义不变——组头摘要常显，组体收起。）
  */
-export type PanelGroupKey = 'content' | 'kpi' | 'style' | 'structure'
+export type PanelGroupKey = 'content' | 'poster' | 'kpi' | 'style' | 'structure'
 
 export const PANEL_GROUPS: ReadonlyArray<{ key: PanelGroupKey; label: string }> = [
   { key: 'content', label: '内容' },
+  { key: 'poster', label: '海报' },
   { key: 'kpi', label: '统计卡' },
   { key: 'style', label: '样式' },
   { key: 'structure', label: '结构' },
@@ -27,6 +28,7 @@ export const PANEL_GROUPS: ReadonlyArray<{ key: PanelGroupKey; label: string }> 
  */
 export const panelGroupOpen = reactive<Record<PanelGroupKey, boolean>>({
   content: true,
+  poster: false,
   kpi: false,
   style: false,
   structure: false,

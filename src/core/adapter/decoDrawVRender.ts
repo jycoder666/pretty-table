@@ -18,6 +18,12 @@ import {
 import { registerCellGroupFactory, registerBarGroupFactory, registerDecoGroupFactory } from './toOption'
 import type { DecoSpec } from './toOption'
 import {
+  DECO_CELLS_EMPTY,
+  DECO_CELLS_INK,
+  DECO_CELLS_TODAY,
+  DECO_CARD_INK,
+  DECO_CARD_MUTED,
+  DECO_WIN_GOLD,
   DECO_INK,
   DECO_SUB_INK,
   DECO_STAR,
@@ -519,13 +525,211 @@ registerDecoGroupFactory((spec, width, height) => {
     return group
   }
 
-  // pill：药丸表头（圆角色块 + 居中主文本 + 可选副文本）
-  const pillH = height - 12
+  if (spec.kind === 'match') {
+    // 对阵卡：格内上下两张小卡（队名 + 比分），胜方金竖条 + 白粗体（淘汰赛稿）
+    const gap = 6
+    const cardH = (height - gap) / 2
+    const cardW = Math.max(0, width - padH * 2)
+    const fsName = fs
+    const win = spec.winColor ?? DECO_WIN_GOLD
+    const border = spec.cardBorder ?? 'rgba(255,255,255,0.22)'
+    const cardBg = spec.cardBg && spec.cardBg !== 'transparent' ? spec.cardBg : 'rgba(255,255,255,0.05)'
+    const drawCard = (top: number, name: string, score: string, isWin: boolean) => {
+      group.appendChild(
+        createRect({
+          x: padH,
+          y: top,
+          width: cardW,
+          height: cardH,
+          cornerRadius: 3,
+          fill: cardBg,
+          stroke: border,
+          lineWidth: 1,
+          pickable: false,
+        }),
+      )
+      if (isWin) {
+        group.appendChild(
+          createRect({
+            x: padH,
+            y: top,
+            width: 3,
+            height: cardH,
+            cornerRadius: 0,
+            fill: win,
+            pickable: false,
+          }),
+        )
+      }
+      group.appendChild(
+        createText({
+          x: padH + 14,
+          y: top + cardH / 2,
+          text: name,
+          fontSize: fsName,
+          fill: isWin ? DECO_CARD_INK : spec.subColor ?? DECO_CARD_MUTED,
+          fontFamily: spec.fontFamily,
+          fontWeight: isWin ? 700 : 400,
+          textAlign: 'left',
+          textBaseline: 'middle',
+          pickable: false,
+        }),
+      )
+      group.appendChild(
+        createText({
+          x: padH + cardW - 14,
+          y: top + cardH / 2,
+          text: score,
+          fontSize: fsName,
+          fill: isWin ? win : spec.subColor ?? DECO_CARD_MUTED,
+          fontFamily: spec.fontFamily,
+          fontWeight: isWin ? 700 : 400,
+          textAlign: 'right',
+          textBaseline: 'middle',
+          pickable: false,
+        }),
+      )
+    }
+    drawCard(0, spec.sideA ?? '', spec.scoreA ?? '', spec.winA === true)
+    drawCard(cardH + gap, spec.sideB ?? '', spec.scoreB ?? '', spec.winB === true)
+    return group
+  }
+
+  if (spec.kind === 'champion') {
+    // 冠军卡：金边半透明金底，居中三行（小标 / 队名 / 备注）
+    const border = spec.cardBorder ?? DECO_WIN_GOLD
+    const cardBg = spec.cardBg ?? 'rgba(217,180,90,0.12)'
+    group.appendChild(
+      createRect({
+        x: padH,
+        y: 4,
+        width: Math.max(0, width - padH * 2),
+        height: Math.max(0, height - 8),
+        cornerRadius: 3,
+        fill: cardBg,
+        stroke: border,
+        lineWidth: 1.5,
+        pickable: false,
+      }),
+    )
+    const cy = height / 2
+    if (spec.sub) {
+      group.appendChild(
+        createText({
+          x: width / 2,
+          y: cy - fs * 1.1,
+          text: spec.sub,
+          fontSize: fs * 0.72,
+          fill: spec.cardTitleColor ?? DECO_WIN_GOLD,
+          fontFamily: spec.fontFamily,
+          textAlign: 'center',
+          textBaseline: 'middle',
+          pickable: false,
+        }),
+      )
+    }
+    group.appendChild(
+      createText({
+        x: width / 2,
+        y: cy + (spec.sub ? 2 : -fs * 0.2),
+        text: spec.main ?? '',
+        fontSize: fs * 1.15,
+        fill: spec.color ?? DECO_CARD_INK,
+        fontFamily: spec.fontFamily,
+        fontWeight: 700,
+        textAlign: 'center',
+        textBaseline: 'middle',
+        pickable: false,
+      }),
+    )
+    if (spec.right) {
+      group.appendChild(
+        createText({
+          x: width / 2,
+          y: cy + fs * 1.25,
+          text: spec.right,
+          fontSize: fs * 0.72,
+          fill: spec.subColor ?? DECO_CARD_MUTED,
+          fontFamily: spec.fontFamily,
+          textAlign: 'center',
+          textBaseline: 'middle',
+          pickable: false,
+        }),
+      )
+    }
+    return group
+  }
+
+  if (spec.kind === 'cells') {
+    // 打卡矩阵：格内一行小方格（'1' 实心完成 / '0' 空心未完成 / today 红框）
+    const pattern = spec.main ?? ''
+    const n = pattern.length
+    if (n === 0) return group
+    const trackW = Math.max(0, width - padH * 2)
+    const cellW = Math.min(26, trackW / n / 1.22)
+    const cellH = Math.min(height * 0.6, cellW * 1.0)
+    const gapW = (trackW - cellW * n) / Math.max(1, n - 1)
+    const cy = height / 2
+    for (let i = 0; i < n; i++) {
+      const x0 = padH + i * (cellW + gapW)
+      const filled = pattern[i] === '1'
+      const isToday = spec.today === i
+      if (filled) {
+        group.appendChild(
+          createRect({
+            x: x0,
+            y: cy - cellH / 2,
+            width: cellW,
+            height: cellH,
+            cornerRadius: Math.min(4, cellW / 4),
+            fill: spec.color ?? DECO_CELLS_INK,
+            pickable: false,
+          }),
+        )
+      } else {
+        group.appendChild(
+          createRect({
+            x: x0,
+            y: cy - cellH / 2,
+            width: cellW,
+            height: cellH,
+            cornerRadius: Math.min(4, cellW / 4),
+            fill: false,
+            stroke: isToday ? spec.dotColor ?? DECO_CELLS_TODAY : spec.cellEmptyBorder ?? DECO_CELLS_EMPTY,
+            lineWidth: isToday ? 2 : 1,
+            pickable: false,
+          }),
+        )
+      }
+      if (isToday && filled) {
+        // 今天且已完成：红框叠在实心格外
+        group.appendChild(
+          createRect({
+            x: x0 - 1.5,
+            y: cy - cellH / 2 - 1.5,
+            width: cellW + 3,
+            height: cellH + 3,
+            cornerRadius: Math.min(5, cellW / 3),
+            fill: false,
+            stroke: spec.dotColor ?? DECO_CELLS_TODAY,
+            lineWidth: 2,
+            pickable: false,
+          }),
+        )
+      }
+    }
+    return group
+  }
+
+  // pill：药丸表头（圆角色块 + 居中主文本 + 可选副文本；上下内缩可调 Schema 1.4）
+  const insetV = Math.min(height / 2 - 2, Math.max(0, spec.insetV ?? 6))
+  const pillH = height - insetV * 2
+  const pillY = insetV
   const hasSub = Boolean(spec.sub)
   group.appendChild(
     createRect({
       x: padH + 2,
-      y: 6,
+      y: pillY,
       width: Math.max(0, width - padH * 2 - 4),
       height: Math.max(0, pillH),
       cornerRadius: pillH / 2,
@@ -538,7 +742,7 @@ registerDecoGroupFactory((spec, width, height) => {
     group.appendChild(
       createText({
         x: width / 2,
-        y: 6 + pillH * 0.36,
+        y: pillY + pillH * 0.36,
         text: spec.main ?? '',
         fontSize: fs,
         fill: spec.color ?? DECO_PILL_INK,
@@ -552,7 +756,7 @@ registerDecoGroupFactory((spec, width, height) => {
     group.appendChild(
       createText({
         x: width / 2,
-        y: 6 + pillH * 0.72,
+        y: pillY + pillH * 0.72,
         text: spec.sub ?? '',
         fontSize: subFs,
         fill: spec.subColor ?? DECO_PILL_INK,
@@ -566,7 +770,7 @@ registerDecoGroupFactory((spec, width, height) => {
     group.appendChild(
       createText({
         x: width / 2,
-        y: 6 + pillH / 2,
+        y: pillY + pillH / 2,
         text: spec.main ?? '',
         fontSize: fs,
         fill: spec.color ?? DECO_PILL_INK,

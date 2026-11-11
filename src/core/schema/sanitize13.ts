@@ -95,9 +95,64 @@ export function sanitizeSlotDeco(obj: Record<string, unknown>): void {
   if ('boxed' in obj && obj.boxed !== true) delete obj.boxed
 }
 
-/** 槽值是否为 Text/Num 形态（可携带 1.3 装饰字段） */
+/** 槽值是否为 Text/Num 形态（可携带 1.3 装饰字段；match/cells/champion 不带装饰字段） */
 export function isRichSlotObject(v: unknown): v is SlotObject {
-  return Boolean(v && typeof v === 'object' && !Array.isArray(v) && !('image' in v) && !('mark' in v))
+  return Boolean(
+    v &&
+      typeof v === 'object' &&
+      !Array.isArray(v) &&
+      !('image' in v) &&
+      !('mark' in v) &&
+      !('match' in v) &&
+      !('cells' in v) &&
+      !('champion' in v),
+  )
+}
+
+/** Schema 1.5：对阵卡清洗（队名/比分字符串化截断；非法整键删） */
+export function sanitizeMatch(raw: unknown): { a: string; sa: string; b: string; sb: string; winA?: boolean; winB?: boolean } | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const str = (v: unknown) => (typeof v === 'string' ? v.slice(0, 40) : typeof v === 'number' ? String(v) : '')
+  const a = str(o.a)
+  const b = str(o.b)
+  if (!a && !b) return null
+  const out: { a: string; sa: string; b: string; sb: string; winA?: boolean; winB?: boolean } = {
+    a,
+    sa: str(o.sa),
+    b,
+    sb: str(o.sb),
+  }
+  if (o.winA === true) out.winA = true
+  if (o.winB === true) out.winB = true
+  return out
+}
+
+/** Schema 1.5：打卡矩阵清洗（pattern 只留 0/1，上限 31；非法整键删） */
+export function sanitizeCells(raw: unknown): { pattern: string; today?: number } | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  if (typeof o.pattern !== 'string') return null
+  const pattern = [...o.pattern].filter((c) => c === '0' || c === '1').join('').slice(0, 31)
+  if (!pattern) return null
+  const out: { pattern: string; today?: number } = { pattern }
+  if (typeof o.today === 'number' && Number.isFinite(o.today)) {
+    const t = Math.round(o.today)
+    if (t >= 0 && t < pattern.length) out.today = t
+  }
+  return out
+}
+
+/** Schema 1.5：冠军卡清洗 */
+export function sanitizeChampion(raw: unknown): { title?: string; name: string; note?: string } | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const name = typeof o.name === 'string' ? o.name.slice(0, 40) : ''
+  if (!name) return null
+  const out: { title?: string; name: string; note?: string } = { name }
+  if (typeof o.title === 'string' && o.title) out.title = o.title.slice(0, 20)
+  if (typeof o.note === 'string' && o.note) out.note = o.note.slice(0, 40)
+  return out
 }
 
 const BORDER_SCHEMES: readonly string[] = ['full', 'rows', 'cols', 'none']
@@ -118,4 +173,12 @@ export function sanitizeStyle13(style: LayoutStyle): void {
     delete style.headerShape
   }
   if ('plainHeader' in style && style.plainHeader !== true) delete style.plainHeader
+  if ('pillInsetV' in style) {
+    const v = style.pillInsetV
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      const clamped = Math.min(20, Math.max(0, Math.round(v)))
+      if (clamped === 6) delete style.pillInsetV
+      else style.pillInsetV = clamped
+    } else delete style.pillInsetV
+  }
 }

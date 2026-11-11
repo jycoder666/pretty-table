@@ -5,7 +5,14 @@ import { sanitizeHex } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
 import { sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
 import { sanitizePoster } from '../theme/posterStyle'
-import { isRichSlotObject, sanitizeSlotDeco, sanitizeStyle13 } from './sanitize13'
+import {
+  isRichSlotObject,
+  sanitizeCells,
+  sanitizeChampion,
+  sanitizeMatch,
+  sanitizeSlotDeco,
+  sanitizeStyle13,
+} from './sanitize13'
 
 /** themeTokens 里的角色色键（schema 1.2），hex 值需要清洗 */
 const TOKEN_COLOR_KEYS: readonly string[] = [
@@ -145,6 +152,26 @@ export function validateInstance(json: unknown): Result<TemplateInstance> {
       if (!isRichSlotObject(v)) continue
       sanitizeSlotDeco(v as unknown as Record<string, unknown>)
     }
+    // Schema 1.5 扩展：对阵/打卡/冠军槽清洗（畸形删键退回空槽）
+    for (const [id, v] of Object.entries(slots)) {
+      if (!v || typeof v !== 'object' || Array.isArray(v)) continue
+      const obj = v as Record<string, unknown>
+      if ('match' in obj) {
+        const m = sanitizeMatch(obj.match)
+        if (m) obj.match = m
+        else delete slots[id]
+      }
+      if ('cells' in obj) {
+        const c = sanitizeCells(obj.cells)
+        if (c) obj.cells = c
+        else delete slots[id]
+      }
+      if ('champion' in obj) {
+        const c = sanitizeChampion(obj.champion)
+        if (c) obj.champion = c
+        else delete slots[id]
+      }
+    }
   }
 
   // Schema 1.2 扩展：kpiCards 清洗（非数组删字段；项级清洗与截断在 sanitizeKpiCards 内）
@@ -153,8 +180,24 @@ export function validateInstance(json: unknown): Result<TemplateInstance> {
   else inst.kpiCards = kpiClean
 
   // Schema 1.3：kpiStyle 枚举清洗（cards/strip 之外删键）
-  if (inst.kpiStyle !== undefined && inst.kpiStyle !== 'cards' && inst.kpiStyle !== 'strip') {
+  if (
+    inst.kpiStyle !== undefined &&
+    inst.kpiStyle !== 'cards' &&
+    inst.kpiStyle !== 'strip' &&
+    inst.kpiStyle !== 'plain'
+  ) {
     delete inst.kpiStyle
+  }
+
+  // Schema 1.5：meta.cover 封面清洗（data URL 白名单 + 400KB 上限；非法删键）
+  if (inst.meta && typeof inst.meta === 'object') {
+    const meta = inst.meta as Record<string, unknown>
+    if ('cover' in meta) {
+      const cover = meta.cover
+      if (typeof cover !== 'string' || !isImageDataUrl(cover) || cover.length > 400_000) {
+        delete meta.cover
+      }
+    }
   }
 
   // Schema 1.3：poster 海报层清洗（枚举/hex/行数/留白钳制；全空删字段零占位）

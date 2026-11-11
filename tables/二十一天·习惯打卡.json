@@ -1,0 +1,261 @@
+{
+  "schemaVersion": "1.3",
+  "templateId": "user-1794412621422-habit",
+  "themeId": "T-B",
+  "zebraOn": false,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "二十一天 习惯打卡",
+    "description": "21 格打卡矩阵 + 无框大数字统计（一比一复刻）",
+    "templateType": "matrix",
+    "origin": "preset"
+  },
+  "slots": {
+    "u1": {
+      "text": "习惯"
+    },
+    "u2": {
+      "text": "第 1 周 1–7　｜　第 2 周 8–14　｜　第 3 周 15–21"
+    },
+    "u3": {
+      "text": "完成"
+    },
+    "u4": {
+      "text": "早起 6:30",
+      "sub": "起床后不到赖床"
+    },
+    "u5": {
+      "cells": {
+        "pattern": "111101111110111111011",
+        "today": 20
+      }
+    },
+    "u6": {
+      "num": 18,
+      "align": "right"
+    },
+    "u7": {
+      "text": "阅读 30 分钟",
+      "sub": "纸质书优先"
+    },
+    "u8": {
+      "cells": {
+        "pattern": "110111110011111101110",
+        "today": 20
+      }
+    },
+    "u9": {
+      "num": 16,
+      "align": "right"
+    },
+    "u10": {
+      "text": "运动 20 分钟",
+      "sub": "快走或力量"
+    },
+    "u11": {
+      "cells": {
+        "pattern": "101111101111100111010",
+        "today": 20
+      }
+    },
+    "u12": {
+      "num": 15,
+      "align": "right"
+    },
+    "u13": {
+      "text": "记账",
+      "sub": "当天消费当天记"
+    },
+    "u14": {
+      "cells": {
+        "pattern": "111011111110111111011",
+        "today": 20
+      }
+    },
+    "u15": {
+      "num": 18,
+      "align": "right"
+    },
+    "u16": {
+      "text": "睡前不看手机",
+      "sub": "22:30 后放客厅"
+    },
+    "u17": {
+      "cells": {
+        "pattern": "111110111111011111111",
+        "today": 20
+      }
+    },
+    "u18": {
+      "num": 19,
+      "align": "right"
+    },
+    "u19": ""
+  },
+  "blocks": [
+    {
+      "id": "blk-summary",
+      "type": "banner",
+      "slotId": "u19",
+      "props": {
+        "text": "本轮小结　　运动是唯一明显掉队的一项，且失守都发生在加班日；下轮把运动改成「下班先换鞋 10 分钟」，不再要求完整 20 分钟。",
+        "color": "#24534a",
+        "barColor": "#24534a",
+        "bannerTextColor": "#ffffff",
+        "bannerRightColor": "#e9f0ea"
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 6,
+    "colCount": 3,
+    "headerLevels": 1,
+    "merges": [],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          5,
+          2
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "u19",
+        "accept": [
+          "banner"
+        ],
+        "region": "footer",
+        "rowHint": "after-5"
+      }
+    ],
+    "slotGrid": [
+      [
+        "u1",
+        "u2",
+        "u3"
+      ],
+      [
+        "u4",
+        "u5",
+        "u6"
+      ],
+      [
+        "u7",
+        "u8",
+        "u9"
+      ],
+      [
+        "u10",
+        "u11",
+        "u12"
+      ],
+      [
+        "u13",
+        "u14",
+        "u15"
+      ],
+      [
+        "u16",
+        "u17",
+        "u18"
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        230,
+        640,
+        90
+      ],
+      "rowHeightTier": 2,
+      "fontSizeTier": 2,
+      "paddingTier": 3,
+      "borderScheme": "rows",
+      "plainHeader": true,
+      "fontFamily": "serif"
+    }
+  },
+  "slotDefs": {
+    "u6": {
+      "kind": "number"
+    },
+    "u9": {
+      "kind": "number"
+    },
+    "u12": {
+      "kind": "number"
+    },
+    "u15": {
+      "kind": "number"
+    },
+    "u18": {
+      "kind": "number"
+    }
+  },
+  "themeTokens": {
+    "primary": "#24534a",
+    "headerText": "#f4f2e9",
+    "zebra": "#edeae0",
+    "emphasis": "#c0653a",
+    "border": "#ddd8ca",
+    "background": "#f4f2e9"
+  },
+  "kpiStyle": "plain",
+  "kpiCards": [
+    {
+      "id": "p1",
+      "label": "整体完成率",
+      "value": "82",
+      "unit": "%",
+      "color": "#24534a"
+    },
+    {
+      "id": "p2",
+      "label": "最长连续",
+      "value": "8",
+      "unit": "天",
+      "color": "#24534a"
+    },
+    {
+      "id": "p3",
+      "label": "累计投入",
+      "value": "20.1",
+      "unit": "小时",
+      "color": "#24534a"
+    },
+    {
+      "id": "p4",
+      "label": "最强 · 睡前不看手机",
+      "value": "19/21",
+      "color": "#3e7d5e"
+    }
+  ],
+  "poster": {
+    "bg": "solid",
+    "bgColor": "#f4f2e9",
+    "kicker": "HABIT TRACKER · ROUND 04",
+    "title": "二十一天 习惯打卡",
+    "legend": "■ 完成　　□ 未完成　　□ 今天",
+    "metaLines": [
+      "10.26 – 11.15 · 第 4 轮",
+      "每天 5 项 · 约 70 分钟",
+      "第 21 天 · 最后一天"
+    ],
+    "footerLines": [
+      "格子按日期日连续编号，缺卡即空白。",
+      "示例样张 · 习惯与完成情况仅作排版示意。"
+    ],
+    "pageBadge": "12",
+    "accent": "#3e7d5e",
+    "textColor": "#24534a",
+    "titleFont": "serif",
+    "padding": 44
+  }
+}

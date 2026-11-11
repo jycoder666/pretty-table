@@ -43,11 +43,12 @@ function rangeIntersectsRect(
 }
 
 function prevStyle(v: SlotValue | undefined): { align?: Align; emphasize?: Emphasis[] } {
-  if (typeof v === 'object' && v !== null && !('image' in v)) {
-    const em = v.emphasize
+  if (typeof v === 'object' && v !== null && !('image' in v) && !('match' in v) && !('cells' in v) && !('champion' in v)) {
+    const rv = v as unknown as Record<string, unknown>
+    const em = rv.emphasize
     return {
-      align: v.align,
-      emphasize: Array.isArray(em) ? em : em ? [em] : undefined,
+      align: rv.align as Align | undefined,
+      emphasize: Array.isArray(em) ? (em as Emphasis[]) : em ? [em as Emphasis] : undefined,
     }
   }
   return {}

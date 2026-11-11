@@ -1,0 +1,818 @@
+{
+  "schemaVersion": "1.3",
+  "templateId": "user-1794412574102-ppl",
+  "themeId": "T-A",
+  "zebraOn": false,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "推拉腿 四分化训练",
+    "description": "黑白灰健身周报 · 黑底分组条 + 绿色组数（一比一复刻）",
+    "templateType": "detail",
+    "origin": "preset"
+  },
+  "slots": {
+    "u1": {
+      "text": "动作 / MOVEMENT"
+    },
+    "u2": {
+      "text": "组数"
+    },
+    "u3": {
+      "text": "次数"
+    },
+    "u4": {
+      "text": "重量"
+    },
+    "u5": {
+      "text": "RPE"
+    },
+    "u6": {
+      "text": "要点"
+    },
+    "u7": "",
+    "u8": {
+      "text": "杠铃卧推",
+      "unit": "主项"
+    },
+    "u9": {
+      "num": 4,
+      "align": "center"
+    },
+    "u10": {
+      "num": 5,
+      "align": "center"
+    },
+    "u11": {
+      "text": "70—75 kg",
+      "align": "center"
+    },
+    "u12": {
+      "num": 8,
+      "align": "center"
+    },
+    "u13": {
+      "text": "肩胛后收，落点乳头线",
+      "color": "#8a8a82"
+    },
+    "u14": {
+      "text": "上斜哑铃卧推",
+      "unit": ""
+    },
+    "u15": {
+      "num": 3,
+      "align": "center"
+    },
+    "u16": {
+      "text": "8—10",
+      "align": "center"
+    },
+    "u17": {
+      "text": "24 kg ×2",
+      "align": "center"
+    },
+    "u18": {
+      "num": 7,
+      "align": "center"
+    },
+    "u19": {
+      "text": "30° 斜凳，斜终肩",
+      "color": "#8a8a82"
+    },
+    "u20": {
+      "text": "坐姿侧平举",
+      "unit": ""
+    },
+    "u21": {
+      "num": 3,
+      "align": "center"
+    },
+    "u22": {
+      "text": "12—15",
+      "align": "center"
+    },
+    "u23": {
+      "text": "8 kg ×2",
+      "align": "center"
+    },
+    "u24": {
+      "num": 7,
+      "align": "center"
+    },
+    "u25": {
+      "text": "肘微屈，抬到肩高",
+      "color": "#8a8a82"
+    },
+    "u26": {
+      "text": "绳索下压",
+      "unit": "收尾"
+    },
+    "u27": {
+      "num": 3,
+      "align": "center"
+    },
+    "u28": {
+      "num": 12,
+      "align": "center"
+    },
+    "u29": {
+      "text": "25 kg",
+      "align": "center"
+    },
+    "u30": {
+      "num": 6,
+      "align": "center"
+    },
+    "u31": {
+      "text": "固定大臂，只动小臂",
+      "color": "#8a8a82"
+    },
+    "u32": "",
+    "u33": {
+      "text": "引体向上",
+      "unit": "主项"
+    },
+    "u34": {
+      "num": 4,
+      "align": "center"
+    },
+    "u35": {
+      "text": "力竭 −2",
+      "align": "center"
+    },
+    "u36": {
+      "text": "自重",
+      "align": "center"
+    },
+    "u37": {
+      "num": 8,
+      "align": "center"
+    },
+    "u38": {
+      "text": "先沉肩再拉起",
+      "color": "#8a8a82"
+    },
+    "u39": {
+      "text": "杠铃划船",
+      "unit": ""
+    },
+    "u40": {
+      "num": 4,
+      "align": "center"
+    },
+    "u41": {
+      "num": 8,
+      "align": "center"
+    },
+    "u42": {
+      "text": "60 kg",
+      "align": "center"
+    },
+    "u43": {
+      "num": 7,
+      "align": "center"
+    },
+    "u44": {
+      "text": "躯干 45°，拉向小腹",
+      "color": "#8a8a82"
+    },
+    "u45": {
+      "text": "坐姿高位下拉",
+      "unit": ""
+    },
+    "u46": {
+      "num": 3,
+      "align": "center"
+    },
+    "u47": {
+      "text": "10—12",
+      "align": "center"
+    },
+    "u48": {
+      "text": "45 kg",
+      "align": "center"
+    },
+    "u49": {
+      "num": 7,
+      "align": "center"
+    },
+    "u50": {
+      "text": "拉杆到锁骨即可",
+      "color": "#8a8a82"
+    },
+    "u51": {
+      "text": "哑铃弯举",
+      "unit": ""
+    },
+    "u52": {
+      "num": 3,
+      "align": "center"
+    },
+    "u53": {
+      "num": 12,
+      "align": "center"
+    },
+    "u54": {
+      "text": "12 kg ×2",
+      "align": "center"
+    },
+    "u55": {
+      "num": 6,
+      "align": "center"
+    },
+    "u56": {
+      "text": "下放 3 秒，别甩",
+      "color": "#8a8a82"
+    },
+    "u57": "",
+    "u58": {
+      "text": "杠铃深蹲",
+      "unit": "主项"
+    },
+    "u59": {
+      "num": 5,
+      "align": "center"
+    },
+    "u60": {
+      "num": 5,
+      "align": "center"
+    },
+    "u61": {
+      "text": "90—95 kg",
+      "align": "center"
+    },
+    "u62": {
+      "num": 8,
+      "align": "center"
+    },
+    "u63": {
+      "text": "膝盖脚尖同向",
+      "color": "#8a8a82"
+    },
+    "u64": {
+      "text": "罗马尼亚硬拉",
+      "unit": ""
+    },
+    "u65": {
+      "num": 3,
+      "align": "center"
+    },
+    "u66": {
+      "num": 8,
+      "align": "center"
+    },
+    "u67": {
+      "text": "70 kg",
+      "align": "center"
+    },
+    "u68": {
+      "num": 7,
+      "align": "center"
+    },
+    "u69": {
+      "text": "屈髋主导，背不塌",
+      "color": "#8a8a82"
+    },
+    "u70": {
+      "text": "腿举",
+      "unit": ""
+    },
+    "u71": {
+      "num": 3,
+      "align": "center"
+    },
+    "u72": {
+      "num": 12,
+      "align": "center"
+    },
+    "u73": {
+      "text": "120 kg",
+      "align": "center"
+    },
+    "u74": {
+      "num": 7,
+      "align": "center"
+    },
+    "u75": {
+      "text": "下到 90° 就推起",
+      "color": "#8a8a82"
+    },
+    "u76": {
+      "text": "提踵",
+      "unit": "收尾"
+    },
+    "u77": {
+      "num": 4,
+      "align": "center"
+    },
+    "u78": {
+      "num": 15,
+      "align": "center"
+    },
+    "u79": {
+      "text": "40 kg",
+      "align": "center"
+    },
+    "u80": {
+      "num": 6,
+      "align": "center"
+    },
+    "u81": {
+      "text": "顶端停 1 秒",
+      "color": "#8a8a82"
+    },
+    "u82": "",
+    "u83": {
+      "text": "悬垂举腿",
+      "unit": ""
+    },
+    "u84": {
+      "num": 3,
+      "align": "center"
+    },
+    "u85": {
+      "text": "10—12",
+      "align": "center"
+    },
+    "u86": {
+      "text": "自重",
+      "align": "center"
+    },
+    "u87": {
+      "num": 7,
+      "align": "center"
+    },
+    "u88": {
+      "text": "不晃身体，慢上慢下",
+      "color": "#8a8a82"
+    },
+    "u89": {
+      "text": "平板支撑",
+      "unit": ""
+    },
+    "u90": {
+      "num": 3,
+      "align": "center"
+    },
+    "u91": {
+      "text": "45 秒",
+      "align": "center"
+    },
+    "u92": {
+      "text": "自重",
+      "align": "center"
+    },
+    "u93": {
+      "text": "—",
+      "align": "center"
+    },
+    "u94": {
+      "text": "夹臀，腰别塌",
+      "color": "#8a8a82"
+    },
+    "u95": {
+      "text": "侧向卷腹",
+      "unit": ""
+    },
+    "u96": {
+      "num": 3,
+      "align": "center"
+    },
+    "u97": {
+      "num": 15,
+      "align": "center"
+    },
+    "u98": {
+      "text": "自重",
+      "align": "center"
+    },
+    "u99": {
+      "num": 6,
+      "align": "center"
+    },
+    "u100": {
+      "text": "两侧交替，控制幅度",
+      "color": "#8a8a82"
+    },
+    "u101": ""
+  },
+  "blocks": [
+    {
+      "id": "blk-A · ",
+      "type": "banner",
+      "slotId": "u7",
+      "props": {
+        "text": "A · 推 / PUSH　　周一 · 胸肩三头",
+        "bannerRight": "17 组",
+        "color": "#151515",
+        "barColor": "#151515",
+        "bannerTextColor": "#ffffff",
+        "bannerRightColor": "#a8c256"
+      }
+    },
+    {
+      "id": "blk-B · ",
+      "type": "banner",
+      "slotId": "u32",
+      "props": {
+        "text": "B · 拉 / PULL　　周三 · 背二头",
+        "bannerRight": "16 组",
+        "color": "#151515",
+        "barColor": "#151515",
+        "bannerTextColor": "#ffffff",
+        "bannerRightColor": "#a8c256"
+      }
+    },
+    {
+      "id": "blk-C · ",
+      "type": "banner",
+      "slotId": "u57",
+      "props": {
+        "text": "C · 腿 / LEGS　　周五 · 股四臀腿",
+        "bannerRight": "15 组",
+        "color": "#151515",
+        "barColor": "#151515",
+        "bannerTextColor": "#ffffff",
+        "bannerRightColor": "#a8c256"
+      }
+    },
+    {
+      "id": "blk-D · ",
+      "type": "banner",
+      "slotId": "u82",
+      "props": {
+        "text": "D · 核心 / CORE　　周日 · 稳定与恢复",
+        "bannerRight": "9 组",
+        "color": "#151515",
+        "barColor": "#151515",
+        "bannerTextColor": "#ffffff",
+        "bannerRightColor": "#a8c256"
+      }
+    },
+    {
+      "id": "blk-rule",
+      "type": "banner",
+      "slotId": "u101",
+      "props": {
+        "text": "下周递增规则",
+        "bannerRight": "主项达成 5组5次 后，杠铃各加 2.5kg；辅助动作次数到上限再加重量。",
+        "color": "#151515",
+        "barColor": "#151515",
+        "bannerTextColor": "#ffffff",
+        "bannerRightColor": "#a8c256"
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 19,
+    "colCount": 6,
+    "headerLevels": 1,
+    "merges": [],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          18,
+          5
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "u7",
+        "accept": [
+          "banner"
+        ],
+        "rowHint": "after-0"
+      },
+      {
+        "id": "u32",
+        "accept": [
+          "banner"
+        ],
+        "rowHint": "after-4"
+      },
+      {
+        "id": "u57",
+        "accept": [
+          "banner"
+        ],
+        "rowHint": "after-9"
+      },
+      {
+        "id": "u82",
+        "accept": [
+          "banner"
+        ],
+        "rowHint": "after-14"
+      },
+      {
+        "id": "u101",
+        "accept": [
+          "banner"
+        ],
+        "region": "footer",
+        "rowHint": "after-18"
+      }
+    ],
+    "slotGrid": [
+      [
+        "u1",
+        "u2",
+        "u3",
+        "u4",
+        "u5",
+        "u6"
+      ],
+      [
+        "u8",
+        "u9",
+        "u10",
+        "u11",
+        "u12",
+        "u13"
+      ],
+      [
+        "u14",
+        "u15",
+        "u16",
+        "u17",
+        "u18",
+        "u19"
+      ],
+      [
+        "u20",
+        "u21",
+        "u22",
+        "u23",
+        "u24",
+        "u25"
+      ],
+      [
+        "u26",
+        "u27",
+        "u28",
+        "u29",
+        "u30",
+        "u31"
+      ],
+      [
+        "u33",
+        "u34",
+        "u35",
+        "u36",
+        "u37",
+        "u38"
+      ],
+      [
+        "u39",
+        "u40",
+        "u41",
+        "u42",
+        "u43",
+        "u44"
+      ],
+      [
+        "u45",
+        "u46",
+        "u47",
+        "u48",
+        "u49",
+        "u50"
+      ],
+      [
+        "u51",
+        "u52",
+        "u53",
+        "u54",
+        "u55",
+        "u56"
+      ],
+      [
+        "u58",
+        "u59",
+        "u60",
+        "u61",
+        "u62",
+        "u63"
+      ],
+      [
+        "u64",
+        "u65",
+        "u66",
+        "u67",
+        "u68",
+        "u69"
+      ],
+      [
+        "u70",
+        "u71",
+        "u72",
+        "u73",
+        "u74",
+        "u75"
+      ],
+      [
+        "u76",
+        "u77",
+        "u78",
+        "u79",
+        "u80",
+        "u81"
+      ],
+      [
+        "u83",
+        "u84",
+        "u85",
+        "u86",
+        "u87",
+        "u88"
+      ],
+      [
+        "u89",
+        "u90",
+        "u91",
+        "u92",
+        "u93",
+        "u94"
+      ],
+      [
+        "u95",
+        "u96",
+        "u97",
+        "u98",
+        "u99",
+        "u100"
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        230,
+        70,
+        90,
+        130,
+        70,
+        330
+      ],
+      "rowHeightTier": 2,
+      "fontSizeTier": 2,
+      "paddingTier": 3,
+      "borderScheme": "rows",
+      "plainHeader": true
+    }
+  },
+  "slotDefs": {
+    "u9": {
+      "kind": "number"
+    },
+    "u10": {
+      "kind": "number"
+    },
+    "u12": {
+      "kind": "number"
+    },
+    "u15": {
+      "kind": "number"
+    },
+    "u18": {
+      "kind": "number"
+    },
+    "u21": {
+      "kind": "number"
+    },
+    "u24": {
+      "kind": "number"
+    },
+    "u27": {
+      "kind": "number"
+    },
+    "u28": {
+      "kind": "number"
+    },
+    "u30": {
+      "kind": "number"
+    },
+    "u34": {
+      "kind": "number"
+    },
+    "u37": {
+      "kind": "number"
+    },
+    "u40": {
+      "kind": "number"
+    },
+    "u41": {
+      "kind": "number"
+    },
+    "u43": {
+      "kind": "number"
+    },
+    "u46": {
+      "kind": "number"
+    },
+    "u49": {
+      "kind": "number"
+    },
+    "u52": {
+      "kind": "number"
+    },
+    "u53": {
+      "kind": "number"
+    },
+    "u55": {
+      "kind": "number"
+    },
+    "u59": {
+      "kind": "number"
+    },
+    "u60": {
+      "kind": "number"
+    },
+    "u62": {
+      "kind": "number"
+    },
+    "u65": {
+      "kind": "number"
+    },
+    "u66": {
+      "kind": "number"
+    },
+    "u68": {
+      "kind": "number"
+    },
+    "u71": {
+      "kind": "number"
+    },
+    "u72": {
+      "kind": "number"
+    },
+    "u74": {
+      "kind": "number"
+    },
+    "u77": {
+      "kind": "number"
+    },
+    "u78": {
+      "kind": "number"
+    },
+    "u80": {
+      "kind": "number"
+    },
+    "u84": {
+      "kind": "number"
+    },
+    "u87": {
+      "kind": "number"
+    },
+    "u90": {
+      "kind": "number"
+    },
+    "u96": {
+      "kind": "number"
+    },
+    "u97": {
+      "kind": "number"
+    },
+    "u99": {
+      "kind": "number"
+    }
+  },
+  "themeTokens": {
+    "primary": "#151515",
+    "headerText": "#ffffff",
+    "zebra": "#ecebe4",
+    "emphasis": "#a8c256",
+    "border": "#d4d2c8",
+    "background": "#f2f1ec"
+  },
+  "kpiCards": [],
+  "poster": {
+    "bg": "solid",
+    "bgColor": "#f2f1ec",
+    "kicker": "TRAINING PLAN · WEEK 06",
+    "title": "推拉腿 四分化训练",
+    "chips": [
+      "容量 17 组 / 天",
+      "主项 RPE 7—8",
+      "力竭留量 2 次"
+    ],
+    "metaLines": [
+      "周期8周 · 第6周",
+      "每周4练 · 训练日 60–75 分钟"
+    ],
+    "footerLines": [
+      "重量为当前周期记录值，按个人极展的 70–80% 估算。",
+      "示例样张 · 动作与重量仅作排版示意，请按自身情况调整。"
+    ],
+    "pageBadge": "09",
+    "accent": "#a8c256",
+    "textColor": "#151515",
+    "titleFont": "sans",
+    "padding": 44
+  }
+}

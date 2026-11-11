@@ -54,6 +54,23 @@ export const useLibraryStore = defineStore('library', () => {
     return saved
   }
 
+  /** Schema 1.5：导出 PNG 后自动写入模板封面（meta.cover，库页卡片展示）。
+   * 模板不存在（预设未另存）静默跳过；失败不抛（封面是非关键附属数据）。 */
+  async function setTemplateCover(templateId: string, cover: string) {
+    try {
+      // 直读 repo（不依赖 mine 缓存——用户可能未进过库页直接在编辑台导出）
+      const t = await repo.get(templateId)
+      if (!t) return false
+      t.meta = { ...t.meta, cover }
+      await repo.save(t)
+      const idx = mine.value.findIndex((x) => x.templateId === templateId)
+      if (idx >= 0) mine.value[idx] = t
+      return true
+    } catch {
+      return false
+    }
+  }
+
   /** PX-10：重命名「我的模板」（改 meta.displayName 后经 repo.save 原键覆盖持久化）。
    * 返回是否成功，提示文案由页面层决定。 */
   async function renameTemplate(templateId: string, displayName: string): Promise<boolean> {
@@ -210,6 +227,7 @@ export const useLibraryStore = defineStore('library', () => {
     loading,
     refreshMine,
     saveAsTemplate,
+    setTemplateCover,
     renameTemplate,
     removeTemplate,
     importTemplate,

@@ -46,8 +46,9 @@ export function isSlotEmpty(v: SlotRecord[string] | undefined): boolean {
   if (typeof v === 'object') {
     if ('mark' in v) return v.mark === null || v.mark === undefined
     if ('num' in v) return v.num === null || v.num === undefined
-    if ('image' in v) return false
-    return String(v.text ?? '') === ''
+    if ('image' in v || 'match' in v || 'champion' in v) return false
+    if ('cells' in v) return String(v.cells?.pattern ?? '') === ''
+    return String((v as unknown as Record<string, unknown>).text ?? '') === ''
   }
   return String(v) === ''
 }
@@ -58,8 +59,8 @@ function slotDisplayText(v: SlotRecord[string] | undefined): string {
   if (typeof v === 'object') {
     if ('mark' in v) return v.mark ? MARK_LABEL[v.mark] : ''
     if ('num' in v) return v.num === null || v.num === undefined ? '' : String(v.num)
-    if ('image' in v) return ''
-    return String(v.text ?? '')
+    if ('image' in v || 'match' in v || 'cells' in v || 'champion' in v) return ''
+    return String((v as unknown as Record<string, unknown>).text ?? '')
   }
   return String(v)
 }

@@ -452,7 +452,8 @@
       "fontSizeTier": 2,
       "paddingTier": 3,
       "borderScheme": "none",
-      "headerShape": "pill"
+      "headerShape": "pill",
+      "pillInsetV": 4
     }
   },
   "slotDefs": {},
@@ -483,6 +484,20 @@
     "accent": "#3e7d5e",
     "textColor": "#24534a",
     "titleFont": "sans",
-    "padding": 44
+    "padding": 44,
+    "bgWashes": [
+      {
+        "color": "#e2ede1",
+        "x": 1.0,
+        "y": 0.0,
+        "r": 0.26
+      },
+      {
+        "color": "#faecde",
+        "x": 0.0,
+        "y": 1.0,
+        "r": 0.22
+      }
+    ]
   }
 }

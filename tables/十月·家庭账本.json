@@ -1,0 +1,840 @@
+{
+  "schemaVersion": "1.3",
+  "templateId": "user-1794412596932-ledger2",
+  "themeId": "T-A",
+  "zebraOn": false,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "十月 家庭账本",
+    "description": "预算执行双色条形 + 支出明细子表（一比一复刻）",
+    "templateType": "stat",
+    "origin": "preset"
+  },
+  "slots": {
+    "u1": {
+      "text": "分类 / CATEGORY"
+    },
+    "u2": {
+      "text": "预算"
+    },
+    "u3": {
+      "text": "实际"
+    },
+    "u4": {
+      "text": "差额"
+    },
+    "u5": {
+      "text": "预算执行"
+    },
+    "u6": {
+      "text": "执行率"
+    },
+    "u7": {
+      "text": "饮食饮食"
+    },
+    "u8": {
+      "num": 3600
+    },
+    "u9": {
+      "num": 3842
+    },
+    "u10": {
+      "text": "-242",
+      "color": "#c0392b",
+      "align": "center",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u11": {
+      "text": "",
+      "bar": {
+        "ratio": 1.07,
+        "color": "#c0392b"
+      }
+    },
+    "u12": {
+      "text": "107%",
+      "color": "#7a828c",
+      "align": "right"
+    },
+    "u13": {
+      "text": "房贷与物业"
+    },
+    "u14": {
+      "num": 5200
+    },
+    "u15": {
+      "num": 5200
+    },
+    "u16": {
+      "text": "0",
+      "color": "#7a828c",
+      "align": "center",
+      "emphasize": null
+    },
+    "u17": {
+      "text": "",
+      "bar": {
+        "ratio": 1.0,
+        "color": "#1e5a8a"
+      }
+    },
+    "u18": {
+      "text": "100%",
+      "color": "#7a828c",
+      "align": "right"
+    },
+    "u19": {
+      "text": "交通出行"
+    },
+    "u20": {
+      "num": 1200
+    },
+    "u21": {
+      "num": 986
+    },
+    "u22": {
+      "text": "+214",
+      "color": "#2e7d4f",
+      "align": "center",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u23": {
+      "text": "",
+      "bar": {
+        "ratio": 0.82,
+        "color": "#1e5a8a"
+      }
+    },
+    "u24": {
+      "text": "82%",
+      "color": "#7a828c",
+      "align": "right"
+    },
+    "u25": {
+      "text": "孩子教育"
+    },
+    "u26": {
+      "num": 2400
+    },
+    "u27": {
+      "num": 2760
+    },
+    "u28": {
+      "text": "-360",
+      "color": "#c0392b",
+      "align": "center",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u29": {
+      "text": "",
+      "bar": {
+        "ratio": 1.15,
+        "color": "#c0392b"
+      }
+    },
+    "u30": {
+      "text": "115%",
+      "color": "#7a828c",
+      "align": "right"
+    },
+    "u31": {
+      "text": "医疗健康"
+    },
+    "u32": {
+      "num": 800
+    },
+    "u33": {
+      "num": 412
+    },
+    "u34": {
+      "text": "+388",
+      "color": "#2e7d4f",
+      "align": "center",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u35": {
+      "text": "",
+      "bar": {
+        "ratio": 0.52,
+        "color": "#1e5a8a"
+      }
+    },
+    "u36": {
+      "text": "52%",
+      "color": "#7a828c",
+      "align": "right"
+    },
+    "u37": {
+      "text": "休闲与其他"
+    },
+    "u38": {
+      "num": 1400
+    },
+    "u39": {
+      "num": 1162
+    },
+    "u40": {
+      "text": "+238",
+      "color": "#2e7d4f",
+      "align": "center",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u41": {
+      "text": "",
+      "bar": {
+        "ratio": 0.83,
+        "color": "#1e5a8a"
+      }
+    },
+    "u42": {
+      "text": "83%",
+      "color": "#7a828c",
+      "align": "right"
+    },
+    "u43": {
+      "text": "合计",
+      "bg": "#e8eef5",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u44": {
+      "num": 14600,
+      "bg": "#e8eef5",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u45": {
+      "num": 14362,
+      "bg": "#e8eef5",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u46": {
+      "text": "+238",
+      "color": "#2e7d4f",
+      "bg": "#e8eef5",
+      "emphasize": [
+        "bold"
+      ],
+      "align": "center"
+    },
+    "u47": {
+      "text": "整体控制在预算内 · 2 类超支",
+      "bg": "#e8eef5",
+      "color": "#7a828c"
+    },
+    "u48": {
+      "text": "",
+      "bg": "#e8eef5"
+    },
+    "u49": {
+      "text": "本月支出明细",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u50": {
+      "text": "按发生日期 · 仅摘录金额较大者",
+      "color": "#7a828c"
+    },
+    "u51": {
+      "text": "日期",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u52": {
+      "text": "项目",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u53": {
+      "text": "",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u54": {
+      "text": "分类",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u55": {
+      "text": "",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u56": {
+      "text": "金额",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u57": {
+      "text": "10.03",
+      "color": "#7a828c"
+    },
+    "u58": {
+      "text": "房贷 · 10 月"
+    },
+    "u59": "",
+    "u60": {
+      "text": "房贷与物业",
+      "color": "#7a828c"
+    },
+    "u61": "",
+    "u62": {
+      "num": 4850.0,
+      "align": "right"
+    },
+    "u63": {
+      "text": "10.06",
+      "color": "#7a828c"
+    },
+    "u64": {
+      "text": "少儿英语 · 秋季课包"
+    },
+    "u65": "",
+    "u66": {
+      "text": "孩子教育",
+      "color": "#7a828c"
+    },
+    "u67": "",
+    "u68": {
+      "num": 1680.0,
+      "align": "right"
+    },
+    "u69": {
+      "text": "10.09",
+      "color": "#7a828c"
+    },
+    "u70": {
+      "text": "超市采购 · 一周食材"
+    },
+    "u71": "",
+    "u72": {
+      "text": "饮食饮食",
+      "color": "#7a828c"
+    },
+    "u73": "",
+    "u74": {
+      "num": 486.4,
+      "align": "right"
+    },
+    "u75": {
+      "text": "10.12",
+      "color": "#7a828c"
+    },
+    "u76": {
+      "text": "加油 · 92#"
+    },
+    "u77": "",
+    "u78": {
+      "text": "交通出行",
+      "color": "#7a828c"
+    },
+    "u79": "",
+    "u80": {
+      "num": 420.0,
+      "align": "right"
+    },
+    "u81": {
+      "text": "10.15",
+      "color": "#7a828c"
+    },
+    "u82": {
+      "text": "门诊与药品"
+    },
+    "u83": "",
+    "u84": {
+      "text": "医疗健康",
+      "color": "#7a828c"
+    },
+    "u85": "",
+    "u86": {
+      "num": 286.0,
+      "align": "right"
+    },
+    "u87": {
+      "text": "10.18",
+      "color": "#7a828c"
+    },
+    "u88": {
+      "text": "聚餐 · 家人生日"
+    },
+    "u89": "",
+    "u90": {
+      "text": "饮食饮食",
+      "color": "#7a828c"
+    },
+    "u91": "",
+    "u92": {
+      "num": 638.0,
+      "align": "right"
+    },
+    "u93": {
+      "text": "10.21",
+      "color": "#7a828c"
+    },
+    "u94": {
+      "text": "绘本与文具"
+    },
+    "u95": "",
+    "u96": {
+      "text": "孩子教育",
+      "color": "#7a828c"
+    },
+    "u97": "",
+    "u98": {
+      "num": 198.0,
+      "align": "right"
+    },
+    "u99": {
+      "text": "10.26",
+      "color": "#7a828c"
+    },
+    "u100": {
+      "text": "周末短途 · 门票与餐费"
+    },
+    "u101": "",
+    "u102": {
+      "text": "休闲与其他",
+      "color": "#7a828c"
+    },
+    "u103": "",
+    "u104": {
+      "num": 520.0,
+      "align": "right"
+    },
+    "u105": ""
+  },
+  "blocks": [
+    {
+      "id": "blk-verdict",
+      "type": "banner",
+      "slotId": "u105",
+      "props": {
+        "text": "本月判断",
+        "bannerRight": "餐饮与教育连续两月超支，下月把这两项预算各上调 200，其余项目压缩等额。",
+        "color": "#1e3a5f",
+        "barColor": "#1e3a5f",
+        "bannerTextColor": "#ffffff",
+        "bannerRightColor": "#e8eef5"
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 18,
+    "colCount": 6,
+    "headerLevels": 1,
+    "merges": [
+      {
+        "start": [
+          10,
+          1
+        ],
+        "end": [
+          10,
+          3
+        ]
+      },
+      {
+        "start": [
+          11,
+          1
+        ],
+        "end": [
+          11,
+          3
+        ]
+      },
+      {
+        "start": [
+          12,
+          1
+        ],
+        "end": [
+          12,
+          3
+        ]
+      },
+      {
+        "start": [
+          13,
+          1
+        ],
+        "end": [
+          13,
+          3
+        ]
+      },
+      {
+        "start": [
+          14,
+          1
+        ],
+        "end": [
+          14,
+          3
+        ]
+      },
+      {
+        "start": [
+          15,
+          1
+        ],
+        "end": [
+          15,
+          3
+        ]
+      },
+      {
+        "start": [
+          16,
+          1
+        ],
+        "end": [
+          16,
+          3
+        ]
+      },
+      {
+        "start": [
+          17,
+          1
+        ],
+        "end": [
+          17,
+          3
+        ]
+      }
+    ],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          18,
+          5
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "u105",
+        "accept": [
+          "banner"
+        ],
+        "region": "footer",
+        "rowHint": "after-17"
+      }
+    ],
+    "slotGrid": [
+      [
+        "u1",
+        "u2",
+        "u3",
+        "u4",
+        "u5",
+        "u6"
+      ],
+      [
+        "u7",
+        "u8",
+        "u9",
+        "u10",
+        "u11",
+        "u12"
+      ],
+      [
+        "u13",
+        "u14",
+        "u15",
+        "u16",
+        "u17",
+        "u18"
+      ],
+      [
+        "u19",
+        "u20",
+        "u21",
+        "u22",
+        "u23",
+        "u24"
+      ],
+      [
+        "u25",
+        "u26",
+        "u27",
+        "u28",
+        "u29",
+        "u30"
+      ],
+      [
+        "u31",
+        "u32",
+        "u33",
+        "u34",
+        "u35",
+        "u36"
+      ],
+      [
+        "u37",
+        "u38",
+        "u39",
+        "u40",
+        "u41",
+        "u42"
+      ],
+      [
+        "u43",
+        "u44",
+        "u45",
+        "u46",
+        "u47",
+        "u48"
+      ],
+      [
+        "u49",
+        null,
+        null,
+        null,
+        "u50",
+        null
+      ],
+      [
+        "u51",
+        "u52",
+        null,
+        "u54",
+        null,
+        "u56"
+      ],
+      [
+        "u57",
+        "u58",
+        "u59",
+        "u60",
+        "u61",
+        "u62"
+      ],
+      [
+        "u63",
+        "u64",
+        "u65",
+        "u66",
+        "u67",
+        "u68"
+      ],
+      [
+        "u69",
+        "u70",
+        "u71",
+        "u72",
+        "u73",
+        "u74"
+      ],
+      [
+        "u75",
+        "u76",
+        "u77",
+        "u78",
+        "u79",
+        "u80"
+      ],
+      [
+        "u81",
+        "u82",
+        "u83",
+        "u84",
+        "u85",
+        "u86"
+      ],
+      [
+        "u87",
+        "u88",
+        "u89",
+        "u90",
+        "u91",
+        "u92"
+      ],
+      [
+        "u93",
+        "u94",
+        "u95",
+        "u96",
+        "u97",
+        "u98"
+      ],
+      [
+        "u99",
+        "u100",
+        "u101",
+        "u102",
+        "u103",
+        "u104"
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        180,
+        110,
+        110,
+        90,
+        300,
+        110
+      ],
+      "rowHeightTier": 2,
+      "fontSizeTier": 2,
+      "paddingTier": 3,
+      "borderScheme": "rows",
+      "plainHeader": true,
+      "fontFamily": "serif"
+    }
+  },
+  "slotDefs": {
+    "u8": {
+      "kind": "number"
+    },
+    "u9": {
+      "kind": "number"
+    },
+    "u14": {
+      "kind": "number"
+    },
+    "u15": {
+      "kind": "number"
+    },
+    "u20": {
+      "kind": "number"
+    },
+    "u21": {
+      "kind": "number"
+    },
+    "u26": {
+      "kind": "number"
+    },
+    "u27": {
+      "kind": "number"
+    },
+    "u32": {
+      "kind": "number"
+    },
+    "u33": {
+      "kind": "number"
+    },
+    "u38": {
+      "kind": "number"
+    },
+    "u39": {
+      "kind": "number"
+    },
+    "u44": {
+      "kind": "number"
+    },
+    "u45": {
+      "kind": "number"
+    },
+    "u62": {
+      "kind": "number",
+      "fractionDigits": 2
+    },
+    "u68": {
+      "kind": "number",
+      "fractionDigits": 2
+    },
+    "u74": {
+      "kind": "number",
+      "fractionDigits": 2
+    },
+    "u80": {
+      "kind": "number",
+      "fractionDigits": 2
+    },
+    "u86": {
+      "kind": "number",
+      "fractionDigits": 2
+    },
+    "u92": {
+      "kind": "number",
+      "fractionDigits": 2
+    },
+    "u98": {
+      "kind": "number",
+      "fractionDigits": 2
+    },
+    "u104": {
+      "kind": "number",
+      "fractionDigits": 2
+    }
+  },
+  "themeTokens": {
+    "primary": "#1e3a5f",
+    "headerText": "#f4f7fa",
+    "zebra": "#eef2f7",
+    "emphasis": "#c0392b",
+    "border": "#d8dee6",
+    "background": "#f8fafc"
+  },
+  "kpiStyle": "strip",
+  "kpiCards": [
+    {
+      "id": "k1",
+      "label": "当月收入",
+      "value": "21,800",
+      "color": "#1e5a8a"
+    },
+    {
+      "id": "k2",
+      "label": "当月支出",
+      "value": "14,362",
+      "color": "#c0392b"
+    },
+    {
+      "id": "k3",
+      "label": "结余 · 储蓄率 34%",
+      "value": "7,438",
+      "color": "#2e7d4f"
+    }
+  ],
+  "poster": {
+    "bg": "solid",
+    "bgColor": "#f4f7fa",
+    "kicker": "MONTHLY LEDGER · OCTOBER",
+    "title": "十月 家庭账本",
+    "metaLines": [
+      "记账周期 10.01 – 10.31",
+      "两人一娃 · 广州"
+    ],
+    "footerLines": [
+      "金额为当月记账汇总，已剔除内部转账与信用卡还款。",
+      "示例样张 · 金额与分类仅作排版示意，非真实账目。"
+    ],
+    "pageBadge": "10",
+    "accent": "#1e5a8a",
+    "textColor": "#1e3a5f",
+    "titleFont": "serif",
+    "padding": 44
+  }
+}

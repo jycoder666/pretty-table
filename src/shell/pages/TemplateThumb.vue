@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { effectivePalette, resolveTheme, type MergeRange, type TemplateInstance } from '@/core'
 
 /**
@@ -11,6 +11,11 @@ import { effectivePalette, resolveTheme, type MergeRange, type TemplateInstance 
  *   右下角画省略提示
  */
 const props = defineProps<{ instance: TemplateInstance }>()
+
+// Schema 1.5：封面图（meta.cover，导出 PNG 自动写入）；加载失败回退骨架示意
+const coverFailed = ref(false)
+const coverSrc = computed(() => props.instance.meta?.cover ?? '')
+const hasCover = computed(() => !coverFailed.value && coverSrc.value.startsWith('data:image/'))
 
 /** 最多示意的行 / 列数，超出部分截断并画省略提示 */
 const MAX_ROWS = 8
@@ -96,7 +101,17 @@ const cells = computed<ThumbCell[]>(() => {
 </script>
 
 <template>
-  <div class="thumb" data-testid="tpl-thumb" :style="thumbVars" aria-hidden="true">
+  <div class="thumb" data-testid="tpl-thumb" :style="thumbVars" :aria-hidden="hasCover ? undefined : true">
+    <!-- Schema 1.5：导出 PNG 自动生成的封面图（meta.cover）；无封面回退 CSS 骨架示意 -->
+    <img
+      v-if="hasCover"
+      class="cover"
+      :src="coverSrc"
+      alt=""
+      loading="lazy"
+      @error="coverFailed = true"
+    />
+    <template v-else>
     <div class="cells" :style="gridStyle">
       <i
         v-for="cell in cells"
@@ -109,6 +124,7 @@ const cells = computed<ThumbCell[]>(() => {
       />
     </div>
     <span v-if="truncated" class="more">…</span>
+    </template>
   </div>
 </template>
 
@@ -121,6 +137,15 @@ const cells = computed<ThumbCell[]>(() => {
   background: var(--th-paper);
   overflow: hidden;
   flex-shrink: 0;
+}
+.cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
 }
 .cells {
   position: absolute;

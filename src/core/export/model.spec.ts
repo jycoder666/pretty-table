@@ -472,3 +472,48 @@ describe('buildExportModel · 导出同源（交互升级 T03）', () => {
 // ── 2026-11-10 四新 emphasis mark（serif/display/muted/bar）：HTML 内联样式侧 ──
 // cellInlineStyle 消费面（buildExportModel → cellStyle）：与 toOption.styleForCell 画布侧同源同序
 
+
+
+describe('Schema 1.5 · 对阵/冠军/打卡槽 HTML 导出', () => {
+  const base = () => ({
+    schemaVersion: '1.3',
+    templateId: 'user-t-match',
+    themeId: 'T-A',
+    slots: {
+      m1: { match: { a: '甲队', sa: '2', b: '乙队', sb: '1', winA: true } },
+      c1: { champion: { title: '冠军', name: '甲队', note: '3 战 3 胜' } },
+      g1: { cells: { pattern: '101', today: 1 } },
+    },
+    blocks: [],
+    layout: {
+      rowCount: 4,
+      colCount: 1,
+      blockSlots: [],
+      headerLevels: 1,
+      slotGrid: [[null], ['m1'], ['c1'], ['g1']],
+    },
+    themeTokens: undefined,
+    kpiCards: [],
+  }) as unknown as import('../types').TemplateInstance
+
+  it('match 槽渲染上下两张卡，胜方高亮；champion 三行；cells 方格', () => {
+    const r = buildExportModel(base())
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const html = renderExportHtml(r.value)
+    expect(html).toContain('甲队')
+    expect(html).toContain('乙队')
+    expect(html).toContain('冠军')
+    expect(html).toContain('3 战 3 胜')
+    // 3 个打卡格：实心/空心 用 i 标签表现
+    expect(html.match(/<i style="[^"]*width:14px[^"]*"/g)?.length).toBe(3)
+  })
+
+  it('match 槽 named 字段不经过 text 白名单失真（无 [object Object]）', () => {
+    const r = buildExportModel(base())
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const html = renderExportHtml(r.value)
+    expect(html).not.toContain('[object Object]')
+  })
+})

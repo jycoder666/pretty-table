@@ -7,12 +7,12 @@ import { SEED_TEMPLATES, ensureSeeded } from './seedTemplates'
 
 /**
  * 内置需求表自动播种（tables/*.json →「我的模板」）：
- * - 首次播种 8 张、显示名=中文文件名去扩展名
+ * - 首次播种 12 张（2026-11-12 起 tables/ 12 张）、显示名=中文文件名去扩展名
  * - 刷新（再次 ensureSeeded）不重复种
  * - 用户删除某张种子表后不复活（注册键 seed:v3:<templateId> 仍在；v3 = schema 1.3 复刻版升级戳）
  * - 用户库已有同 id 模板（跨机导入）不被覆盖
  * idb-keyval 以内存 Map 模拟（与 idbTemplateRepo.spec.ts 同款），
- * import.meta.glob 经 vitest 真实加载 tables/ 下 8 张 JSON。
+ * import.meta.glob 经 vitest 真实加载 tables/ 下 12 张 JSON。
  */
 
 const { mem, memOf } = vi.hoisted(() => {
@@ -56,6 +56,11 @@ const SEED_FILE_NAMES = [
   '年度体检·指标解读',
   '百万医疗险·横向测评',
   '餐厅秋季菜单',
+  // 2026-11-12 批：table2 设计稿 4 张（训练/账本/淘汰赛/打卡）
+  '推拉腿·四分化训练',
+  '十月·家庭账本',
+  '城市杯·八强淘汰赛',
+  '二十一天·习惯打卡',
 ]
 
 function seedKeys(): string[] {
@@ -76,38 +81,38 @@ beforeEach(() => {
 })
 
 describe('seedTemplates · 内置需求表自动播种', () => {
-  it('glob 收集：tables/ 下 8 张表全部合法，显示名=文件名去扩展名（P6 懒加载后经 ensureSeeded 触发）', async () => {
+  it('glob 收集：tables/ 下 12 张表全部合法，显示名=文件名去扩展名（P6 懒加载后经 ensureSeeded 触发）', async () => {
     // P6：glob 改 eager:false，种子清单在首次 ensureSeeded 时动态加载填充
     await ensureSeeded()
-    expect(SEED_TEMPLATES).toHaveLength(8)
+    expect(SEED_TEMPLATES).toHaveLength(12)
     expect(SEED_TEMPLATES.map((s) => s.fileName).sort()).toEqual([...SEED_FILE_NAMES].sort())
     for (const s of SEED_TEMPLATES) {
       expect(s.instance.templateId).toMatch(/^user-/)
     }
   })
 
-  it('首次播种：空库 ensureSeeded 后「我的模板」出现 8 张，displayName 为文件名，注册键齐全', async () => {
+  it('首次播种：空库 ensureSeeded 后「我的模板」出现 12 张，displayName 为文件名，注册键齐全', async () => {
     await ensureSeeded()
     const repo = createIdbTemplateRepo()
     const list = await repo.list()
-    expect(list).toHaveLength(8)
+    expect(list).toHaveLength(12)
     expect(list.map((t) => t.meta?.displayName ?? '').sort()).toEqual([...SEED_FILE_NAMES].sort())
-    expect(seedKeys()).toHaveLength(8)
+    expect(seedKeys()).toHaveLength(12)
     // 播种实例可再读回（repo.list 内 validate+migrate 通过）
     expect(list.every((t) => t.schemaVersion === '1.3')).toBe(true)
     // 防回退（P0 教训 2026-11-08）：所有播种写入必须落在应用库 kvStore，
     // 默认库（漏传 store 参数时的去处）必须保持零键
     expect(mem.size).toBe(0)
-    expect(memOf(kvStore).size).toBe(16)
+    expect(memOf(kvStore).size).toBe(24)
   })
 
-  it('刷新不重复种：第二次 ensureSeeded 零写入，列表仍 8 张', async () => {
+  it('刷新不重复种：第二次 ensureSeeded 零写入，列表仍 12 张', async () => {
     await ensureSeeded()
     const writesAfterFirst = vi.mocked(idbSet).mock.calls.length
     await ensureSeeded()
     expect(vi.mocked(idbSet).mock.calls.length).toBe(writesAfterFirst)
     const repo = createIdbTemplateRepo()
-    expect(await repo.list()).toHaveLength(8)
+    expect(await repo.list()).toHaveLength(12)
   })
 
   it('删除后不复活：remove 只删 tpl: 键，注册键仍在，再播种不写回', async () => {
@@ -120,7 +125,7 @@ describe('seedTemplates · 内置需求表自动播种', () => {
     expect(vi.mocked(idbSet).mock.calls.length).toBe(writesAfterRemove)
     expect(await repo.get(target.instance.templateId)).toBeNull()
     const list = await repo.list()
-    expect(list).toHaveLength(7)
+    expect(list).toHaveLength(11)
     expect(list.map((t) => t.meta?.displayName)).not.toContain(target.fileName)
   })
 

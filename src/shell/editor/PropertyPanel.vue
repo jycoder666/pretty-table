@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { CellsSlotObject, ChampionSlotObject, MatchSlotObject } from '@/core'
 import { useEditorStore } from '../stores/editor'
 import {
   isEmphasizable,
@@ -133,8 +134,8 @@ function slotDisplay(v: SlotValue | undefined): string {
   if (typeof v === 'object') {
     if ('mark' in v) return v.mark ? MARK_LABEL[v.mark] : ''
     if ('num' in v) return v.num === null || v.num === undefined ? '' : String(v.num)
-    if ('image' in v) return ''
-    return String(v.text ?? '')
+    if ('image' in v || 'match' in v || 'cells' in v || 'champion' in v) return ''
+    return String((v as unknown as Record<string, unknown>).text ?? '')
   }
   return String(v)
 }
@@ -217,6 +218,85 @@ const blockHeadline = computed<string>(() => {
   return mLeft ? `区块 · 第 ${Number(mLeft[1]) + 1} 行` : '区块'
 })
 
+// ── Schema 1.5：海报组（表格外纸面文字全量编辑；一次字段修改 = 一步撤销）──
+const posterSpec = computed<Record<string, unknown>>(() =>
+  (editor.current?.poster ?? {}) as Record<string, unknown>,
+)
+
+function setPosterField(key: string, value: unknown) {
+  if (!editor.current || editor.pastePending) return
+  const next = { ...posterSpec.value }
+  if (value === '' || value === undefined || (Array.isArray(value) && value.length === 0)) {
+    delete next[key]
+  } else {
+    next[key] = value
+  }
+  editor.apply({ kind: 'setPoster', poster: next as never })
+}
+
+function posterStr(key: string) {
+  return typeof posterSpec.value[key] === 'string' ? (posterSpec.value[key] as string) : ''
+}
+
+function posterLines(key: string) {
+  const arr = posterSpec.value[key]
+  return Array.isArray(arr) ? arr.map(String).join('\n') : ''
+}
+
+const posterKicker = computed({
+  get: () => posterStr('kicker'),
+  set: (v: string) => setPosterField('kicker', v.trim()),
+})
+const posterTitle = computed({
+  get: () => posterStr('title'),
+  set: (v: string) => setPosterField('title', v),
+})
+const posterSubtitle = computed({
+  get: () => posterStr('subtitle'),
+  set: (v: string) => setPosterField('subtitle', v),
+})
+const posterLegend = computed({
+  get: () => posterStr('legend'),
+  set: (v: string) => setPosterField('legend', v.trim()),
+})
+const posterBadge = computed({
+  get: () => posterStr('pageBadge'),
+  set: (v: string) => setPosterField('pageBadge', v.trim()),
+})
+const posterMeta = computed({
+  get: () => posterLines('metaLines'),
+  set: (v: string) =>
+    setPosterField(
+      'metaLines',
+      v
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean),
+    ),
+})
+const posterFooter = computed({
+  get: () => posterLines('footerLines'),
+  set: (v: string) =>
+    setPosterField(
+      'footerLines',
+      v
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean),
+    ),
+})
+const posterChips = computed({
+  get: () => posterLines('chips'),
+  set: (v: string) =>
+    setPosterField(
+      'chips',
+      v
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean),
+    ),
+})
+
 const slotText = computed({
   get() {
     if (!editor.selectedSlotId || !editor.current) return ''
@@ -233,6 +313,242 @@ const slotKind = computed<'text' | 'number' | 'mark'>(() => {
   if (!editor.current || !sid) return 'text'
   return editor.current.slotDefs?.[sid]?.kind ?? 'text'
 })
+
+// ── Schema 1.5：副行小字 / 同行尾注（text/num 槽对象字段 patch，一步撤销）──
+const isStructuredSlot = computed(() => {
+  const sid = editor.selectedSlotId
+  const v = sid && editor.current ? editor.current.slots[sid] : undefined
+  return Boolean(
+    v && typeof v === 'object' && ('match' in v || 'cells' in v || 'champion' in v),
+  )
+})
+
+const isDecoratableSlot = computed(() => {
+  const sid = editor.selectedSlotId
+  const v = sid && editor.current ? editor.current.slots[sid] : undefined
+  if (v === undefined || v === null || typeof v !== 'object') return slotKind.value !== 'mark'
+  return !('image' in v) && !('match' in v) && !('cells' in v) && !('champion' in v) && !('mark' in v)
+})
+
+/** 读取选中槽的 text/num 对象形态；字符串值先升级为 {text} 对象再 patch */
+function patchSlotObject(patch: Record<string, unknown>) {
+  const sid = editor.selectedSlotId
+  if (!sid || !editor.current || editor.pastePending) return
+  const prev = editor.current.slots[sid]
+  let base: Record<string, unknown>
+  if (prev && typeof prev === 'object' && !('mark' in prev) && !('image' in prev)) {
+    base = { ...(prev as unknown as Record<string, unknown>) }
+  } else {
+    base = { text: typeof prev === 'object' || prev === undefined ? '' : String(prev) }
+    if (slotKind.value === 'number') base = { num: null }
+  }
+  for (const [k, val] of Object.entries(patch)) {
+    if (val === undefined || val === '') delete base[k]
+    else base[k] = val
+  }
+  editor.apply({ kind: 'setSlot', slotId: sid, value: base as never })
+}
+
+const slotSub = computed({
+  get() {
+    const sid = editor.selectedSlotId
+    const v = sid && editor.current ? editor.current.slots[sid] : undefined
+    return v && typeof v === 'object' && 'sub' in v ? String((v as { sub?: string }).sub ?? '') : ''
+  },
+  set(v: string) {
+    if (isDecoratableSlot.value) patchSlotObject({ sub: v })
+  },
+})
+
+const slotUnit = computed({
+  get() {
+    const sid = editor.selectedSlotId
+    const v = sid && editor.current ? editor.current.slots[sid] : undefined
+    if (v && typeof v === 'object' && 'unit' in v) return String((v as { unit?: string }).unit ?? '')
+    // num 槽单位由 slotDefs 声明（模板级）
+    const sid2 = editor.selectedSlotId
+    return sid2 ? editor.current?.slotDefs?.[sid2]?.unit ?? '' : ''
+  },
+  set(v: string) {
+    if (slotKind.value === 'number') return // num 槽单位是模板声明，不在格级改
+    if (isDecoratableSlot.value) patchSlotObject({ unit: v })
+  },
+})
+
+// ── Schema 1.5：槽位装饰编辑（星级/圆点/甘特/时间轴/点线/描边盒/字号倍率/逐格色）──
+interface SlotObjRec extends Record<string, unknown> {
+  text?: string | number
+}
+
+const decorSlot = computed<SlotObjRec | null>(() => {
+  const sid = editor.selectedSlotId
+  const v = sid && editor.current ? editor.current.slots[sid] : undefined
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null
+  if ('mark' in v || 'image' in v || 'match' in v || 'cells' in v || 'champion' in v) return null
+  return v as unknown as SlotObjRec
+})
+
+const canDecor = computed(() => decorSlot.value !== null && !editor.pastePending)
+
+function patchDecor(patch: Record<string, unknown>) {
+  if (!canDecor.value) return
+  patchSlotObject(patch)
+}
+
+const slotStars = computed(() => (decorSlot.value?.stars as number | undefined) ?? 0)
+function setStars(n: number) {
+  patchDecor({ stars: n === 0 ? undefined : n })
+}
+
+const slotDot = computed(() => (decorSlot.value?.dot as { color?: string } | undefined) ?? null)
+const dotColor = computed(() => slotDot.value?.color ?? '#c0653a')
+function toggleDot() {
+  patchDecor({ dot: slotDot.value ? undefined : { color: dotColor.value } })
+}
+function setDotColor(hex: string) {
+  if (!slotDot.value) return
+  patchDecor({ dot: { color: hex } })
+}
+
+const slotGantt = computed(() => (decorSlot.value?.gantt as { from: number; to: number; color?: string; milestone?: boolean } | undefined) ?? null)
+function toggleGantt() {
+  patchDecor({ gantt: slotGantt.value ? undefined : { from: 0.1, to: 0.6 } })
+}
+function setGantt(key: 'from' | 'to', raw: string) {
+  if (!slotGantt.value) return
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return
+  const v = Math.min(1, Math.max(0, n))
+  const next = { ...slotGantt.value, [key]: v }
+  if (next.to < next.from) next.to = next.from
+  patchDecor({ gantt: next })
+}
+function setGanttMilestone(on: boolean) {
+  if (!slotGantt.value) return
+  const next = { ...slotGantt.value }
+  if (on) next.milestone = true
+  else delete next.milestone
+  patchDecor({ gantt: next })
+}
+function setGanttColor(hex: string) {
+  if (!slotGantt.value) return
+  patchDecor({ gantt: { ...slotGantt.value, color: hex } })
+}
+
+const slotNode = computed(() => decorSlot.value?.node === true)
+const slotLeader = computed(() => decorSlot.value?.leader === true)
+const slotBoxed = computed(() => decorSlot.value?.boxed === true)
+
+const slotScale = computed(() => (decorSlot.value?.cellScale as number | undefined) ?? 1)
+function setScale(v: number) {
+  patchDecor({ cellScale: v === 1 ? undefined : v })
+}
+
+const slotBg = computed(() => (decorSlot.value?.bg as string | undefined) ?? '')
+const slotColor = computed(() => (decorSlot.value?.color as string | undefined) ?? '')
+function setSlotBg(hex: string) {
+  patchDecor({ bg: hex })
+}
+function setSlotTextColor(hex: string) {
+  patchDecor({ color: hex })
+}
+
+// ── Schema 1.5：对阵/冠军/打卡槽专属编辑 ──
+const matchSlot = computed(() => {
+  const sid = editor.selectedSlotId
+  const v = sid && editor.current ? editor.current.slots[sid] : undefined
+  return v && typeof v === 'object' && 'match' in v ? (v as { match: MatchSlotObject['match'] }).match : null
+})
+function patchMatch(patch: Partial<MatchSlotObject['match']>) {
+  const sid = editor.selectedSlotId
+  if (!sid || !matchSlot.value || editor.pastePending) return
+  editor.apply({
+    kind: 'setSlot',
+    slotId: sid,
+    value: { match: { ...matchSlot.value, ...patch } },
+  })
+}
+
+const championSlot = computed(() => {
+  const sid = editor.selectedSlotId
+  const v = sid && editor.current ? editor.current.slots[sid] : undefined
+  return v && typeof v === 'object' && 'champion' in v
+    ? (v as { champion: ChampionSlotObject['champion'] }).champion
+    : null
+})
+function patchChampion(patch: Partial<ChampionSlotObject['champion']>) {
+  const sid = editor.selectedSlotId
+  if (!sid || !championSlot.value || editor.pastePending) return
+  editor.apply({
+    kind: 'setSlot',
+    slotId: sid,
+    value: { champion: { ...championSlot.value, ...patch } },
+  })
+}
+
+const cellsSlot = computed(() => {
+  const sid = editor.selectedSlotId
+  const v = sid && editor.current ? editor.current.slots[sid] : undefined
+  return v && typeof v === 'object' && 'cells' in v ? (v as { cells: CellsSlotObject['cells'] }).cells : null
+})
+function patchCells(patch: Partial<CellsSlotObject['cells']>) {
+  const sid = editor.selectedSlotId
+  if (!sid || !cellsSlot.value || editor.pastePending) return
+  editor.apply({
+    kind: 'setSlot',
+    slotId: sid,
+    value: { cells: { ...cellsSlot.value, ...patch } },
+  })
+}
+
+// ── Schema 1.5：表格形态（样式组；setStylePatch 一步撤销）──
+const styleState = computed(() => editor.current?.layout.style ?? {})
+const fontFamily = computed<'sans' | 'serif'>(() => styleState.value.fontFamily ?? 'sans')
+const borderScheme = computed(() => styleState.value.borderScheme ?? 'full')
+const headerShape = computed(() => styleState.value.headerShape ?? 'flat')
+const plainHeader = computed(() => styleState.value.plainHeader === true)
+const pillInsetV = computed(() => styleState.value.pillInsetV ?? 6)
+function patchStyle(patch: Record<string, unknown>) {
+  if (!editor.current || editor.pastePending) return
+  editor.apply({ kind: 'setStylePatch', patch: patch as never })
+}
+
+// ── Schema 1.5：海报背景（bg 形态 / 基色 / 纹理色 / accent / 文字色 / 标题字体 / 留白 / 颜色洗）──
+const posterBgMode = computed(() => {
+  const p = editor.current?.poster
+  return (p?.bg ?? 'solid') as 'solid' | 'dots' | 'ruled' | 'gradient'
+})
+function setPosterField2(key: string, value: unknown) {
+  if (!editor.current || editor.pastePending) return
+  const next: Record<string, unknown> = { ...editor.current.poster }
+  if (value === '' || value === undefined) delete next[key]
+  else next[key] = value
+  editor.apply({ kind: 'setPoster', poster: next as never })
+}
+const posterBgColor = computed(() => (editor.current?.poster?.bgColor as string | undefined) ?? '')
+const posterBgAccent = computed(() => (editor.current?.poster?.bgAccent as string | undefined) ?? '')
+const posterAccent = computed(() => (editor.current?.poster?.accent as string | undefined) ?? '')
+const posterTextColor = computed(() => (editor.current?.poster?.textColor as string | undefined) ?? '')
+const posterTitleFont = computed<'sans' | 'serif'>(() => editor.current?.poster?.titleFont ?? 'sans')
+const posterPadding = computed(() => editor.current?.poster?.padding ?? 40)
+const posterWashes = computed(() => editor.current?.poster?.bgWashes ?? [])
+function setWash(index: number, patch: Partial<{ color: string; x: number; y: number; r: number }>) {
+  const washes = (editor.current?.poster?.bgWashes ?? []).map((w, i) =>
+    i === index ? { ...w, ...patch } : w,
+  )
+  setPosterField2('bgWashes', washes)
+}
+function addWash() {
+  const washes = editor.current?.poster?.bgWashes ?? []
+  if (washes.length >= 6) return
+  setPosterField2('bgWashes', [...washes, { color: '#e2ede1', x: 1, y: 0, r: 0.3 }])
+}
+function removeWash(index: number) {
+  setPosterField2(
+    'bgWashes',
+    (editor.current?.poster?.bgWashes ?? []).filter((_, i) => i !== index),
+  )
+}
 
 const markValue = computed<MarkValue | null>(() => {
   const sid = editor.selectedSlotId
@@ -689,9 +1005,292 @@ const barColorValue = computed(() => selectedBar.value?.color ?? roleColorOf(edi
               placeholder="填写数字"
               @change="numText = ($event.target as HTMLInputElement).value"
             />
+            <p v-if="slotUnit" class="hint">单位：{{ slotUnit }}（由模板定义）</p>
           </template>
           <template v-else>
-            <textarea v-if="!selectedImage" v-model="slotText" rows="3" @blur="editor.endTextSession()" />
+            <!-- 结构化槽（对阵/冠军/打卡）只显示专属编辑器，不展示通用文字区（防误写覆盖） -->
+            <textarea
+              v-if="!selectedImage && !isStructuredSlot"
+              v-model="slotText"
+              rows="3"
+              data-testid="slot-text"
+              @blur="editor.endTextSession()"
+            />
+            <!-- Schema 1.5：副行小字 / 同行尾注（模板自带的双行格在这里逐格可改） -->
+            <template v-if="!selectedImage && isDecoratableSlot">
+              <div class="deco-fields" data-testid="slot-deco-fields">
+                <label class="mini-label" for="slot-sub">副行小字（格子里的第二行）</label>
+                <input
+                  id="slot-sub"
+                  type="text"
+                  :value="slotSub"
+                  :disabled="editor.pastePending"
+                  placeholder="如：李老师 · 302"
+                  @change="slotSub = ($event.target as HTMLInputElement).value"
+                />
+                <label class="mini-label" for="slot-unit">同行尾注（主文字后的小字）</label>
+                <input
+                  id="slot-unit"
+                  type="text"
+                  :value="slotUnit"
+                  :disabled="editor.pastePending"
+                  placeholder="如：主项 / 收尾（可留空）"
+                  @change="slotUnit = ($event.target as HTMLInputElement).value"
+                />
+              </div>
+              <!-- Schema 1.5：装饰元素（星级/圆点/甘特/时间轴/点线/描边盒/字号倍率/逐格色） -->
+              <div v-if="canDecor" class="deco-fields" data-testid="slot-deco-tools">
+                <label class="mini-label">星级（0 = 清除）</label>
+                <div class="row" role="radiogroup" aria-label="星级">
+                  <PtButton
+                    v-for="n in 5"
+                    :key="'star-' + n"
+                    variant="ghost"
+                    :class="{ on: slotStars >= n }"
+                    :aria-pressed="slotStars >= n"
+                    :disabled="editor.pastePending"
+                    @click="setStars(slotStars === n ? n - 1 : n)"
+                  >
+                    ★
+                  </PtButton>
+                  <PtButton variant="ghost" :disabled="editor.pastePending" @click="setStars(0)">清</PtButton>
+                </div>
+                <label class="mini-label">状态圆点</label>
+                <div class="row">
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: !!slotDot }"
+                    :aria-pressed="!!slotDot"
+                    :disabled="editor.pastePending"
+                    @click="toggleDot"
+                  >
+                    {{ slotDot ? '● 有圆点' : '○ 无圆点' }}
+                  </PtButton>
+                  <input
+                    v-if="slotDot"
+                    type="color"
+                    class="mini-color"
+                    :value="dotColor"
+                    aria-label="圆点颜色"
+                    @change="setDotColor(($event.target as HTMLInputElement).value)"
+                  />
+                </div>
+                <label class="mini-label">甘特条</label>
+                <div class="row">
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: !!slotGantt }"
+                    :aria-pressed="!!slotGantt"
+                    :disabled="editor.pastePending"
+                    @click="toggleGantt"
+                  >
+                    {{ slotGantt ? '移除甘特' : '添加甘特' }}
+                  </PtButton>
+                </div>
+                <template v-if="slotGantt">
+                  <div class="row">
+                    <label class="mini-label" for="gantt-from">起</label>
+                    <input
+                      id="gantt-from"
+                      class="num-sm"
+                      type="text"
+                      inputmode="decimal"
+                      :value="slotGantt.from"
+                      @change="setGantt('from', ($event.target as HTMLInputElement).value)"
+                    />
+                    <label class="mini-label" for="gantt-to">止</label>
+                    <input
+                      id="gantt-to"
+                      class="num-sm"
+                      type="text"
+                      inputmode="decimal"
+                      :value="slotGantt.to"
+                      @change="setGantt('to', ($event.target as HTMLInputElement).value)"
+                    />
+                    <input
+                      type="color"
+                      class="mini-color"
+                      :value="slotGantt.color || '#2f3630'"
+                      aria-label="甘特条颜色"
+                      @change="setGanttColor(($event.target as HTMLInputElement).value)"
+                    />
+                  </div>
+                  <label class="zebra">
+                    <input
+                      type="checkbox"
+                      :checked="!!slotGantt.milestone"
+                      :disabled="editor.pastePending"
+                      @change="setGanttMilestone(($event.target as HTMLInputElement).checked)"
+                    />
+                    里程碑（终点菱形）
+                  </label>
+                </template>
+                <div class="row">
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: slotNode }"
+                    :aria-pressed="slotNode"
+                    :disabled="editor.pastePending"
+                    @click="patchDecor({ node: !slotNode || undefined })"
+                  >
+                    {{ slotNode ? '● 时间轴' : '○ 时间轴' }}
+                  </PtButton>
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: slotLeader }"
+                    :aria-pressed="slotLeader"
+                    :disabled="editor.pastePending"
+                    @click="patchDecor({ leader: !slotLeader || undefined })"
+                  >
+                    {{ slotLeader ? '● 点线' : '○ 点线' }}
+                  </PtButton>
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: slotBoxed }"
+                    :aria-pressed="slotBoxed"
+                    :disabled="editor.pastePending"
+                    @click="patchDecor({ boxed: !slotBoxed || undefined })"
+                  >
+                    {{ slotBoxed ? '▣ 描边盒' : '▢ 描边盒' }}
+                  </PtButton>
+                </div>
+                <label class="mini-label">字号倍率</label>
+                <div class="row" role="radiogroup" aria-label="字号倍率">
+                  <PtButton
+                    v-for="sc in [1, 1.25, 1.5]"
+                    :key="'sc-' + sc"
+                    variant="ghost"
+                    :class="{ on: slotScale === sc }"
+                    :aria-pressed="slotScale === sc"
+                    :disabled="editor.pastePending"
+                    @click="setScale(sc)"
+                  >
+                    {{ sc }}×
+                  </PtButton>
+                </div>
+                <label class="mini-label" for="slot-bg">格子底色</label>
+                <div class="row">
+                  <input
+                    id="slot-bg"
+                    type="color"
+                    class="mini-color"
+                    :value="slotBg || '#f6f0e3'"
+                    aria-label="格子底色"
+                    @change="setSlotBg(($event.target as HTMLInputElement).value)"
+                  />
+                  <PtButton variant="ghost" :disabled="editor.pastePending" @click="setSlotBg('')">清除</PtButton>
+                </div>
+                <label class="mini-label" for="slot-textcolor">文字颜色</label>
+                <div class="row">
+                  <input
+                    id="slot-textcolor"
+                    type="color"
+                    class="mini-color"
+                    :value="slotColor || '#1a1a1a'"
+                    aria-label="文字颜色"
+                    @change="setSlotTextColor(($event.target as HTMLInputElement).value)"
+                  />
+                  <PtButton variant="ghost" :disabled="editor.pastePending" @click="setSlotTextColor('')">清除</PtButton>
+                </div>
+              </div>
+            </template>
+            <!-- Schema 1.5：对阵卡编辑（bracket 槽） -->
+            <div v-if="matchSlot" class="deco-fields" data-testid="match-editor">
+              <label class="mini-label" for="match-a">上卡 · 队名</label>
+              <input
+                id="match-a"
+                type="text"
+                :value="matchSlot.a"
+                @change="patchMatch({ a: ($event.target as HTMLInputElement).value })"
+              />
+              <label class="mini-label" for="match-sa">上卡 · 比分</label>
+              <input
+                id="match-sa"
+                type="text"
+                :value="matchSlot.sa"
+                @change="patchMatch({ sa: ($event.target as HTMLInputElement).value })"
+              />
+              <label class="mini-label" for="match-b">下卡 · 队名</label>
+              <input
+                id="match-b"
+                type="text"
+                :value="matchSlot.b"
+                @change="patchMatch({ b: ($event.target as HTMLInputElement).value })"
+              />
+              <label class="mini-label" for="match-sb">下卡 · 比分</label>
+              <input
+                id="match-sb"
+                type="text"
+                :value="matchSlot.sb"
+                @change="patchMatch({ sb: ($event.target as HTMLInputElement).value })"
+              />
+              <label class="zebra">
+                <input
+                  type="checkbox"
+                  :checked="!!matchSlot.winA"
+                  @change="patchMatch({ winA: ($event.target as HTMLInputElement).checked, winB: false })"
+                />
+                上方队伍胜出
+              </label>
+              <label class="zebra">
+                <input
+                  type="checkbox"
+                  :checked="!!matchSlot.winB"
+                  @change="patchMatch({ winB: ($event.target as HTMLInputElement).checked, winA: false })"
+                />
+                下方队伍胜出
+              </label>
+            </div>
+            <!-- Schema 1.5：冠军卡编辑 -->
+            <div v-if="championSlot" class="deco-fields" data-testid="champion-editor">
+              <label class="mini-label" for="champ-title">小标</label>
+              <input
+                id="champ-title"
+                type="text"
+                :value="championSlot.title || ''"
+                @change="patchChampion({ title: ($event.target as HTMLInputElement).value })"
+              />
+              <label class="mini-label" for="champ-name">冠军名</label>
+              <input
+                id="champ-name"
+                type="text"
+                :value="championSlot.name"
+                @change="patchChampion({ name: ($event.target as HTMLInputElement).value })"
+              />
+              <label class="mini-label" for="champ-note">备注</label>
+              <input
+                id="champ-note"
+                type="text"
+                :value="championSlot.note || ''"
+                @change="patchChampion({ note: ($event.target as HTMLInputElement).value })"
+              />
+            </div>
+            <!-- Schema 1.5：打卡矩阵编辑 -->
+            <div v-if="cellsSlot" class="deco-fields" data-testid="cells-editor">
+              <label class="mini-label" for="cells-pattern">打卡串（1 = 完成，0 = 未完成）</label>
+              <textarea
+                id="cells-pattern"
+                rows="2"
+                :value="cellsSlot.pattern"
+                @change="patchCells({ pattern: ($event.target as HTMLTextAreaElement).value.replace(/[^01]/g, '') })"
+              ></textarea>
+              <label class="mini-label" for="cells-today">「今天」位置（0 起，留空无）</label>
+              <input
+                id="cells-today"
+                class="num-sm"
+                type="text"
+                inputmode="numeric"
+                :value="cellsSlot.today === undefined ? '' : String(cellsSlot.today)"
+                @change="
+                  patchCells({
+                    today:
+                      ($event.target as HTMLInputElement).value === ''
+                        ? undefined
+                        : Number(($event.target as HTMLInputElement).value),
+                  })
+                "
+              />
+            </div>
           </template>
           <!-- WP3：多选时按钮作用于整块选区（一批一步撤销） -->
           <p v-if="multiSelect" class="hint" data-testid="selection-count">
@@ -762,6 +1361,209 @@ const barColorValue = computed(() => selectedBar.value?.color ?? roleColorOf(edi
               </div>
               <p class="hint">条宽 = 比例 × 格子内容宽，颜色默认跟主题。</p>
             </template>
+          </div>
+        </div>
+
+                <!-- Schema 1.5：海报组（表格外纸面文字；无 poster 的模板编辑即创建） -->
+        <div class="section" data-testid="poster-group">
+          <h4>海报（标题区 / 注脚）</h4>
+          <p class="hint">表格画布之外的纸面文字：标题区、右上信息、底部注脚与页码。</p>
+          <div class="deco-fields">
+            <label class="mini-label">背景形态</label>
+            <div class="row" role="radiogroup" aria-label="背景形态">
+              <PtButton
+                v-for="opt in [
+                  { v: 'solid', label: '纯色' },
+                  { v: 'dots', label: '点纹' },
+                  { v: 'ruled', label: '横线' },
+                  { v: 'gradient', label: '渐变' },
+                ]"
+                :key="'bg-' + opt.v"
+                variant="ghost"
+                :class="{ on: posterBgMode === opt.v }"
+                :aria-pressed="posterBgMode === opt.v"
+                :disabled="editor.pastePending"
+                @click="setPosterField2('bg', opt.v)"
+              >
+                {{ opt.label }}
+              </PtButton>
+            </div>
+            <div class="row">
+              <label class="mini-label" for="poster-bgcolor">纸面基色</label>
+              <input
+                id="poster-bgcolor"
+                type="color"
+                class="mini-color"
+                :value="posterBgColor || '#f7f3e6'"
+                aria-label="纸面基色"
+                @change="setPosterField2('bgColor', ($event.target as HTMLInputElement).value)"
+              />
+              <label class="mini-label" for="poster-bgaccent">纹理 / 渐变第二色</label>
+              <input
+                id="poster-bgaccent"
+                type="color"
+                class="mini-color"
+                :value="posterBgAccent || '#d8d2bd'"
+                aria-label="纹理第二色"
+                @change="setPosterField2('bgAccent', ($event.target as HTMLInputElement).value)"
+              />
+            </div>
+            <!-- Schema 1.4：角部颜色洗（非均匀渐变） -->
+            <label class="mini-label">颜色洗（角部渐变斑；最多 6 个）</label>
+            <div v-for="(wash, wi) in posterWashes" :key="'wash-' + wi" class="row">
+              <input
+                type="color"
+                class="mini-color"
+                :value="wash.color"
+                :aria-label="'洗色 ' + (wi + 1)"
+                @change="setWash(wi, { color: ($event.target as HTMLInputElement).value })"
+              />
+              <input
+                class="num-sm"
+                type="text"
+                inputmode="decimal"
+                :value="String(wash.x)"
+                :aria-label="'洗 x ' + (wi + 1)"
+                @change="setWash(wi, { x: Number(($event.target as HTMLInputElement).value) || 0 })"
+              />
+              <input
+                class="num-sm"
+                type="text"
+                inputmode="decimal"
+                :value="String(wash.y)"
+                :aria-label="'洗 y ' + (wi + 1)"
+                @change="setWash(wi, { y: Number(($event.target as HTMLInputElement).value) || 0 })"
+              />
+              <input
+                class="num-sm"
+                type="text"
+                inputmode="decimal"
+                :value="String(wash.r ?? 0.35)"
+                :aria-label="'洗半径 ' + (wi + 1)"
+                @change="setWash(wi, { r: Number(($event.target as HTMLInputElement).value) || 0.1 })"
+              />
+              <PtButton variant="ghost" @click="removeWash(wi)">删</PtButton>
+            </div>
+            <PtButton variant="ghost" :disabled="posterWashes.length >= 6" @click="addWash">+ 加颜色洗</PtButton>
+            <div class="row">
+              <label class="mini-label" for="poster-accent">强调色</label>
+              <input
+                id="poster-accent"
+                type="color"
+                class="mini-color"
+                :value="posterAccent || '#3e7d5e'"
+                aria-label="海报强调色"
+                @change="setPosterField2('accent', ($event.target as HTMLInputElement).value)"
+              />
+              <label class="mini-label" for="poster-tc">标题文字色</label>
+              <input
+                id="poster-tc"
+                type="color"
+                class="mini-color"
+                :value="posterTextColor || '#24534a'"
+                aria-label="标题文字色"
+                @change="setPosterField2('textColor', ($event.target as HTMLInputElement).value)"
+              />
+            </div>
+            <label class="mini-label">标题字体</label>
+            <div class="row" role="radiogroup" aria-label="标题字体">
+              <PtButton
+                variant="ghost"
+                :class="{ on: posterTitleFont === 'sans' }"
+                :aria-pressed="posterTitleFont === 'sans'"
+                :disabled="editor.pastePending"
+                @click="setPosterField2('titleFont', 'sans')"
+              >
+                无衬线
+              </PtButton>
+              <PtButton
+                variant="ghost"
+                :class="{ on: posterTitleFont === 'serif' }"
+                :aria-pressed="posterTitleFont === 'serif'"
+                :disabled="editor.pastePending"
+                @click="setPosterField2('titleFont', 'serif')"
+              >
+                衬线
+              </PtButton>
+            </div>
+            <label class="mini-label" for="poster-pad">纸面留白（px）</label>
+            <input
+              id="poster-pad"
+              class="num-sm"
+              type="text"
+              inputmode="numeric"
+              :value="String(posterPadding)"
+              @change="setPosterField2('padding', Number(($event.target as HTMLInputElement).value) || 40)"
+            />
+            <label class="mini-label" for="poster-kicker">眉标（英文小字）</label>
+            <input
+              id="poster-kicker"
+              type="text"
+              :value="posterKicker"
+              :disabled="editor.pastePending"
+              placeholder="如：CLASS TIMETABLE · AUTUMN 2026"
+              @change="posterKicker = ($event.target as HTMLInputElement).value"
+            />
+            <label class="mini-label" for="poster-title">大标题</label>
+            <input
+              id="poster-title"
+              type="text"
+              :value="posterTitle"
+              :disabled="editor.pastePending"
+              placeholder="表格大标题（留空 = 不显示）"
+              @change="posterTitle = ($event.target as HTMLInputElement).value"
+            />
+            <label class="mini-label" for="poster-subtitle">副标题</label>
+            <input
+              id="poster-subtitle"
+              type="text"
+              :value="posterSubtitle"
+              :disabled="editor.pastePending"
+              @change="posterSubtitle = ($event.target as HTMLInputElement).value"
+            />
+            <label class="mini-label" for="poster-chips">徽章卡（每行一个，第一个黑底）</label>
+            <textarea
+              id="poster-chips"
+              rows="2"
+              :value="posterChips"
+              :disabled="editor.pastePending"
+              placeholder="如：容量 17 组 / 天"
+              @change="posterChips = ($event.target as HTMLTextAreaElement).value"
+            ></textarea>
+            <label class="mini-label" for="poster-legend">图例 / 说明行</label>
+            <input
+              id="poster-legend"
+              type="text"
+              :value="posterLegend"
+              :disabled="editor.pastePending"
+              placeholder="如：■ 完成　□ 未完成"
+              @change="posterLegend = ($event.target as HTMLInputElement).value"
+            />
+            <label class="mini-label" for="poster-meta">右上信息（每行一条）</label>
+            <textarea
+              id="poster-meta"
+              rows="2"
+              :value="posterMeta"
+              :disabled="editor.pastePending"
+              @change="posterMeta = ($event.target as HTMLTextAreaElement).value"
+            ></textarea>
+            <label class="mini-label" for="poster-footer">底部注脚（每行一条）</label>
+            <textarea
+              id="poster-footer"
+              rows="2"
+              :value="posterFooter"
+              :disabled="editor.pastePending"
+              @change="posterFooter = ($event.target as HTMLTextAreaElement).value"
+            ></textarea>
+            <label class="mini-label" for="poster-badge">页码徽标</label>
+            <input
+              id="poster-badge"
+              type="text"
+              :value="posterBadge"
+              :disabled="editor.pastePending"
+              placeholder="如：02 / 04"
+              @change="posterBadge = ($event.target as HTMLInputElement).value"
+            />
           </div>
         </div>
 
@@ -917,6 +1719,19 @@ const barColorValue = computed(() => selectedBar.value?.color ?? roleColorOf(edi
             />
             强调卡（强调色描边）
           </label>
+          <!-- Schema 1.5：独立数值色（strip 竖条 / plain 数字 / cards 数值同用） -->
+          <div class="row">
+            <label class="mini-label" :for="'kpi-color-' + card.id">数值色</label>
+            <input
+              :id="'kpi-color-' + card.id"
+              type="color"
+              class="mini-color"
+              :value="card.color || '#2e4a3e'"
+              :aria-label="'数值色 ' + card.label"
+              @change="patchKpi(card.id, { color: ($event.target as HTMLInputElement).value })"
+            />
+            <PtButton variant="ghost" @click="patchKpi(card.id, { color: undefined })">跟随主题</PtButton>
+          </div>
         </div>
         <PtButton
           variant="ghost"
@@ -1040,6 +1855,94 @@ const barColorValue = computed(() => selectedBar.value?.color ?? roleColorOf(edi
             </label>
           </div>
           <p class="hint">列宽范围 64～360，留空恢复默认。</p>
+          <div class="section" data-testid="table-shape">
+            <h4>表格形态</h4>
+            <label class="mini-label">字体族</label>
+            <div class="row" role="radiogroup" aria-label="字体族">
+              <PtButton
+                variant="ghost"
+                :class="{ on: fontFamily === 'sans' }"
+                :aria-pressed="fontFamily === 'sans'"
+                :disabled="editor.pastePending"
+                @click="patchStyle({ fontFamily: 'sans' })"
+              >
+                无衬线
+              </PtButton>
+              <PtButton
+                variant="ghost"
+                :class="{ on: fontFamily === 'serif' }"
+                :aria-pressed="fontFamily === 'serif'"
+                :disabled="editor.pastePending"
+                @click="patchStyle({ fontFamily: 'serif' })"
+              >
+                衬线
+              </PtButton>
+            </div>
+            <label class="mini-label">边框方案</label>
+            <div class="row" role="radiogroup" aria-label="边框方案">
+              <PtButton
+                v-for="opt in [
+                  { v: 'full', label: '全框' },
+                  { v: 'rows', label: '仅横线' },
+                  { v: 'cols', label: '仅竖线' },
+                  { v: 'none', label: '无框' },
+                ]"
+                :key="'bs-' + opt.v"
+                variant="ghost"
+                :class="{ on: borderScheme === opt.v }"
+                :aria-pressed="borderScheme === opt.v"
+                :disabled="editor.pastePending"
+                @click="patchStyle({ borderScheme: opt.v })"
+              >
+                {{ opt.label }}
+              </PtButton>
+            </div>
+            <label class="mini-label">表头形状</label>
+            <div class="row" role="radiogroup" aria-label="表头形状">
+              <PtButton
+                variant="ghost"
+                :class="{ on: headerShape === 'flat' && !plainHeader }"
+                :aria-pressed="headerShape === 'flat' && !plainHeader"
+                :disabled="editor.pastePending"
+                @click="patchStyle({ headerShape: 'flat', plainHeader: undefined })"
+              >
+                色块
+              </PtButton>
+              <PtButton
+                variant="ghost"
+                :class="{ on: plainHeader }"
+                :aria-pressed="plainHeader"
+                :disabled="editor.pastePending"
+                @click="patchStyle({ plainHeader: true })"
+              >
+                无底色
+              </PtButton>
+              <PtButton
+                variant="ghost"
+                :class="{ on: headerShape === 'pill' }"
+                :aria-pressed="headerShape === 'pill'"
+                :disabled="editor.pastePending"
+                @click="patchStyle({ headerShape: 'pill', plainHeader: undefined })"
+              >
+                药丸
+              </PtButton>
+            </div>
+            <template v-if="headerShape === 'pill'">
+              <label class="mini-label" for="pill-inset">药丸上下留边（px，越小越饱满）</label>
+              <input
+                id="pill-inset"
+                class="num-sm"
+                type="text"
+                inputmode="numeric"
+                :value="String(pillInsetV)"
+                @change="
+                  patchStyle({
+                    pillInsetV: Number(($event.target as HTMLInputElement).value) || 0,
+                  })
+                "
+              />
+            </template>
+          </div>
         </div>
       </div>
     </section>
@@ -1586,5 +2489,42 @@ textarea {
 .kpi-row .kpi-unit {
   flex: none;
   width: 40%;
+}
+
+.deco-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.mini-label {
+  font-size: 11px;
+  color: var(--pt-muted);
+  margin-top: 4px;
+}
+.mini-color {
+  width: 34px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--pt-border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.num-sm {
+  width: 64px;
+  border: 1px solid var(--pt-border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font: inherit;
+}
+.deco-fields input,
+.deco-fields textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--pt-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
 }
 </style>

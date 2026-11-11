@@ -40,6 +40,10 @@ export type {
   DotFormat,
   GanttFormat,
   PosterSpec,
+  PosterWash,
+  MatchSlotObject,
+  CellsSlotObject,
+  ChampionSlotObject,
 } from './types'
 
 export type { ErrorCode, WarnCode, CoreError, CoreWarning, Result, PasteErrorCode } from './errors'
@@ -197,6 +201,10 @@ export {
   kpiStripItemStyle,
   kpiStripLabelStyle,
   kpiStripValueStyle,
+  kpiPlainStyle,
+  kpiPlainItemStyle,
+  kpiPlainLabelStyle,
+  kpiPlainValueStyle,
 } from './kpi/kpiCards'
 
 // Schema 1.3：页面海报层（预览 / HTML / PNG 三方同源单点）
@@ -210,6 +218,9 @@ export {
   posterHeaderHeight,
   posterFooterHeight,
   sanitizePoster,
+  posterChipsWrapStyle,
+  posterChipStyle,
+  posterLegendStyle,
 } from './theme/posterStyle'
 
 // T34：渲染核（VTable 依赖图）只经动态导入出口暴露，壳层用 loadRenderCore()

@@ -6,6 +6,7 @@ import type {
   EditIntent,
   Emphasis,
   ImageSlotObject,
+  LayoutStyle,
   MarkSlotObject,
   NumSlotObject,
   RoleColorKey,
@@ -21,13 +22,22 @@ import { LIMITS, clampColWidth, clampTier, clampTier3, visibleRowCount } from '.
 import { MARK_LABEL } from '../format/formatTokens'
 import { canSetImage, checkImageBudget, validateImageDataUrl } from '../image/imageGuard'
 import { KPI_CARD_MAX, sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
+import { sanitizePoster } from '../theme/posterStyle'
 
 function slotStyle(v: SlotValue | undefined): { align?: Align; emphasize?: Emphasis[] } {
-  if (typeof v === 'object' && v !== null && !('image' in v)) {
-    const em = v.emphasize
+  if (
+    typeof v === 'object' &&
+    v !== null &&
+    !('image' in v) &&
+    !('match' in v) &&
+    !('cells' in v) &&
+    !('champion' in v)
+  ) {
+    const rv = v as unknown as Record<string, unknown>
+    const em = rv.emphasize
     return {
-      align: v.align,
-      emphasize: Array.isArray(em) ? em : em ? [em] : undefined,
+      align: rv.align as Align | undefined,
+      emphasize: Array.isArray(em) ? (em as Emphasis[]) : em ? [em as Emphasis] : undefined,
     }
   }
   return {}
@@ -50,20 +60,72 @@ function slotBar(v: SlotValue | undefined): BarFormat | undefined {
 }
 
 /** Merge incoming value with the previous align/emphasize/bar (format follows the value's kind). */
+/** Schema 1.3/1.5 装饰字段集合（mergeSlotValue 透传，防写入时被白名单抹掉） */
+const DECOR_KEYS: readonly string[] = [
+  'sub',
+  'unit',
+  'color',
+  'bg',
+  'cellScale',
+  'stars',
+  'dot',
+  'gantt',
+  'node',
+  'leader',
+  'boxed',
+]
+
+/** 从槽值提取已定义的装饰字段 */
+function decorOf(v: SlotValue | undefined): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  if (!v || typeof v !== 'object') return out
+  const rv = v as unknown as Record<string, unknown>
+  for (const k of DECOR_KEYS) {
+    if (rv[k] !== undefined) out[k] = rv[k]
+  }
+  return out
+}
+
 function mergeSlotValue(prev: SlotValue | undefined, incoming: SlotValue): SlotValue {
   const base = slotStyle(prev)
   const inc = slotStyle(incoming)
   const align = inc.align ?? base.align
   const emphasize = inc.emphasize ?? base.emphasize
   const bar = slotBar(incoming) ?? slotBar(prev)
-  if (typeof incoming === 'object' && incoming !== null && 'mark' in incoming) {
+  // Schema 1.3/1.5：装饰字段透传。语义分两路——
+  // ① incoming 为对象（面板已构造完整意图）：以 incoming 为准，缺失不继承
+  //    （否则清空副行等「删键」操作会被 prev 捡回来）；
+  // ② incoming 为纯字符串（粘贴/旧调用方）：从 prev 继承装饰（改文字不丢样式，
+  //    与 align/emphasize/bar 的既有继承语义一致）。
+  const incomingIsObject = typeof incoming === 'object' && incoming !== null
+  // Schema 1.5：结构化槽（对阵/冠军/打卡）原样透传——不得走文字白名单重建
+  // （旧链 text 分支会把对象 String 成 [object Object]，整槽破坏）
+  if (incomingIsObject && 'match' in incoming) {
+    return { ...incoming } as SlotValue
+  }
+  if (incomingIsObject && 'champion' in incoming) {
+    return { ...incoming } as SlotValue
+  }
+  if (incomingIsObject && 'cells' in incoming) {
+    return { ...incoming } as SlotValue
+  }
+  const decor = incomingIsObject
+    ? decorOf(incoming)
+    : { ...decorOf(prev), ...decorOf(incoming) }
+  if (incomingIsObject && 'mark' in incoming) {
     return { mark: incoming.mark, align, emphasize } satisfies MarkSlotObject
   }
-  if (typeof incoming === 'object' && incoming !== null && 'num' in incoming) {
-    return { num: incoming.num, align, emphasize, ...(bar ? { bar } : {}) } satisfies NumSlotObject
+  if (incomingIsObject && 'num' in incoming) {
+    return {
+      num: incoming.num,
+      align,
+      emphasize,
+      ...(bar ? { bar } : {}),
+      ...decor,
+    } satisfies NumSlotObject
   }
-  const text = typeof incoming === 'object' && 'text' in incoming ? String(incoming.text ?? '') : String(incoming)
-  return { text, align, emphasize, ...(bar ? { bar } : {}) } satisfies TextSlotObject
+  const text = incomingIsObject && 'text' in incoming ? String(incoming.text ?? '') : String(incoming)
+  return { text, align, emphasize, ...(bar ? { bar } : {}), ...decor } satisfies TextSlotObject
 }
 
 /** Keep the value's kind (text / mark / num / image), only patch align. */
@@ -71,9 +133,16 @@ function withAlign(v: SlotValue | undefined, align: Align): SlotValue {
   if (typeof v === 'object' && v !== null && ('mark' in v || 'num' in v)) {
     return { ...v, align }
   }
-  // 图片槽无对齐语义：原样保留
-  if (typeof v === 'object' && v !== null && 'image' in v) return v
-  const text = typeof v === 'object' && v !== null ? String(v.text ?? '') : v === undefined ? '' : String(v)
+  // 图片/对阵/打卡/冠军槽无对齐语义：原样保留
+  if (
+    typeof v === 'object' &&
+    v !== null &&
+    ('image' in v || 'match' in v || 'cells' in v || 'champion' in v)
+  ) {
+    return v
+  }
+  const rv = v as unknown as Record<string, unknown> | undefined
+  const text = typeof v === 'object' && v !== null ? String(rv?.text ?? '') : v === undefined ? '' : String(v)
   return { text, align }
 }
 
@@ -82,9 +151,16 @@ function withEmphasis(v: SlotValue | undefined, emphasize: Emphasis[]): SlotValu
   if (typeof v === 'object' && v !== null && ('mark' in v || 'num' in v)) {
     return { ...v, emphasize }
   }
-  // 图片槽无强调语义：原样保留
-  if (typeof v === 'object' && v !== null && 'image' in v) return v
-  const text = typeof v === 'object' && v !== null ? String(v.text ?? '') : v === undefined ? '' : String(v)
+  // 图片/对阵/打卡/冠军槽无强调语义：原样保留
+  if (
+    typeof v === 'object' &&
+    v !== null &&
+    ('image' in v || 'match' in v || 'cells' in v || 'champion' in v)
+  ) {
+    return v
+  }
+  const rv = v as unknown as Record<string, unknown> | undefined
+  const text = typeof v === 'object' && v !== null ? String(rv?.text ?? '') : v === undefined ? '' : String(v)
   return { text, emphasize }
 }
 
@@ -93,8 +169,8 @@ function slotText(v: SlotValue | undefined): string {
   if (typeof v === 'object') {
     if ('mark' in v) return v.mark ? MARK_LABEL[v.mark] : ''
     if ('num' in v) return v.num === null || v.num === undefined ? '' : String(v.num)
-    if ('image' in v) return ''
-    return String(v.text ?? '')
+    if ('image' in v || 'match' in v || 'cells' in v || 'champion' in v) return ''
+    return String((v as unknown as Record<string, unknown>).text ?? '')
   }
   return String(v)
 }
@@ -602,6 +678,37 @@ export function applyEditIntent(
       } else {
         next.meta = { ...next.meta, displayName: text }
       }
+      return ok(next)
+    }
+    // ── Schema 1.5：海报层整包更新（面板海报组；sanitize 收口枚举/hex/行数）──
+    case 'setPoster': {
+      const poster = sanitizePoster(intent.poster)
+      if (poster) next.poster = poster
+      else delete next.poster
+      return ok(next)
+    }
+    // ── Schema 1.5：表格形态部分合并（字体族/边框/表头形状/药丸内缩等）──
+    case 'setStylePatch': {
+      const patch = intent.patch ?? {}
+      const style: LayoutStyle = { ...next.layout.style, ...patch }
+      // 枚举/档位清洗（与 validate 同口径）
+      if (style.fontFamily !== undefined && style.fontFamily !== 'sans' && style.fontFamily !== 'serif') {
+        delete style.fontFamily
+      }
+      if (style.borderScheme !== undefined && !['full', 'rows', 'cols', 'none'].includes(style.borderScheme)) {
+        delete style.borderScheme
+      }
+      if (style.headerShape !== undefined && style.headerShape !== 'flat' && style.headerShape !== 'pill') {
+        delete style.headerShape
+      }
+      if ('plainHeader' in style && style.plainHeader !== true) delete style.plainHeader
+      if ('pillInsetV' in style) {
+        const v = style.pillInsetV
+        if (typeof v === 'number' && Number.isFinite(v) && v !== 6) {
+          style.pillInsetV = Math.min(20, Math.max(0, Math.round(v)))
+        } else delete style.pillInsetV
+      }
+      next.layout = { ...next.layout, style }
       return ok(next)
     }
     default:

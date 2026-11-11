@@ -2,11 +2,14 @@ import type { SlotValue, TemplateInstance, PosterSpec } from '../types'
 import { resolveTheme, readableTextColor, type Palette } from '../theme/palettes'
 import { cellInlineStyle } from '../theme/inlineStyle'
 import { FONT_STACK } from '../theme/font'
-import { DECO_STAR, DECO_STAR_EMPTY } from '../theme/decoDefaults'
+import { DECO_CARD_INK, DECO_CELLS_TODAY, DECO_STAR, DECO_STAR_EMPTY, DECO_WIN_GOLD } from '../theme/decoDefaults'
 import {
   posterWrapStyle,
   posterHeaderStyles,
   posterFooterStyles,
+  posterChipsWrapStyle,
+  posterChipStyle,
+  posterLegendStyle,
 } from '../theme/posterStyle'
 import { MARK_LABEL } from '../format/formatTokens'
 import { isImageDataUrl } from '../image/imageGuard'
@@ -65,6 +68,12 @@ export interface ExportCell {
   subColor?: string
   /** Schema 1.3：单位小字（同行跟在主值后） */
   unit?: string
+  /** Schema 1.5：对阵卡（HTML 近似：上下两行小卡） */
+  match?: { a: string; sa: string; b: string; sb: string; winA?: boolean; winB?: boolean }
+  /** Schema 1.5：冠军卡 */
+  champion?: { title?: string; name: string; note?: string }
+  /** Schema 1.5：打卡矩阵（0/1 串 + 今天下标） */
+  cells?: { pattern: string; today?: number }
 }
 
 export interface ExportModel {
@@ -198,7 +207,13 @@ function bannerStyle(
 
 /** Schema 1.3：海报标题区 HTML（posterHeaderStyles 同源） */
 function posterHeaderHtml(poster: PosterSpec, palette: Palette): string {
-  const has = poster.kicker || poster.title || poster.subtitle || poster.metaLines?.length
+  const has =
+    poster.kicker ||
+    poster.title ||
+    poster.subtitle ||
+    poster.metaLines?.length ||
+    poster.chips?.length ||
+    poster.legend
   if (!has) return ''
   const s = posterHeaderStyles(poster, palette)
   const left = [
@@ -208,10 +223,19 @@ function posterHeaderHtml(poster: PosterSpec, palette: Palette): string {
       ? `<p style="${escapeHtml(s.subtitle)}">${escapeHtml(poster.subtitle)}</p>`
       : '',
   ].join('')
+  // Schema 1.5：chips（第 0 个黑底白字）/ legend 图例行
+  const chips = poster.chips?.length
+    ? `<div style="${escapeHtml(posterChipsWrapStyle(palette))}">${poster.chips
+        .map((chip, i) => `<span style="${escapeHtml(posterChipStyle(palette, i))}">${escapeHtml(chip)}</span>`)
+        .join('')}</div>`
+    : ''
+  const legend = poster.legend
+    ? `<p style="${escapeHtml(posterLegendStyle(palette))}">${escapeHtml(poster.legend)}</p>`
+    : ''
   const right = poster.metaLines?.length
     ? `<div style="${escapeHtml(s.meta)}">${poster.metaLines.map(escapeHtml).join('<br>')}</div>`
     : ''
-  return `<div style="${escapeHtml(s.wrap)}"><div>${left}</div>${right}</div>`
+  return `<div style="${escapeHtml(s.wrap)}"><div>${left}${chips}${legend}</div>${right}</div>`
 }
 
 /** Schema 1.3：海报注脚区 HTML */
@@ -345,6 +369,33 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
                 milestone: cell.gantt.milestone === true,
               }
             : undefined
+        // Schema 1.5：对阵/冠军/打卡槽提取（HTML 近似渲染）
+        const match =
+          !inHeader && cell.match
+            ? {
+                a: String(cell.match.a ?? ''),
+                sa: String(cell.match.sa ?? ''),
+                b: String(cell.match.b ?? ''),
+                sb: String(cell.match.sb ?? ''),
+                ...(cell.match.winA === true ? { winA: true } : {}),
+                ...(cell.match.winB === true ? { winB: true } : {}),
+              }
+            : undefined
+        const champion =
+          !inHeader && cell.champion
+            ? {
+                name: String(cell.champion.name ?? ''),
+                ...(cell.champion.title ? { title: String(cell.champion.title) } : {}),
+                ...(cell.champion.note ? { note: String(cell.champion.note) } : {}),
+              }
+            : undefined
+        const cellsDeco =
+          !inHeader && cell.cells
+            ? {
+                pattern: String(cell.cells.pattern ?? ''),
+                ...(typeof cell.cells.today === 'number' ? { today: cell.cells.today } : {}),
+              }
+            : undefined
         const style = cellStyle(
           cell,
           palette,
@@ -377,6 +428,9 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
           lineColor: palette.border,
           subColor: palette.muted,
           unit: !inHeader && cell.unit ? cell.unit : undefined,
+          match,
+          champion,
+          cells: cellsDeco,
         })
       })
       if (inHeader) headRows.push(cells)
@@ -468,6 +522,25 @@ export function renderExportHtml(model: ExportModel): string {
     const subInner = !cell.sub
       ? ''
       : `<div style="font-size:11px;color:${attr(cell.subColor ?? '')};margin-top:2px;line-height:1.35">${escapeHtml(cell.sub)}</div>`
+    // Schema 1.5：对阵卡 = 上下两张小卡（胜方金色左条 + 白粗体）；冠军卡 = 描边居中三行
+    const matchRow = (name: string, score: string, win: boolean): string =>
+      `<div style="display:flex;justify-content:space-between;gap:8px;border:1px solid ${attr(cell.lineColor ?? '')};${win ? `border-left:3px solid ${attr(DECO_WIN_GOLD)};background:${attr(DECO_WIN_GOLD)}55;` : ''}border-radius:3px;padding:4px 8px"><span style="${win ? `font-weight:700;color:${DECO_CARD_INK}` : `color:${attr(cell.subColor ?? '')}`}">${escapeHtml(name)}</span><span style="${win ? `font-weight:700;color:${DECO_CARD_INK}` : `color:${attr(cell.subColor ?? '')}`}">${escapeHtml(score)}</span></div>`
+    const matchInner = cell.match
+      ? `<div style="display:flex;flex-direction:column;gap:4px">${matchRow(cell.match.a, cell.match.sa, cell.match.winA === true)}${matchRow(cell.match.b, cell.match.sb, cell.match.winB === true)}</div>`
+      : ''
+    const championInner = cell.champion
+      ? `<div style="border:1px solid ${attr(cell.lineColor ?? '')};border-radius:3px;text-align:center;padding:6px 8px">${cell.champion.title ? `<div style="font-size:11px;color:${attr(cell.subColor ?? '')}">${escapeHtml(cell.champion.title)}</div>` : ''}<div style="font-weight:700">${escapeHtml(cell.champion.name)}</div>${cell.champion.note ? `<div style="font-size:11px;color:${attr(cell.subColor ?? '')}">${escapeHtml(cell.champion.note)}</div>` : ''}</div>`
+      : ''
+    const cellsInner = cell.cells
+      ? `<div style="display:flex;gap:3px">${[...cell.cells.pattern]
+          .map((ch, i) => {
+            const isToday = cell.cells!.today === i
+            return ch === '1'
+              ? `<i style="width:14px;height:14px;border-radius:3px;background:${attr(cell.subColor ?? '')};${isToday ? `box-shadow:0 0 0 2px ${attr(DECO_CELLS_TODAY)};` : ''}display:inline-block"></i>`
+              : `<i style="width:14px;height:14px;border-radius:3px;border:1px solid ${attr(isToday ? DECO_CELLS_TODAY : cell.lineColor ?? '')};display:inline-block"></i>`
+          })
+          .join('')}</div>`
+      : ''
     const bannerInner = cell.bannerRight
       ? `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><span>${escapeHtml(cell.text)}</span><span style="font-weight:700">${escapeHtml(cell.bannerRight)}</span></div>`
       : ''
@@ -485,9 +558,15 @@ export function renderExportHtml(model: ExportModel): string {
                 ? starsInner
                 : cell.leader
                   ? leaderInner
-                  : cell.bannerRight
-                    ? bannerInner
-                    : `${escapeHtml(cell.text)}${cell.unit ? `<span style="font-size:0.72em;color:${attr(cell.subColor ?? '')}"> ${escapeHtml(cell.unit)}</span>` : ''}${badge}${subInner}`
+                  : cell.match
+                    ? matchInner
+                    : cell.champion
+                      ? championInner
+                      : cell.cells
+                        ? cellsInner
+                        : cell.bannerRight
+                          ? bannerInner
+                          : `${escapeHtml(cell.text)}${cell.unit ? `<span style="font-size:0.72em;color:${attr(cell.subColor ?? '')}"> ${escapeHtml(cell.unit)}</span>` : ''}${badge}${subInner}`
     return `<${cell.tag} ${attrs.join(' ')}>${inner}</${cell.tag}>`
   }
   const rowHtml = (row: ExportCell[]): string => `<tr>${row.map(cellHtml).join('')}</tr>`

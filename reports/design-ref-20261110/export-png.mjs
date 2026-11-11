@@ -18,6 +18,10 @@ const ALL = [
   { card: '餐厅秋季菜单', file: '06-秋季菜单' },
   { card: '产品改版排期', file: '07-项目排期' },
   { card: '大理四天三晚行程', file: '08-旅行行程' },
+  { card: '推拉腿·四分化训练', file: '09-训练计划' },
+  { card: '十月·家庭账本', file: '10-家庭账本' },
+  { card: '城市杯·八强淘汰赛', file: '11-淘汰赛' },
+  { card: '二十一天·习惯打卡', file: '12-习惯打卡' },
 ]
 
 const wanted = process.argv.slice(2)

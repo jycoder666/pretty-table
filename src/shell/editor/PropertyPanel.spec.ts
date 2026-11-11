@@ -213,13 +213,20 @@ describe('PropertyPanel · 格式微调区（FR-C2）', () => {
   it('行高/字号/内边距三档写入 style；缺省显示「标准」档', async () => {
     const { editor, wrapper } = await setup()
     expect(editor.current!.layout.style?.rowHeightTier).toBeUndefined()
-    const segs = wrapper.findAll('[role="radiogroup"]')
-    // 前 3 个分段组：行高 / 字号 / 内边距
-    await segs[0]!.findAll('button')[0]!.trigger('click')
+    // 格式微调 section 内的三档分段（行高/字号/内边距）；面板后续新增了多个
+    // 原生 radiogroup（星级/字体族/边框方案等），不能用位置索引取
+    const tweak = wrapper.find('[data-testid="group-style"]')
+    const segBtn = (group: string, label: string) => {
+      const fields = tweak.findAll('.field')
+      const field = fields.find((f) => f.find('span').text() === group)
+      expect(field, `${group} 档位组存在`).toBeTruthy()
+      return field!.findAll('button').find((b) => b.text() === label)!
+    }
+    await segBtn('行高', '紧凑').trigger('click')
     expect(editor.current!.layout.style?.rowHeightTier).toBe(1)
-    await segs[1]!.findAll('button')[2]!.trigger('click')
+    await segBtn('字号', '大').trigger('click')
     expect(editor.current!.layout.style?.fontSizeTier).toBe(3)
-    await segs[2]!.findAll('button')[2]!.trigger('click')
+    await segBtn('内边距', '松').trigger('click')
     expect(editor.current!.layout.style?.paddingTier).toBe(3)
   })
 

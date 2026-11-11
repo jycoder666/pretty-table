@@ -5,6 +5,9 @@ import {
   posterHeaderHeight,
   posterFooterHeight,
   posterTitleFont,
+  posterChipStyle,
+  posterChipsWrapStyle,
+  posterLegendStyle,
   POSTER_DOTS_SIZE,
   POSTER_DOTS_R,
   POSTER_RULED_GAP,
@@ -14,7 +17,12 @@ import {
   POSTER_SUBTITLE_FONT,
   POSTER_META_FONT,
   POSTER_FOOTER_FONT,
+  POSTER_CHIP_H,
+  POSTER_CHIP_FONT,
+  POSTER_CHIP_GAP,
+  POSTER_LEGEND_FONT,
 } from '../theme/posterStyle'
+import { DECO_CARD_INK } from '../theme/decoDefaults'
 import { FONT_STACK } from '../theme/font'
 
 /**
@@ -23,7 +31,7 @@ import { FONT_STACK } from '../theme/font'
  * canvas 无法用 CSS —— 本模块按同值手绘，三方视觉对齐。
  */
 
-/** 纸面底色 + 纹理（覆盖整个输出画布；solid 纯色零纹理） */
+/** 纸面底色 + 角部颜色洗（Schema 1.4）+ 纹理（覆盖整个输出画布；solid 纯色零纹理） */
 export function drawPosterBackground(
   ctx: CanvasRenderingContext2D,
   poster: PosterSpec | undefined,
@@ -35,6 +43,26 @@ export function drawPosterBackground(
   ctx.fillStyle = c.bg
   ctx.fillRect(0, 0, w, h)
   const mode = poster?.bg ?? 'solid'
+  if (mode === 'gradient') {
+    const grad = ctx.createLinearGradient(0, 0, w * 0.6, h)
+    grad.addColorStop(0, c.bg)
+    grad.addColorStop(1, c.texture)
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, w, h)
+  }
+  // Schema 1.4：角部颜色洗（径向渐变，画布坐标 = 相对比例 × 对角线）
+  for (const wash of poster?.bgWashes ?? []) {
+    const cx = wash.x * w
+    const cy = wash.y * h
+    const rad = Math.min(1, Math.max(0.02, wash.r ?? 0.35)) * Math.hypot(w, h)
+    // 终点 = 同色 alpha 0（transparent 是黑 alpha 0，canvas 非预乘插值会发灰）
+    const rgb = parseWashRgb(wash.color)
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad)
+    g.addColorStop(0, wash.color)
+    g.addColorStop(1, `rgba(${rgb},0)`)
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, w, h)
+  }
   if (mode === 'dots') {
     ctx.fillStyle = c.texture
     const size = POSTER_DOTS_SIZE
@@ -56,13 +84,15 @@ export function drawPosterBackground(
       ctx.lineTo(w, y)
       ctx.stroke()
     }
-  } else if (mode === 'gradient') {
-    const grad = ctx.createLinearGradient(0, 0, w * 0.6, h)
-    grad.addColorStop(0, c.bg)
-    grad.addColorStop(1, c.texture)
-    ctx.fillStyle = grad
-    ctx.fillRect(0, 0, w, h)
   }
+}
+
+/** hex → "r,g,b" 字串（canvas 渐隐终点用；非法回退黑） */
+function parseWashRgb(hex: string): string {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex.trim())
+  if (!m) return '0,0,0'
+  const n = parseInt(m[1]!, 16)
+  return `${(n >> 16) & 0xff},${(n >> 8) & 0xff},${n & 0xff}`
 }
 
 /** 眉标字距（canvas letterSpacing 支持面窄，不支持时逐字手绘间隔） */
@@ -115,6 +145,52 @@ export function drawPosterHeader(
     ctx.fillStyle = c.sub
     ctx.font = `${POSTER_SUBTITLE_FONT * scale}px ${FONT_STACK}`
     ctx.fillText(poster.subtitle, x, cy)
+  }
+  // Schema 1.5：chips 徽章卡（第 0 个黑底白字）+ legend 图例行 —— 与标题块同层，位于 subtitle 下
+  let cy2 = y + (poster?.kicker ? (POSTER_KICKER_FONT * 1.5 + 6) * scale : 0) +
+    (poster?.title ? (POSTER_TITLE_FONT * 1.3 + 8) * scale : 0) +
+    (poster?.subtitle ? (POSTER_SUBTITLE_FONT * 1.6 + 4) * scale : 0)
+  if (poster?.chips?.length) {
+    const chipFont = POSTER_CHIP_FONT * scale
+    ctx.font = `${chipFont}px ${FONT_STACK}`
+    ctx.textBaseline = 'middle'
+    let cxChip = x
+    poster.chips.forEach((chip, i) => {
+      const padX = (POSTER_CHIP_H / 2.6) * scale
+      const chipW = ctx.measureText(chip).width + padX * 2
+      const chipH = POSTER_CHIP_H * scale
+      const st = posterChipStyle(palette, i)
+      const isSolid = i === 0
+      ctx.beginPath()
+      const rr = 3 * scale
+      ctx.moveTo(cxChip + rr, cy2)
+      ctx.arcTo(cxChip + chipW, cy2, cxChip + chipW, cy2 + chipH, rr)
+      ctx.arcTo(cxChip + chipW, cy2 + chipH, cxChip, cy2 + chipH, rr)
+      ctx.arcTo(cxChip, cy2 + chipH, cxChip, cy2, rr)
+      ctx.arcTo(cxChip, cy2, cxChip + chipW, cy2, rr)
+      ctx.closePath()
+      if (isSolid) {
+        ctx.fillStyle = c.title
+        ctx.fill()
+        ctx.fillStyle = DECO_CARD_INK
+      } else {
+        ctx.strokeStyle = palette.border
+        ctx.lineWidth = scale
+        ctx.stroke()
+        ctx.fillStyle = c.title
+      }
+      ctx.textAlign = 'left'
+      ctx.fillText(chip, cxChip + padX, cy2 + chipH / 2 + 1)
+      cxChip += chipW + POSTER_CHIP_GAP * scale
+    })
+    ctx.textBaseline = 'top'
+    cy2 += (POSTER_CHIP_H + 10) * scale
+  }
+  if (poster?.legend) {
+    ctx.fillStyle = c.footer
+    ctx.font = `${POSTER_LEGEND_FONT * scale}px ${FONT_STACK}`
+    ctx.textAlign = 'left'
+    ctx.fillText(poster.legend, x, cy2 + 6 * scale)
   }
   if (poster?.metaLines?.length) {
     ctx.fillStyle = c.meta

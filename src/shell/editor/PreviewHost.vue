@@ -26,6 +26,9 @@ import {
   posterFooterStyles,
   posterPadding,
   posterColors,
+  posterChipsWrapStyle,
+  posterChipStyle,
+  posterLegendStyle,
   type PosterSpec,
   type Palette,
 } from '@/core'
@@ -386,7 +389,9 @@ const posterSheetStyle = computed(() => {
   const pad = posterPadding(p)
   return {
     ...cssTextToStyle(posterWrapStyle(p, pal)),
-    width: `min(100%, ${innerW + pad * 2}px)`,
+    // 海报是定尺寸画板：固定自然宽，窄窗由宿主横向滚动整体平移（与宽屏同一张图），
+    // 绝不 min(100%,…) 跟容器收缩——否则统计条换行、VTable 画布被裁、标题折行全部错位
+    width: `${innerW + pad * 2}px`,
     margin: '12px auto',
     boxSizing: 'border-box' as const,
   }
@@ -407,6 +412,21 @@ const posterHasHeader = computed(() => {
   const p = posterSpec.value
   return Boolean(p && (p.kicker || p.title || p.subtitle || p.metaLines?.length))
 })
+function posterChipsWrapStyleOf(): string {
+  const pal = posterPalette.value
+  return pal ? posterChipsWrapStyle(pal) : ''
+}
+
+function posterChipStyleOf(index: number): string {
+  const pal = posterPalette.value
+  return pal ? posterChipStyle(pal, index) : ''
+}
+
+function posterLegendStyleOf(): string {
+  const pal = posterPalette.value
+  return pal ? posterLegendStyle(pal) : ''
+}
+
 const posterHasFooter = computed(() => {
   const p = posterSpec.value
   return Boolean(p && (p.footerLines?.length || p.pageBadge))
@@ -951,6 +971,10 @@ defineExpose({
           <p v-if="posterSpec?.kicker" :style="posterHdr.kicker">{{ posterSpec.kicker }}</p>
           <h1 v-if="posterSpec?.title" :style="posterHdr.title">{{ posterSpec.title }}</h1>
           <p v-if="posterSpec?.subtitle" :style="posterHdr.subtitle">{{ posterSpec.subtitle }}</p>
+          <div v-if="posterSpec?.chips?.length" :style="posterChipsWrapStyleOf()">
+            <span v-for="(chip, i) in posterSpec.chips" :key="`pc-${i}`" :style="posterChipStyleOf(i)">{{ chip }}</span>
+          </div>
+          <p v-if="posterSpec?.legend" :style="posterLegendStyleOf()">{{ posterSpec.legend }}</p>
         </div>
         <div v-if="posterSpec?.metaLines?.length" :style="posterHdr.meta">
           <div v-for="(line, i) in posterSpec.metaLines" :key="`pm-${i}`">{{ line }}</div>

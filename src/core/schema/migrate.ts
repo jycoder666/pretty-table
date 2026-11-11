@@ -4,7 +4,14 @@ import { sanitizeHex } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
 import { sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
 import { sanitizePoster } from '../theme/posterStyle'
-import { isRichSlotObject, sanitizeSlotDeco, sanitizeStyle13 } from './sanitize13'
+import {
+  isRichSlotObject,
+  sanitizeCells,
+  sanitizeChampion,
+  sanitizeMatch,
+  sanitizeSlotDeco,
+  sanitizeStyle13,
+} from './sanitize13'
 
 /**
  * Schema migration (增强期 §3.3/§3.4 + 自定义格式设计增量 §1.5):
@@ -196,6 +203,22 @@ export function migrateInstance(
     }
     // Schema 1.3 扩展：格内装饰字段清洗（validate 同款，共用单点）
     if (isRichSlotObject(obj)) sanitizeSlotDeco(obj)
+    // Schema 1.5 扩展：对阵/打卡/冠军槽清洗
+    if ('match' in obj) {
+      const m = sanitizeMatch(obj.match)
+      if (m) obj.match = m
+      else delete inst.slots[id]
+    }
+    if ('cells' in obj) {
+      const c = sanitizeCells(obj.cells)
+      if (c) obj.cells = c
+      else delete inst.slots[id]
+    }
+    if ('champion' in obj) {
+      const c = sanitizeChampion(obj.champion)
+      if (c) obj.champion = c
+      else delete inst.slots[id]
+    }
   }
 
   // Schema 1.2 扩展：kpiCards 清洗（非数组删字段；项级清洗与截断在 sanitizeKpiCards 内）
@@ -203,8 +226,24 @@ export function migrateInstance(
   if (kpiClean === null) delete inst.kpiCards
   else inst.kpiCards = kpiClean
 
+  // Schema 1.5：meta.cover 封面清洗（白名单 + 上限；非法删键）
+  if (inst.meta && typeof inst.meta === 'object') {
+    const meta = inst.meta as Record<string, unknown>
+    if ('cover' in meta) {
+      const cover = meta.cover
+      if (typeof cover !== 'string' || !isImageDataUrl(cover) || cover.length > 400_000) {
+        delete meta.cover
+      }
+    }
+  }
+
   // Schema 1.3：kpiStyle 枚举 + poster 海报层清洗
-  if (inst.kpiStyle !== undefined && inst.kpiStyle !== 'cards' && inst.kpiStyle !== 'strip') {
+  if (
+    inst.kpiStyle !== undefined &&
+    inst.kpiStyle !== 'cards' &&
+    inst.kpiStyle !== 'strip' &&
+    inst.kpiStyle !== 'plain'
+  ) {
     delete inst.kpiStyle
   }
   if (inst.poster !== undefined) {

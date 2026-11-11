@@ -11,6 +11,8 @@ import {
   PNG_PAD,
 } from '@/core'
 import { useEditorStore } from '../stores/editor'
+import { useLibraryStore } from '../stores/library'
+import { blobToCoverDataUrl } from './cover'
 import { errorCopy } from '../editor/errorCopy'
 import { pngMaxOverride } from '../debug/flags'
 import { faultGate } from '../debug/fault'
@@ -23,6 +25,7 @@ import PtTooltip from '../ui/PtTooltip.vue'
 
 const open = defineModel<boolean>('open', { default: false })
 const editor = useEditorStore()
+const library = useLibraryStore()
 const htmlFallback = ref<string | null>(null)
 
 /** GC-19：调试开关构建期常量；生产构建折叠为 false，调试调用被摇树 */
@@ -140,6 +143,14 @@ async function downloadPng() {
   // 失效 URL，导致静默丢下载——见 blobDownload.ts 文件头说明）
   triggerBlobDownload(blob, `${editor.current?.meta?.displayName ?? 'table'}.png`)
   editor.showToast('PNG 已下载')
+  // Schema 1.5：导出的图自动成为模板封面（缩略写 meta.cover，库页卡片展示；
+  // 非阻塞、失败静默——封面是附属数据，不影响导出主流程）
+  const tplId = editor.current?.templateId
+  if (tplId) {
+    blobToCoverDataUrl(blob).then((cover) => {
+      if (cover) void library.setTemplateCover(tplId, cover)
+    })
+  }
 }
 
 /** 模板 JSON 导出（跨设备同步）：核内 instanceToJSON 规范化 → blob 下载 .pretty-table.json */

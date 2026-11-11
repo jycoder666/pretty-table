@@ -2,9 +2,12 @@ import type {
   Align,
   BarFormat,
   BlockType,
+  CellsSlotObject,
+  ChampionSlotObject,
   DotFormat,
   Emphasis,
   GanttFormat,
+  MatchSlotObject,
   LayoutStyle,
   MarkSlotObject,
   MarkValue,
@@ -40,6 +43,8 @@ export interface TypeMetrics {
   padH: number
   /** Schema 1.3：生效字体族（layout.style.fontFamily → 衬线/无衬线栈） */
   fontFamily: string
+  /** Schema 1.4：药丸表头上下内缩 px（缺省 6；越小药丸越饱满） */
+  pillInsetV: number
 }
 
 /** 无 style（或档位缺省）→ 既有默认值；设了档位 → 档位 px（内边距四边统一） */
@@ -49,6 +54,10 @@ export function typeMetrics(style: LayoutStyle | undefined): TypeMetrics {
     padV: style?.paddingTier !== undefined ? PADDING_TIERS[style.paddingTier - 1]! : 8,
     padH: style?.paddingTier !== undefined ? PADDING_TIERS[style.paddingTier - 1]! : 10,
     fontFamily: fontStackOf(style?.fontFamily),
+    pillInsetV:
+      typeof style?.pillInsetV === 'number' && Number.isFinite(style.pillInsetV)
+        ? Math.min(20, Math.max(0, style.pillInsetV))
+        : 6,
   }
 }
 
@@ -109,6 +118,16 @@ export type CellMeta = {
   bannerBarColor?: string
   /** banner 文本对齐（block.props.bannerAlign = 'center' 时居中；缺省左） */
   bannerAlign?: Align
+  /** Schema 1.5：banner 主文本色覆盖（黑底白字稿） */
+  bannerTextColor?: string
+  /** Schema 1.5：banner 右侧文本色覆盖 */
+  bannerRightColor?: string
+  /** Schema 1.5：对阵卡（bracket） */
+  match?: MatchSlotObject['match']
+  /** Schema 1.5：打卡矩阵 */
+  cells?: CellsSlotObject['cells']
+  /** Schema 1.5：冠军卡 */
+  champion?: ChampionSlotObject['champion']
 }
 
 function slotParts(
@@ -132,6 +151,10 @@ function slotParts(
   node?: boolean
   leader?: boolean
   boxed?: boolean
+  unit?: string
+  match?: MatchSlotObject['match']
+  cells?: CellsSlotObject['cells']
+  champion?: ChampionSlotObject['champion']
 } {
   if (v === undefined || v === null) return { text: '' }
   if (typeof v === 'object') {
@@ -139,10 +162,21 @@ function slotParts(
       // 图片槽（R-3）：text 置空，data URL 透传给 CellMeta 消费方
       return { text: '', image: v.image }
     }
-    const em = v.emphasize
+    // Schema 1.5：bracket/打卡/冠军槽（装饰通道绘制，text 置空）
+    if ('match' in v && v.match && typeof v.match === 'object') {
+      return { text: '', match: v.match }
+    }
+    if ('cells' in v && v.cells && typeof v.cells === 'object') {
+      return { text: '', cells: v.cells }
+    }
+    if ('champion' in v && v.champion && typeof v.champion === 'object') {
+      return { text: '', champion: v.champion }
+    }
+    const rv0 = v as unknown as Record<string, unknown>
+    const em = rv0.emphasize
     const style = {
-      align: v.align,
-      emphasize: Array.isArray(em) ? em : em ? [em] : undefined,
+      align: rv0.align as Align | undefined,
+      emphasize: Array.isArray(em) ? (em as Emphasis[]) : em ? [em as Emphasis] : undefined,
     }
     const bar = 'bar' in v && v.bar && typeof v.bar === 'object' ? (v.bar as BarFormat) : undefined
     // Schema 1.3：装饰扩展字段透传（Text/Num 槽；mark 槽无这些键，record 读取绕开联合收窄）
@@ -157,6 +191,7 @@ function slotParts(
       gantt: rv.gantt && typeof rv.gantt === 'object' ? (rv.gantt as GanttFormat) : undefined,
       node: rv.node === true ? true : undefined,
       leader: rv.leader === true ? true : undefined,
+      unit: typeof rv.unit === 'string' && rv.unit !== '' ? rv.unit : undefined,
       boxed: rv.boxed === true ? true : undefined,
     }
     if ('mark' in v) {
@@ -173,7 +208,7 @@ function slotParts(
         ...deco,
       }
     }
-    return { text: String(v.text ?? ''), ...style, ...(bar ? { bar } : {}), ...deco }
+    return { text: String(rv0.text ?? ''), ...style, ...(bar ? { bar } : {}), ...deco }
   }
   // mark/num 槽存普通文字（如「面议」「100万」）→ 按文字显示，不套格式
   return { text: String(v) }
@@ -249,6 +284,9 @@ export function buildVisualRows(inst: TemplateInstance): {
       let leader: boolean | undefined
       let boxed: boolean | undefined
       let unit: string | undefined
+      let match: MatchSlotObject['match'] | undefined
+      let cells: CellsSlotObject['cells'] | undefined
+      let champion: ChampionSlotObject['champion'] | undefined
 
       if (r === 0 && c === 0 && inst.meta?.templateType === 'compare') {
         text = '项目'
@@ -268,6 +306,10 @@ export function buildVisualRows(inst: TemplateInstance): {
         node = parts.node
         leader = parts.leader
         boxed = parts.boxed
+        unit = parts.unit
+        match = parts.match
+        cells = parts.cells
+        champion = parts.champion
         // Schema 1.3：num 槽单位小字（slotDefs.unit 声明）
         if (parts.num !== undefined && sid) unit = inst.slotDefs?.[sid]?.unit
         // mark 默认居中、num 默认右对齐（设计增量 §4.4）
@@ -326,6 +368,9 @@ export function buildVisualRows(inst: TemplateInstance): {
         ...(leader ? { leader } : {}),
         ...(boxed ? { boxed } : {}),
         ...(unit ? { unit } : {}),
+        ...(match ? { match } : {}),
+        ...(cells ? { cells } : {}),
+        ...(champion ? { champion } : {}),
       })
     }
     metas.push(metaRow)
@@ -338,6 +383,9 @@ export function buildVisualRows(inst: TemplateInstance): {
       const richH = metrics.padV * 2 + metrics.fontSize * 1.45 + 3 + subFont * 1.35
       rowH = Math.max(rowH, Math.ceil(richH))
     }
+    // Schema 1.5：对阵卡/冠军卡（双卡叠放）行高固定抬到 76；打卡矩阵行高 44（方格 + 上下留白）
+    if (metaRow.some((cell) => cell.match || cell.champion)) rowH = Math.max(rowH, 76)
+    if (metaRow.some((cell) => cell.cells)) rowH = Math.max(rowH, 44)
     rowHeights.push(rowH)
 
     const gapId = gapAfter.get(r)
@@ -375,6 +423,12 @@ export function buildVisualRows(inst: TemplateInstance): {
           ? { bannerBarColor: block.props.barColor as string }
           : {}),
         ...(isBanner && block?.props?.bannerAlign === 'center' ? { bannerAlign: 'center' as Align } : {}),
+        ...(isBanner && typeof block?.props?.bannerTextColor === 'string' && block.props.bannerTextColor
+          ? { bannerTextColor: sanitizeHexLoose(block.props.bannerTextColor as string) }
+          : {}),
+        ...(isBanner && typeof block?.props?.bannerRightColor === 'string' && block.props.bannerRightColor
+          ? { bannerRightColor: sanitizeHexLoose(block.props.bannerRightColor as string) }
+          : {}),
       }))
       blockRowIndexes.set(metas.length, gapId)
       metas.push(blockRow)
@@ -733,7 +787,7 @@ export function drawBarCell(
 
 /** 装饰格绘制描述（扁平结构；字段按 kind 取用，全部为已解析的具体值） */
 export interface DecoSpec {
-  kind: 'rich' | 'stars' | 'dot' | 'gantt' | 'node' | 'leader' | 'banner' | 'pill' | 'headerCard'
+  kind: 'rich' | 'stars' | 'dot' | 'gantt' | 'node' | 'leader' | 'banner' | 'pill' | 'headerCard' | 'match' | 'champion' | 'cells'
   /** 主行文本（rich/dot/leader/banner/pill） */
   main?: string
   /** 副行文本（rich/pill） */
@@ -772,6 +826,26 @@ export interface DecoSpec {
   /** banner / pill 底色与左强调条色 */
   bg?: string
   barLeftColor?: string
+  /** pill 上下内缩 px（Schema 1.4，可调药丸高度；缺省 6） */
+  insetV?: number
+  /** Schema 1.5 对阵卡：上/下卡队名与比分、胜方高亮 */
+  sideA?: string
+  scoreA?: string
+  sideB?: string
+  scoreB?: string
+  winA?: boolean
+  winB?: boolean
+  /** 对阵/冠军卡面色与描边色（深底稿） */
+  cardBg?: string
+  cardBorder?: string
+  /** 冠军卡小标/备注色 */
+  cardTitleColor?: string
+  /** 打卡矩阵：「今天」下标（0 基，红框） */
+  today?: number
+  /** 打卡矩阵空心格描边色（缺省 subColor） */
+  cellEmptyBorder?: string
+  /** 对阵卡胜方强调色（金竖条/金色比分） */
+  winColor?: string
 }
 
 export type DecoGroupFactory = (spec: DecoSpec, width: number, height: number) => unknown
@@ -781,6 +855,12 @@ let decoGroupFactory: DecoGroupFactory | null = null
 /** 装饰格绘制通道注册（vtableLite 装载时调用一次；传 null 撤销，装饰格回退默认文字绘制） */
 export function registerDecoGroupFactory(fn: DecoGroupFactory | null): void {
   decoGroupFactory = fn
+}
+
+/** 宽松 hex 清洗（banner 文字色覆盖用；非法返回 undefined 走 palette 兜底） */
+function sanitizeHexLoose(v: string): string | undefined {
+  const m = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.exec(v.trim())
+  return m ? v.trim().toLowerCase() : undefined
 }
 
 /** 单格装饰 kind 判定（priority：gantt > stars > dot > node > leader > rich 副行） */
@@ -817,7 +897,9 @@ export function decoSpecOf(
       padH: metrics.padH,
       align: 'center' as const,
     }
-    return headerShapeFlat ? { kind: 'headerCard', ...headSpec } : { kind: 'pill', ...headSpec }
+    return headerShapeFlat
+      ? { kind: 'headerCard', ...headSpec }
+      : { kind: 'pill', ...headSpec, insetV: metrics.pillInsetV }
   }
   const kind = decoKindOf(cell)
   if (kind) {
@@ -895,14 +977,68 @@ export function decoSpecOf(
       main: cell.text,
       right: cell.bannerRight,
       fontSize: metrics.fontSize,
-      color: palette.primary,
-      rightColor: palette.emphasis,
+      color: cell.bannerTextColor ?? palette.primary,
+      rightColor: cell.bannerRightColor ?? palette.emphasis,
       fontWeight: 600,
       fontFamily: metrics.fontFamily,
       bg: cell.blockColor ?? palette.zebra,
       barLeftColor: cell.bannerBarColor ?? palette.emphasis,
       padH: metrics.padH,
       align: cell.bannerAlign ?? 'left',
+    }
+  }
+  if (cell.match) {
+    return {
+      kind: 'match',
+      fontSize: metrics.fontSize,
+      subFontSize: metrics.fontSize * SUB_FONT_RATIO,
+      color: palette.primary,
+      subColor: palette.muted,
+      fontFamily: metrics.fontFamily,
+      padH: metrics.padH,
+      sideA: cell.match.a,
+      scoreA: cell.match.sa,
+      sideB: cell.match.b,
+      scoreB: cell.match.sb,
+      winA: cell.match.winA === true,
+      winB: cell.match.winB === true,
+      winColor: palette.emphasis,
+      cardBg: cell.bg ?? 'transparent',
+      cardBorder: cell.color,
+      align: 'left',
+    }
+  }
+  if (cell.champion) {
+    return {
+      kind: 'champion',
+      main: cell.champion.name,
+      sub: cell.champion.title,
+      right: cell.champion.note,
+      fontSize: metrics.fontSize,
+      subFontSize: metrics.fontSize * SUB_FONT_RATIO,
+      color: cell.color ?? palette.emphasis,
+      subColor: palette.muted,
+      fontFamily: metrics.fontFamily,
+      padH: metrics.padH,
+      align: 'center',
+      cardBg: cell.bg,
+      cardBorder: cell.color ?? palette.emphasis,
+      cardTitleColor: palette.emphasis,
+    }
+  }
+  if (cell.cells) {
+    return {
+      kind: 'cells',
+      main: cell.cells.pattern,
+      fontSize: metrics.fontSize,
+      color: cell.color ?? palette.primary,
+      subColor: palette.border,
+      fontFamily: metrics.fontFamily,
+      padH: metrics.padH,
+      align: 'left',
+      today: cell.cells.today,
+      cellEmptyBorder: palette.border,
+      dotColor: palette.emphasis,
     }
   }
   return null
@@ -953,7 +1089,13 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
         cell.blockType === 'banner' &&
         cell.bannerAlign === 'center' &&
         !cell.bannerRight
-      if (decoKindOf(cell) || (cell.role === 'block' && cell.blockType === 'banner' && !isPlainCenterBanner)) {
+      if (
+        decoKindOf(cell) ||
+        cell.match ||
+        cell.cells ||
+        cell.champion ||
+        (cell.role === 'block' && cell.blockType === 'banner' && !isPlainCenterBanner)
+      ) {
         decoCols.add(c)
       }
       if (pill && cell.role === 'header') decoCols.add(c)
@@ -1028,13 +1170,37 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
         // 因此合并区内**每个格都必须返回完整 text**：非锚点格若返回 ''，
         // 其影子格不画内容，文本就被裁在锚点列宽内（改对齐只是重排，截断依旧）。
         // 取值统一取锚点格 text，非锚点格仅作为拼接影子存在（编辑读写仍走锚点）。
-        const text = metas[m.start[0]]?.[m.start[1]]?.text ?? ''
+        const anchor = metas[m.start[0]]?.[m.start[1]]
+        const text = anchor?.text ?? ''
+        // Schema 1.5：合并格的装饰绘制必须走 customMerge 返回值的 customLayout 字段——
+        // VTable 对合并格只消费 getCustomMerge() 的返回（text/style/customLayout），
+        // **不读 column.customLayout**（黑底 banner 白字消失的根因）；且此处 rect.width
+        // = 全合并区宽，banner 居中/全宽绘制自然正确。
+        const wantDeco =
+          anchor &&
+          (anchor.blockType === 'banner' || Boolean(decoKindOf(anchor)) || anchor.match || anchor.cells || anchor.champion)
+        const decoSpec = wantDeco && anchor ? decoSpecOf(anchor, palette, metrics) : null
         return {
           text,
           range: {
             start: { col: m.start[1], row: m.start[0] },
             end: { col: m.end[1], row: m.end[0] },
           },
+          ...(decoSpec && decoGroupFactory
+            ? {
+                customLayout: (args: VCustomRenderArgs) => {
+                  const factory = decoGroupFactory
+                  return {
+                    rootContainer: factory
+                      ? factory(decoSpec, args.rect.width, args.rect.height)
+                      : null,
+                    expectedWidth: args.rect.width,
+                    expectedHeight: args.rect.height,
+                    renderDefault: false,
+                  }
+                },
+              }
+            : {}),
         }
       }
     }

@@ -63,6 +63,8 @@ export interface TextSlotObject {
   leader?: boolean
   /** Schema 1.3：整格描边盒（菜单供应说明） */
   boxed?: boolean
+  /** Schema 1.5：同行尾注小字（如动作名右侧「主项/收尾」灰字） */
+  unit?: string
 }
 
 /** Schema 1.1: three-state semantic mark */
@@ -94,7 +96,48 @@ export interface ImageSlotObject {
   image: string
 }
 
-export type SlotObject = TextSlotObject | MarkSlotObject | NumSlotObject | ImageSlotObject
+/** Schema 1.5：对阵卡（锦标赛 bracket；一格内上下两张小卡，win 方高亮） */
+export interface MatchSlotObject {
+  match: {
+    /** 上半卡队名 / 比分 */
+    a: string
+    sa: string
+    /** 下半卡队名 / 比分 */
+    b: string
+    sb: string
+    /** 胜方高亮（金色竖条 + 白粗体；缺省都不高亮） */
+    winA?: boolean
+    winB?: boolean
+  }
+}
+
+/** Schema 1.5：打卡矩阵（格内一行小方格；'1' 实心完成 / '0' 空心未完成） */
+export interface CellsSlotObject {
+  cells: {
+    /** 逐日串，如 '110101...'；长度 = 格数（上限 31） */
+    pattern: string
+    /** 「今天」下标（0 基；该格红框加粗） */
+    today?: number
+  }
+}
+
+/** Schema 1.5：冠军卡（金边金底居中三行：小标 / 队名 / 备注） */
+export interface ChampionSlotObject {
+  champion: {
+    title?: string
+    name: string
+    note?: string
+  }
+}
+
+export type SlotObject =
+  | TextSlotObject
+  | MarkSlotObject
+  | NumSlotObject
+  | ImageSlotObject
+  | MatchSlotObject
+  | CellsSlotObject
+  | ChampionSlotObject
 
 export type SlotValue = string | number | SlotObject
 
@@ -147,6 +190,8 @@ export interface LayoutStyle {
   headerShape?: 'flat' | 'pill'
   /** Schema 1.3：无底色表头（纸底深字，账本/极简风；缺省 false = 主色底） */
   plainHeader?: boolean
+  /** Schema 1.4：药丸表头上下内缩 px（0-20，缺省 6；越小药丸越饱满） */
+  pillInsetV?: number
 }
 
 export interface BlockDesc {
@@ -161,6 +206,10 @@ export interface BlockDesc {
     color?: string
     /** Schema 1.3：横幅行右侧强调文本（仅 banner 消费） */
     bannerRight?: string
+    /** Schema 1.5：banner 主文本色覆盖（黑底白字稿；hex） */
+    bannerTextColor?: string
+    /** Schema 1.5：banner 右侧文本色覆盖（hex） */
+    bannerRightColor?: string
     [k: string]: unknown
   }
 }
@@ -228,6 +277,27 @@ export interface PosterSpec {
   textColor?: string
   /** 纸面四周留白（px，缺省 40；钳制 16-80） */
   padding?: number
+  /**
+   * Schema 1.4：角部颜色洗（非均匀渐变）。在基色/渐变之上、点纹之下，
+   * 按相对坐标铺径向渐变色斑（豆包稿典型的右上泛绿/左下泛暖）。上限 6 个。
+   */
+  bgWashes?: PosterWash[]
+  /** Schema 1.5：标题下徽章卡（第 0 个黑底白字，其余白底描边；上限 6 个、每个 24 字） */
+  chips?: string[]
+  /** Schema 1.5：标题下无边框图例/说明行（muted 小字，如「■ 完成　□ 未完成　□ 今天」） */
+  legend?: string
+}
+
+/** 径向颜色洗：x/y 为相对画布位置（0-1），r 为相对对角线半径（0-1，缺省 0.35） */
+export interface PosterWash {
+  /** 洗色（hex） */
+  color: string
+  /** 圆心 x（0-1） */
+  x: number
+  /** 圆心 y（0-1） */
+  y: number
+  /** 半径（0-1 相对对角线；缺省 0.35） */
+  r?: number
 }
 
 /** Schema 1.2 扩展：表外 KPI 统计卡（hero 区一排等宽卡片，上限 6 张） */
@@ -238,6 +308,8 @@ export interface KpiCard {
   unit?: string
   /** 强调卡：数值/边框走主题 emphasis 色、底色 emphasisSoft */
   accent?: boolean
+  /** Schema 1.5：独立数值色（hex；strip 竖条/plain 数字/cards 数值同用） */
+  color?: string
 }
 
 export interface TemplateMeta {
@@ -247,6 +319,8 @@ export interface TemplateMeta {
   origin?: 'preset' | 'user'
   sourceTemplateId?: string | null
   savedAt?: string | null
+  /** Schema 1.5：模板封面图（导出 PNG 时自动生成的缩略 dataURL；库页卡片展示） */
+  cover?: string
 }
 
 export interface TemplateInstance {
@@ -264,8 +338,8 @@ export interface TemplateInstance {
   highlight?: { recommendCol: number | null }
   /** Schema 1.2 扩展: 表外 KPI 统计卡（缺省/空数组 = 无卡片区，导出零占位） */
   kpiCards?: KpiCard[]
-  /** Schema 1.3：统计卡形态（cards 卡片 / strip 细分隔条；缺省 cards） */
-  kpiStyle?: 'cards' | 'strip'
+  /** Schema 1.3/1.5：统计卡形态（cards 卡片 / strip 细分隔条 / plain 无框大数字；缺省 cards） */
+  kpiStyle?: 'cards' | 'strip' | 'plain'
   /** Schema 1.3：页面海报层（背景纹理 / 标题区 / 注脚 / 页码；缺省 = 无海报层，行为同 1.2） */
   poster?: PosterSpec
   /** Runtime: zebra on/off; defaults true when unset */
@@ -328,6 +402,10 @@ export type EditIntent =
   | { kind: 'moveBlockRow'; blockId: string; dir: -1 | 1 }
   /** 表名编辑：有 captionSlot 写槽（预览行同步），否则写 meta.displayName（导出用） */
   | { kind: 'setCaption'; text: string }
+  /** Schema 1.5：整包更新海报层（面板海报组逐字段编辑，一次意图一张撤销快照） */
+  | { kind: 'setPoster'; poster: PosterSpec }
+  /** Schema 1.5：表格形态部分合并（字体族/边框方案/表头形状/药丸内缩等；一次意图一张快照） */
+  | { kind: 'setStylePatch'; patch: Partial<LayoutStyle> }
 
 /** E3 多次撤销：撤销/重做栈深上限（入栈超限裁掉最旧一条，恒定内存上界） */
 export const UNDO_LIMITS = { maxDepth: 50 } as const

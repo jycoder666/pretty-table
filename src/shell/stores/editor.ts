@@ -392,6 +392,33 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function setSlotText(slotId: string, text: string) {
+    // Schema 1.3+：对象形态槽值只改 text、保留其余字段（sub/unit/color/bg/stars/…）——
+    // 旧实现整值覆盖会把副行小字/逐格色一并抹掉（课程表改「数学」丢「李老师 · 302」根因）
+    const prev = current.value?.slots[slotId]
+    if (
+      prev &&
+      typeof prev === 'object' &&
+      !('mark' in prev) &&
+      !('num' in prev) &&
+      !('image' in prev) &&
+      !('match' in prev) &&
+      !('cells' in prev) &&
+      !('champion' in prev)
+    ) {
+      apply(
+        { kind: 'setSlot', slotId, value: { ...(prev as unknown as Record<string, unknown>), text } },
+        textUndoOpts(`slot:${slotId}`),
+      )
+      return
+    }
+    // 结构化槽（对阵/冠军/打卡）无纯文字语义：拒写，防误操作清空结构数据
+    if (
+      prev &&
+      typeof prev === 'object' &&
+      ('match' in prev || 'cells' in prev || 'champion' in prev)
+    ) {
+      return
+    }
     apply({ kind: 'setSlot', slotId, value: text }, textUndoOpts(`slot:${slotId}`))
   }
 
