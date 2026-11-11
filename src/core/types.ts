@@ -1,20 +1,28 @@
 /** Core types — shell/core contract (G-AR-01). No Vue/Pinia imports. */
 
 export type ThemeId = 'T-A' | 'T-B' | 'T-C'
-export type BlockType = 'sectionBar' | 'groupHeader' | 'emphFooter' | 'leftTag'
+export type BlockType = 'sectionBar' | 'groupHeader' | 'emphFooter' | 'leftTag' | 'banner'
 export type Align = 'left' | 'center' | 'right'
-/** 强调 mark：既有四项 + 2026-11-10 追加四项（全部加法，不改动既有语义）；'rule' = 下缘重强调线（复刻通道微调） */
-export type Emphasis =
-  | 'bold'
-  | 'red'
-  | 'green'
-  | 'bg'
-  | 'serif'
-  | 'display'
-  | 'muted'
-  | 'bar'
-  | 'rule'
+export type Emphasis = 'bold' | 'red' | 'bg'
 export type CellCoord = [row: number, col: number]
+
+/** Schema 1.3：格内状态圆点（体检「偏高/正常」）——色随模板数据，文字仍走槽位 text */
+export interface DotFormat {
+  /** 圆点颜色（hex；缺省 = 主题 emphasis） */
+  color?: string
+}
+
+/** Schema 1.3：格内甘特条（排期）——from/to 为 0-1 相对整格内容区宽 */
+export interface GanttFormat {
+  /** 条起点（0-1，钳制） */
+  from: number
+  /** 条终点（0-1，钳制；>= from） */
+  to: number
+  /** 条色（hex；缺省 = 主题 primary） */
+  color?: string
+  /** 里程碑：条终点画菱形 */
+  milestone?: boolean
+}
 
 export interface MergeRange {
   start: CellCoord
@@ -35,6 +43,26 @@ export interface TextSlotObject {
   emphasize?: Emphasis | Emphasis[]
   /** Schema 1.2 扩展：横条格式（文字/数值格可设） */
   bar?: BarFormat
+  /** Schema 1.3：副行小字（主行下方第二行，muted 色） */
+  sub?: string
+  /** Schema 1.3：主行文字色（hex） */
+  color?: string
+  /** Schema 1.3：整格底色（hex，含 padding 区） */
+  bg?: string
+  /** Schema 1.3：主行字号倍率（1 / 1.25 / 1.5，读入钳制到最近档） */
+  cellScale?: number
+  /** Schema 1.3：星级 0-5（金★ + 灰☆） */
+  stars?: number
+  /** Schema 1.3：状态圆点 */
+  dot?: DotFormat
+  /** Schema 1.3：甘特条 */
+  gantt?: GanttFormat
+  /** Schema 1.3：时间轴节点（格内圆点 + 贯穿竖虚线，行程） */
+  node?: boolean
+  /** Schema 1.3：点线引导（文字后 dotted leader 填至行尾，菜单） */
+  leader?: boolean
+  /** Schema 1.3：整格描边盒（菜单供应说明） */
+  boxed?: boolean
 }
 
 /** Schema 1.1: three-state semantic mark */
@@ -54,6 +82,11 @@ export interface NumSlotObject {
   emphasize?: Emphasis | Emphasis[]
   /** Schema 1.2 扩展：横条格式（数值格可设，条宽 = ratio 百分比） */
   bar?: BarFormat
+  /** Schema 1.3：副行小字 / 逐格颜色 / 字号倍率（与 TextSlotObject 同语义） */
+  sub?: string
+  color?: string
+  bg?: string
+  cellScale?: number
 }
 
 /** Schema 1.2：图片槽值。image 必须是通过 imageGuard.isImageDataUrl 白名单校验的 data URL */
@@ -90,28 +123,26 @@ export interface ThemeTokens {
   headerText?: string
   zebra?: boolean | string
   emphasis?: string
-  /** 正向/成功语义色（「正常」青绿点等），缺省回落主题内置 */
-  success?: string
   border?: string
   background?: string
   tag?: string
-  /** 柔彩底（'bg' mark 消费；复刻 2026-11-10 补开 token 覆盖，与同级角色色对齐） */
-  emphasisSoft?: string
 }
 
-/** 排版微调档位（全局；px 映射在 core/theme/layoutScales.ts，行高含第 4 档特高） */
+/** 排版微调档位（全局；px 映射在 core/theme/layoutScales.ts） */
 export interface LayoutStyle {
   /** 与列一一对应；null/缺位 = 该列用默认宽 */
   colWidths?: (number | null)[]
-  /** 与可视行一一对应（含端点行；null/缺位 = 按行高档位）；区块 gap 行恒 32 不受控 */
-  rowHeights?: (number | null)[]
-  rowHeightTier?: 1 | 2 | 3 | 4
+  rowHeightTier?: 1 | 2 | 3
   fontSizeTier?: 1 | 2 | 3
   paddingTier?: 1 | 2 | 3
-  /** 网格线模式（复刻 2026-11-10）：'rows' = 只留行间横线（无竖线、无外框），横线随 zebraRange 限定数据区；缺省 'all' 全网格 */
-  gridLines?: 'all' | 'rows'
-  /** 斑马纹/行间横线作用可视行区间（含端点；缺省全表）。注脚/列头等非数据行可排除在条纹与横线外 */
-  zebraRange?: [number, number]
+  /** Schema 1.3：字体族（sans 无衬线 / serif 衬线；缺省 sans） */
+  fontFamily?: 'sans' | 'serif'
+  /** Schema 1.3：边框方案（full 全网格 / rows 仅横线 / cols 仅竖线 / none 无框；缺省 full） */
+  borderScheme?: 'full' | 'rows' | 'cols' | 'none'
+  /** Schema 1.3：表头形状（flat 平色块 / pill 药丸圆角；缺省 flat） */
+  headerShape?: 'flat' | 'pill'
+  /** Schema 1.3：无底色表头（纸底深字，账本/极简风；缺省 false = 主色底） */
+  plainHeader?: boolean
 }
 
 export interface BlockDesc {
@@ -124,6 +155,8 @@ export interface BlockDesc {
     styleTier?: 1 | 2 | 3
     /** 区块级底色覆盖（仅 sectionBar / groupHeader 消费；hex，缺省 = 跟主题 primary） */
     color?: string
+    /** Schema 1.3：横幅行右侧强调文本（仅 banner 消费） */
+    bannerRight?: string
     [k: string]: unknown
   }
 }
@@ -160,6 +193,39 @@ export interface LayoutSpec {
 
 export type TemplateType = 'compare' | 'detail' | 'pricing' | 'matrix' | 'blank' | 'stat'
 
+/**
+ * Schema 1.3：页面海报层（表格外纸面设计：背景纹理 / 标题区 / 注脚 / 页码）。
+ * 预览 DOM / PNG 合成 / HTML 导出三方同源消费（几何与内联样式单点在 core/theme/posterStyle.ts）。
+ */
+export interface PosterSpec {
+  /** 纸面背景形态：solid 纯色 / dots 点纹 / ruled 横线 / gradient 渐变（缺省 solid） */
+  bg?: 'solid' | 'dots' | 'ruled' | 'gradient'
+  /** 纸面基色（hex；缺省 = 主题 paper） */
+  bgColor?: string
+  /** 纹理 / 渐变第二色（hex；dots/ruled 线色、gradient 终止色） */
+  bgAccent?: string
+  /** 英文眉标（kicker，字距加宽小字） */
+  kicker?: string
+  /** 大标题 */
+  title?: string
+  /** 副标题 */
+  subtitle?: string
+  /** 右上信息行（逐行） */
+  metaLines?: string[]
+  /** 底部注脚行（逐行） */
+  footerLines?: string[]
+  /** 页码徽标（如「01 / 08」，右下角） */
+  pageBadge?: string
+  /** 强调色（眉标 / 页码 / 标题点缀；hex；缺省 = 主题 emphasis） */
+  accent?: string
+  /** 标题字体族（sans / serif；缺省 sans） */
+  titleFont?: 'sans' | 'serif'
+  /** 标题区文字色（hex；缺省 = 主题 primary） */
+  textColor?: string
+  /** 纸面四周留白（px，缺省 40；钳制 16-80） */
+  padding?: number
+}
+
 /** Schema 1.2 扩展：表外 KPI 统计卡（hero 区一排等宽卡片，上限 6 张） */
 export interface KpiCard {
   id: string
@@ -194,6 +260,10 @@ export interface TemplateInstance {
   highlight?: { recommendCol: number | null }
   /** Schema 1.2 扩展: 表外 KPI 统计卡（缺省/空数组 = 无卡片区，导出零占位） */
   kpiCards?: KpiCard[]
+  /** Schema 1.3：统计卡形态（cards 卡片 / strip 细分隔条；缺省 cards） */
+  kpiStyle?: 'cards' | 'strip'
+  /** Schema 1.3：页面海报层（背景纹理 / 标题区 / 注脚 / 页码；缺省 = 无海报层，行为同 1.2） */
+  poster?: PosterSpec
   /** Runtime: zebra on/off; defaults true when unset */
   zebraOn?: boolean
 }
@@ -223,7 +293,7 @@ export type EditIntent =
   | { kind: 'resetThemeTokens' }
   /** FR-C2 排版档位（width=null 恢复默认宽） */
   | { kind: 'setColWidth'; col: number; width: number | null }
-  | { kind: 'setRowHeightTier'; tier: 1 | 2 | 3 | 4 }
+  | { kind: 'setRowHeightTier'; tier: 1 | 2 | 3 }
   | { kind: 'setFontSizeTier'; tier: 1 | 2 | 3 }
   | { kind: 'setPaddingTier'; tier: 1 | 2 | 3 }
   /** FR-C3 结构编辑（全部按钮式；一次意图 = 一张撤销快照 = 一套 remap） */

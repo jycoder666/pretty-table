@@ -3,6 +3,8 @@ import type { SlotDef, TemplateDefinition, TemplateInstance, TemplateType } from
 import { sanitizeHex } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
 import { sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
+import { sanitizePoster } from '../theme/posterStyle'
+import { isRichSlotObject, sanitizeSlotDeco, sanitizeStyle13 } from './sanitize13'
 
 /**
  * Schema migration (增强期 §3.3/§3.4 + 自定义格式设计增量 §1.5):
@@ -14,7 +16,7 @@ import { sanitizeBar, sanitizeKpiCards } from '../kpi/kpiCards'
  * 纯函数：不修改入参，只改内存副本；不批量回写本机已存模板。
  */
 
-export const SCHEMA_VERSION_CURRENT = '1.2'
+export const SCHEMA_VERSION_CURRENT = '1.3'
 
 /** OUT-13：实例里携带的语义色/符号映射一律忽略 */
 export const SEMANTIC_TOKEN_KEYS: readonly string[] = [
@@ -65,9 +67,9 @@ export function migrateInstance(
   const warnings: CoreWarning[] = []
   inst.schemaVersion = SCHEMA_VERSION_CURRENT
 
-  // 读 1.x（minor > 2）宽容 warn（设计增量 §1.5 读规则）
+  // 读 1.x（minor > 3）宽容 warn（schema 1.3 起沿用读规则）
   const minor = /^1\.(\d+)/.exec(rawVersion)
-  if (minor && Number(minor[1]) > 2) {
+  if (minor && Number(minor[1]) > 3) {
     warnings.push({
       code: 'UNKNOWN_FIELD',
       message: '模板版本较新，已尽量兼容读取',
@@ -83,6 +85,10 @@ export function migrateInstance(
 
   const layout = { ...inst.layout }
   inst.layout = layout
+
+  // schema 1.3：layout.style 1.3 字段枚举清洗（在 1.2 档位钳制之前的宽容读入口径，
+  // 档位钳制仍由 validate 收口——migrate 输出后再过 validate 的路径不双写）
+  if (layout.style) sanitizeStyle13(layout.style)
 
   // highlight 缺省 → recommendCol=null
   if (!inst.highlight || typeof inst.highlight !== 'object') {
@@ -188,12 +194,24 @@ export function migrateInstance(
       if (!cleaned) delete (obj as Record<string, unknown>).bar
       else (obj as Record<string, unknown>).bar = cleaned
     }
+    // Schema 1.3 扩展：格内装饰字段清洗（validate 同款，共用单点）
+    if (isRichSlotObject(obj)) sanitizeSlotDeco(obj)
   }
 
   // Schema 1.2 扩展：kpiCards 清洗（非数组删字段；项级清洗与截断在 sanitizeKpiCards 内）
   const kpiClean = sanitizeKpiCards(inst.kpiCards)
   if (kpiClean === null) delete inst.kpiCards
   else inst.kpiCards = kpiClean
+
+  // Schema 1.3：kpiStyle 枚举 + poster 海报层清洗
+  if (inst.kpiStyle !== undefined && inst.kpiStyle !== 'cards' && inst.kpiStyle !== 'strip') {
+    delete inst.kpiStyle
+  }
+  if (inst.poster !== undefined) {
+    const poster = sanitizePoster(inst.poster)
+    if (poster) inst.poster = poster
+    else delete inst.poster
+  }
 
   // recommendCol 必须在 recommendableCols 内，否则置 null + warn
   const recs = Array.isArray(layout.recommendableCols)

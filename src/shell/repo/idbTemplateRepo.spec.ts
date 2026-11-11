@@ -60,7 +60,7 @@ describe('idbTemplateRepo · 读时迁移（FR-C4 闭环）', () => {
     await repo.save(legacyUserTemplate('user-legacy-1', '1.1'))
     const out = await repo.list()
     expect(out).toHaveLength(1)
-    expect(out[0]!.schemaVersion).toBe('1.2')
+    expect(out[0]!.schemaVersion).toBe('1.3')
     expect(out[0]!.templateId).toBe('user-legacy-1')
     expect(out[0]!.slots['obj.name.a']).toBe('方案 A')
     expect(out[0]!.meta?.origin).toBe('user')
@@ -71,16 +71,16 @@ describe('idbTemplateRepo · 读时迁移（FR-C4 闭环）', () => {
     await repo.save(legacyUserTemplate('user-legacy-0', '1.0'))
     const got = await repo.get('user-legacy-0')
     expect(got).not.toBeNull()
-    expect(got!.schemaVersion).toBe('1.2')
+    expect(got!.schemaVersion).toBe('1.3')
   })
 
   it('list/get 对已是当前版本的实例幂等（再读不变）', async () => {
     const repo = createIdbTemplateRepo()
     await repo.save(legacyUserTemplate('user-cur', '1.2'))
     const once = await repo.get('user-cur')
-    expect(once!.schemaVersion).toBe('1.2')
+    expect(once!.schemaVersion).toBe('1.3')
     const list = await repo.list()
-    expect(list[0]!.schemaVersion).toBe('1.2')
+    expect(list[0]!.schemaVersion).toBe('1.3')
   })
 
   it('重命名 round-trip（PX-10）：同名键覆盖 save 后 get/list 读回新名字，其余字段保真', async () => {
@@ -100,7 +100,7 @@ describe('idbTemplateRepo · 读时迁移（FR-C4 闭环）', () => {
     // get 读回：同样生效
     const got = await repo.get('user-rn')
     expect(got!.meta?.displayName).toBe('体检对比·终版')
-    expect(got!.schemaVersion).toBe('1.2')
+    expect(got!.schemaVersion).toBe('1.3')
   })
 
   it('list 跳过校验不过的坏数据，不抛错不中断其他条目', async () => {

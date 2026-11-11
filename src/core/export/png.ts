@@ -8,6 +8,12 @@ import { resolveTheme } from '../theme/palettes'
 import { isImageDataUrl } from '../image/imageGuard'
 import { drawKpiHero, effectiveKpiCards, kpiHeroHeight } from '../kpi/kpiCards'
 import { PNG_MAX_PIXELS_DEFAULT, PNG_PAD, measurePng } from './pngSize'
+import {
+  posterPadding,
+  posterHeaderHeight,
+  posterFooterHeight,
+} from '../theme/posterStyle'
+import { drawPosterBackground, drawPosterHeader, drawPosterFooter } from './posterDraw'
 
 // pngSize 是与 VTable 解耦的估算模块（壳层静态消费）；此处 re-export 保持
 // 核内旧路径（./png）可用，但 @/core 出口只从 pngSize 静态导出（T34 切 chunk）。
@@ -206,10 +212,15 @@ export async function exportPng(
 
   const measured = measureContentSize(inst)
   // Schema 1.2 扩展：输出画布高 = KPI hero 区 + 表格内容（无卡片 kpiExtra = 0，口径与 measurePng 一致）
+  // Schema 1.3 扩展：poster 海报层（海报留白替代 PNG_PAD + 标题区/注脚区高度）
   const kpiCards = effectiveKpiCards(inst)
-  const kpiExtra = kpiHeroHeight(kpiCards)
-  const outW = (measured.width + PNG_PAD * 2) * scale
-  const outH = (measured.height + kpiExtra + PNG_PAD * 2) * scale
+  const kpiExtra = kpiHeroHeight(kpiCards, inst.kpiStyle)
+  const poster = inst.poster
+  const posterHeader = posterHeaderHeight(poster)
+  const posterFooter = posterFooterHeight(poster)
+  const pad = poster ? posterPadding(poster) : PNG_PAD
+  const outW = (measured.width + pad * 2) * scale
+  const outH = (measured.height + kpiExtra + posterHeader + posterFooter + pad * 2) * scale
   if (outW * outH > maxPixels) {
     return fail('EXPORT_PNG_TOO_LARGE', `输出 ${Math.round(outW)}×${Math.round(outH)}=${Math.round(outW * outH)} 像素超过上限 ${maxPixels}，请改用更低倍率重试`, {
       width: outW,
@@ -280,23 +291,42 @@ export async function exportPng(
     const ctx = canvas.getContext('2d')
     if (!ctx) return fail('EXPORT_PNG_FAIL', '无法创建画布')
 
-    if (transparent) {
+    if (transparent && !poster) {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+    } else if (poster) {
+      // Schema 1.3：海报层铺满画布（bg + 纹理；透明请求与海报互斥，海报优先）
+      drawPosterBackground(ctx, poster, palette, canvas.width, canvas.height)
     } else {
       ctx.fillStyle = palette.paper
       ctx.fillRect(0, 0, canvas.width, canvas.height)
     }
+    // Schema 1.3：海报标题区先画（海报留白起笔），后续内容整体下移
+    let cursorY = pad * scale
+    const contentX = pad * scale
+    const contentW = measured.width * scale
+    cursorY += drawPosterHeader(ctx, poster, palette, contentX, cursorY, contentW, scale)
     // Schema 1.2 扩展：KPI hero 区先画（表格上方；几何与语义色同 HTML 导出单点），表格图随之下移
     const kpiDrawn = drawKpiHero(
       ctx,
       kpiCards,
       palette,
-      PNG_PAD * scale,
-      PNG_PAD * scale,
-      measured.width * scale,
+      contentX,
+      cursorY,
+      contentW,
+      scale,
+      inst.kpiStyle,
+    )
+    ctx.drawImage(img, contentX, cursorY + kpiDrawn, img.width, img.height)
+    // Schema 1.3：海报注脚区（表格之下）
+    drawPosterFooter(
+      ctx,
+      poster,
+      palette,
+      contentX,
+      cursorY + kpiDrawn + img.height,
+      contentW,
       scale,
     )
-    ctx.drawImage(img, PNG_PAD * scale, PNG_PAD * scale + kpiDrawn, img.width, img.height)
 
     // P1 空图守卫（终检兜底）：产物降采样后除纸面/透明外无任何内容像素 →
     // 显式报错（EXPORT_PNG_EMPTY + errorCopy 白话，GC-25），绝不静默交付全空白图。

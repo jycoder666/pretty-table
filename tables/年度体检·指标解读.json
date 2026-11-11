@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.3",
   "templateId": "user-1794016568816-u5cjn",
   "themeId": "T-B",
   "zebraOn": true,
@@ -7,12 +7,10 @@
     "recommendCol": null
   },
   "meta": {
-    "displayName": "年度体检·指标解读",
-    "description": "从零开始的 8 行 5 列空表，行列与表头层级都可以再调",
+    "displayName": "年度体检 · 指标解读",
+    "description": "结论横幅 · 状态圆点 · 结语分组（一比一复刻设计稿）",
     "templateType": "blank",
-    "origin": "user",
-    "sourceTemplateId": "user-1793988695165-o25bg",
-    "savedAt": "2026-11-07T01:56:08.816Z"
+    "origin": "preset"
   },
   "slots": {
     "u1": {
@@ -31,136 +29,236 @@
       "text": "建议"
     },
     "u6": {
-      "text": "血压 BP"
+      "text": "血压",
+      "sub": "BP"
     },
     "u7": {
-      "text": "128/82 mmHg"
+      "text": "128 / 82",
+      "align": "left"
     },
     "u8": {
-      "text": "<120/80"
+      "text": "< 120 / 80",
+      "align": "left",
+      "color": "#6b6b60"
     },
     "u9": {
       "text": "偏高",
+      "dot": {
+        "color": "#c47b3a"
+      },
+      "color": "#c47b3a",
       "emphasize": [
-        "red",
         "bold"
-      ]
+      ],
+      "align": "left"
     },
     "u10": {
-      "text": "限盐、每周3次有氧"
+      "text": "限盐、每周 3 次有氧",
+      "color": "#6b6b60"
     },
     "u11": {
-      "text": "空腹血糖 GLU"
+      "text": "空腹血糖",
+      "sub": "GLU"
     },
     "u12": {
-      "text": "5.9 mmol/L"
+      "text": "5.9",
+      "align": "left"
     },
     "u13": {
-      "text": "3.9-6.1"
+      "text": "3.9 – 6.1",
+      "align": "left",
+      "color": "#6b6b60"
     },
     "u14": {
-      "text": "正常"
+      "text": "正常",
+      "dot": {
+        "color": "#2e6e63"
+      },
+      "color": "#2e6e63",
+      "emphasize": [
+        "bold"
+      ],
+      "align": "left"
     },
     "u15": {
-      "text": "保持现有饮食结构"
+      "text": "保持现有饮食结构",
+      "color": "#6b6b60"
     },
     "u16": {
-      "text": "总胆固醇 TC"
+      "text": "总胆固醇",
+      "sub": "TC"
     },
     "u17": {
-      "text": "5.8 mmol/L"
+      "text": "5.8",
+      "align": "left"
     },
     "u18": {
-      "text": "<5.2"
+      "text": "< 5.2",
+      "align": "left",
+      "color": "#6b6b60"
     },
     "u19": {
       "text": "偏高",
+      "dot": {
+        "color": "#c47b3a"
+      },
+      "color": "#c47b3a",
       "emphasize": [
-        "red",
         "bold"
-      ]
+      ],
+      "align": "left"
     },
     "u20": {
-      "text": "减少动物油脂，3个月复查"
+      "text": "减少动物油脂，3 个月复查",
+      "color": "#6b6b60"
     },
     "u21": {
-      "text": "尿酸 UA"
+      "text": "尿酸",
+      "sub": "UA"
     },
     "u22": {
-      "text": "468 μmol/L"
+      "text": "468",
+      "align": "left"
     },
     "u23": {
-      "text": "208-428"
+      "text": "208 – 428",
+      "align": "left",
+      "color": "#6b6b60"
     },
     "u24": {
       "text": "偏高",
+      "dot": {
+        "color": "#c47b3a"
+      },
+      "color": "#c47b3a",
       "emphasize": [
-        "red",
         "bold"
-      ]
+      ],
+      "align": "left"
     },
     "u25": {
-      "text": "少喝含糖饮料与啤酒"
+      "text": "少喝含糖饮料与啤酒",
+      "color": "#6b6b60"
     },
     "u26": {
-      "text": "体质指数 BMI"
+      "text": "体质指数",
+      "sub": "BMI"
     },
     "u27": {
-      "text": "24.6"
+      "text": "24.6",
+      "align": "left"
     },
     "u28": {
-      "text": "18.5-23.9"
+      "text": "18.5 – 23.9",
+      "align": "left",
+      "color": "#6b6b60"
     },
     "u29": {
       "text": "偏高",
+      "dot": {
+        "color": "#c47b3a"
+      },
+      "color": "#c47b3a",
       "emphasize": [
-        "red",
         "bold"
-      ]
+      ],
+      "align": "left"
     },
     "u30": {
-      "text": "减重3-5公斤更稳妥"
+      "text": "减重 3–5 公斤更稳妥",
+      "color": "#6b6b60"
     },
     "u31": {
-      "text": "血红蛋白 HGB"
+      "text": "血红蛋白",
+      "sub": "HGB"
     },
     "u32": {
-      "text": "148 g/L"
+      "text": "148",
+      "align": "left"
     },
     "u33": {
-      "text": "130-175"
+      "text": "130 – 175",
+      "align": "left",
+      "color": "#6b6b60"
     },
     "u34": {
-      "text": "正常"
+      "text": "正常",
+      "dot": {
+        "color": "#2e6e63"
+      },
+      "color": "#2e6e63",
+      "emphasize": [
+        "bold"
+      ],
+      "align": "left"
     },
     "u35": {
-      "text": "无需干预"
+      "text": "无需干预",
+      "color": "#6b6b60"
     },
     "u36": {
-      "text": "谷丙转氨酶 ALT"
+      "text": "谷丙转氨酶",
+      "sub": "ALT"
     },
     "u37": {
-      "text": "32 U/L"
+      "text": "32",
+      "align": "left"
     },
     "u38": {
-      "text": "9-50"
+      "text": "9 – 50",
+      "align": "left",
+      "color": "#6b6b60"
     },
     "u39": {
-      "text": "正常"
+      "text": "正常",
+      "dot": {
+        "color": "#2e6e63"
+      },
+      "color": "#2e6e63",
+      "emphasize": [
+        "bold"
+      ],
+      "align": "left"
     },
     "u40": {
-      "text": "无需干预"
-    }
+      "text": "无需干预",
+      "color": "#6b6b60"
+    },
+    "u41": "",
+    "u42": "",
+    "u43": "",
+    "u44": ""
   },
   "blocks": [
     {
-      "id": "blk-1793988665232",
-      "type": "emphFooter",
-      "slotId": "footer-1",
+      "id": "blk-banner",
+      "type": "banner",
+      "slotId": "u41",
       "props": {
-        "label": "",
-        "text": "7 项指标中 4 项偏高·均为生活方式相关，未提示器质性异常，建议 3 个月后复查\n报告单号 HC.2026.0418 · 体检日期 2026.04.18\n示例样张·数值仅作排版示意，不构成医学诊断，请以医生意见为准",
-        "styleTier": 1
+        "text": "7 项指标中 4 项偏高 · 均为生活方式相关，未提示器质性异常",
+        "bannerRight": "建议 3 个月后复查",
+        "color": "#eef2ee",
+        "barColor": "#2e6e63"
+      }
+    },
+    {
+      "id": "blk-follow",
+      "type": "banner",
+      "slotId": "u42",
+      "props": {
+        "text": "需要跟进  ① 血压接近上限，先做家庭自测  ② 血脂尿酸偏高与体重、饮酒相关  ③ 3 个月后复查",
+        "color": "#f1f4f0",
+        "barColor": "#2e6e63"
+      }
+    },
+    {
+      "id": "blk-keep",
+      "type": "banner",
+      "slotId": "u43",
+      "props": {
+        "text": "保持项目  ① 血糖、血红蛋白、转氨酶均在区间内  ② 睡眠与运动是维持主因  ③ 沿用同一机构",
+        "color": "#f1f4f0",
+        "barColor": "#2e6e63"
       }
     }
   ],
@@ -184,68 +282,25 @@
     ],
     "blockSlots": [
       {
-        "id": "footer-1",
+        "id": "u41",
         "accept": [
-          "emphFooter"
+          "banner"
         ],
-        "region": "footer",
+        "rowHint": "after-0"
+      },
+      {
+        "id": "u42",
+        "accept": [
+          "banner"
+        ],
+        "rowHint": "after-6"
+      },
+      {
+        "id": "u43",
+        "accept": [
+          "banner"
+        ],
         "rowHint": "after-7"
-      },
-      {
-        "id": "left-r1",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-1"
-      },
-      {
-        "id": "left-r2",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-2"
-      },
-      {
-        "id": "left-r3",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-3"
-      },
-      {
-        "id": "left-r4",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-4"
-      },
-      {
-        "id": "left-r5",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-5"
-      },
-      {
-        "id": "left-r6",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-6"
-      },
-      {
-        "id": "left-r7",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-7"
       }
     ],
     "slotGrid": [
@@ -308,21 +363,47 @@
     ],
     "style": {
       "colWidths": [
-        null,
-        null,
-        null,
-        84,
-        220
-      ]
+        150,
+        160,
+        130,
+        96,
+        240
+      ],
+      "rowHeightTier": 3,
+      "fontSizeTier": 2,
+      "paddingTier": 3,
+      "borderScheme": "rows",
+      "plainHeader": true
     }
   },
+  "slotDefs": {},
   "themeTokens": {
-    "primary": "#0b211c",
-    "headerText": "#ffffff",
-    "zebra": "#f1e9d8",
-    "emphasis": "#b4532a",
-    "border": "#d8cdb8",
-    "background": "#f6f0e3"
+    "primary": "#2e6e63",
+    "headerText": "#f5f7f4",
+    "zebra": "#f0f3ef",
+    "emphasis": "#c47b3a",
+    "border": "#d5dcd5",
+    "background": "#fafbf8"
   },
-  "slotDefs": {}
+  "kpiCards": [],
+  "poster": {
+    "bg": "solid",
+    "bgColor": "#fafbf8",
+    "kicker": "HEALTH CHECK · KEY INDICATORS",
+    "title": "年度体检 · 指标解读",
+    "subtitle": "7 项核心指标 · 结果 / 区间 / 状态 / 建议 逐项对照",
+    "metaLines": [
+      "检测日期 2026.04.18",
+      "报告编号 HC-2026-0418"
+    ],
+    "footerLines": [
+      "参考区间来自常见成人标准区间，不同实验室略有差异。",
+      "示例样张 · 数值仅作排版示意，不构成医学诊断，请以医生意见为准。"
+    ],
+    "pageBadge": "07 / 08",
+    "accent": "#2e6e63",
+    "textColor": "#25423c",
+    "titleFont": "sans",
+    "padding": 44
+  }
 }

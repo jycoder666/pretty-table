@@ -37,6 +37,9 @@ export type {
   ViewportHit,
   KpiCard,
   BarFormat,
+  DotFormat,
+  GanttFormat,
+  PosterSpec,
 } from './types'
 
 export type { ErrorCode, WarnCode, CoreError, CoreWarning, Result, PasteErrorCode } from './errors'
@@ -190,7 +193,24 @@ export {
   kpiValueStyle,
   kpiUnitStyle,
   kpiLabelStyle,
+  kpiStripStyle,
+  kpiStripItemStyle,
+  kpiStripLabelStyle,
+  kpiStripValueStyle,
 } from './kpi/kpiCards'
+
+// Schema 1.3：页面海报层（预览 / HTML / PNG 三方同源单点）
+export {
+  hasPoster,
+  posterWrapStyle,
+  posterHeaderStyles,
+  posterFooterStyles,
+  posterPadding,
+  posterColors,
+  posterHeaderHeight,
+  posterFooterHeight,
+  sanitizePoster,
+} from './theme/posterStyle'
 
 // T34：渲染核（VTable 依赖图）只经动态导入出口暴露，壳层用 loadRenderCore()
 export { loadRenderCore, type RenderCore } from './render/lazyCore'

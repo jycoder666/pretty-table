@@ -1,220 +1,372 @@
 {
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.3",
   "templateId": "user-1794022578103-zdrhi",
-  "themeId": "T-C",
-  "zebraOn": true,
+  "themeId": "T-B",
+  "zebraOn": false,
   "highlight": {
     "recommendCol": null
   },
   "meta": {
-    "displayName": "大理四天三晚 · TRAVEL ITINERARY",
-    "description": "从零开始的 16 行 3 列空表，行列与表头层级都可以再调",
+    "displayName": "大理 四天三晚",
+    "description": "时间轴节点 · 日期分组 · 侧栏备忘（一比一复刻设计稿）",
     "templateType": "blank",
     "origin": "preset"
   },
   "slots": {
     "u1": {
-      "text": "时段"
+      "text": "日期"
     },
     "u2": {
-      "text": "安排"
+      "text": "时间"
     },
     "u3": {
-      "text": "贴士"
+      "text": "安排"
     },
     "u4": {
-      "text": "09:40"
+      "text": "行程备忘"
     },
     "u5": {
-      "text": "落地 · 取车"
+      "text": "10.02",
+      "color": "#22303c",
+      "cellScale": 1.25,
+      "emphasize": [
+        "bold"
+      ],
+      "sub": "周四"
     },
     "u6": {
-      "text": "机场到古城约 40 分钟"
+      "text": "D1 · 抵达　入住古城客栈，先适应海拔",
+      "color": "#b4532a"
     },
     "u7": {
-      "text": "12:00"
+      "text": "09:40",
+      "color": "#6b6b60"
     },
     "u8": {
-      "text": "古城午餐"
+      "text": "落地 · 取车",
+      "node": true,
+      "sub": "机场到古城约 40 分钟",
+      "color": "#22303c"
     },
     "u9": {
-      "text": "人民路 · 本地菜"
+      "text": "12:00",
+      "color": "#6b6b60"
     },
     "u10": {
-      "text": "15:00"
+      "text": "古城午餐",
+      "node": true,
+      "sub": "人民路 · 本地菜",
+      "color": "#22303c"
     },
     "u11": {
-      "text": "崇圣寺三塔"
+      "text": "15:00",
+      "color": "#6b6b60"
     },
     "u12": {
-      "text": "倒影公园 · 日落侧光最好"
+      "text": "崇圣寺三塔",
+      "node": true,
+      "sub": "倒影公园 · 日落侧光最好",
+      "color": "#22303c"
     },
     "u13": {
-      "text": "19:30"
+      "text": "19:30",
+      "color": "#6b6b60"
     },
     "u14": {
-      "text": "人民路夜逛"
+      "text": "人民路夜逛",
+      "node": true,
+      "sub": "小吃与手作小摊",
+      "color": "#22303c"
     },
     "u15": {
-      "text": "小吃与手作小摊"
+      "text": "10.03",
+      "color": "#22303c",
+      "cellScale": 1.25,
+      "emphasize": [
+        "bold"
+      ],
+      "sub": "周五"
     },
     "u16": {
-      "text": "08:30"
+      "text": "D2 · 环洱海　顺时针一圈 · 约 130 公里",
+      "color": "#b4532a"
     },
     "u17": {
-      "text": "才村码头"
+      "text": "08:30",
+      "color": "#6b6b60"
     },
     "u18": {
-      "text": "看洱海日出，风大要外套"
+      "text": "才村码头",
+      "node": true,
+      "sub": "看洱海日出，风大要外套",
+      "color": "#22303c"
     },
     "u19": {
-      "text": "11:00"
+      "text": "11:00",
+      "color": "#6b6b60"
     },
     "u20": {
-      "text": "喜洲古镇"
+      "text": "喜洲古镇",
+      "node": true,
+      "sub": "严家大院与喜洲粑粑",
+      "color": "#22303c"
     },
     "u21": {
-      "text": "严家大院与喜洲粑粑"
+      "text": "14:30",
+      "color": "#6b6b60"
     },
     "u22": {
-      "text": "14:30"
+      "text": "海舌公园",
+      "node": true,
+      "sub": "湿地栈道，步行 40 分钟",
+      "color": "#22303c"
     },
     "u23": {
-      "text": "海舌公园"
+      "text": "18:30",
+      "color": "#6b6b60"
     },
     "u24": {
-      "text": "湿地栈道，步行 40 分钟"
+      "text": "小普陀 · 落日",
+      "node": true,
+      "sub": "提前 40 分钟占位",
+      "color": "#22303c"
     },
     "u25": {
-      "text": "18:30"
+      "text": "10.04",
+      "color": "#22303c",
+      "cellScale": 1.25,
+      "emphasize": [
+        "bold"
+      ],
+      "sub": "周六"
     },
     "u26": {
-      "text": "小普陀 · 落日"
+      "text": "D3 · 苍山　山上比古城低 8 – 10℃",
+      "color": "#b4532a"
     },
     "u27": {
-      "text": "提前 40 分钟占位"
+      "text": "09:00",
+      "color": "#6b6b60"
     },
     "u28": {
-      "text": "09:00"
+      "text": "感通索道",
+      "node": true,
+      "sub": "上行 8 分钟，排队较长",
+      "color": "#22303c"
     },
     "u29": {
-      "text": "感通索道"
+      "text": "12:30",
+      "color": "#6b6b60"
     },
     "u30": {
-      "text": "上行 8 分钟，排队较长"
+      "text": "寂照鹿素斋",
+      "node": true,
+      "sub": "11:30 开始派号",
+      "color": "#22303c"
     },
     "u31": {
-      "text": "12:30"
+      "text": "15:30",
+      "color": "#6b6b60"
     },
     "u32": {
-      "text": "寂照庵素斋"
+      "text": "玉带云游路",
+      "node": true,
+      "sub": "平路，适合慢走",
+      "color": "#22303c"
     },
     "u33": {
-      "text": "11:30 开始派号"
+      "text": "20:00",
+      "color": "#6b6b60"
     },
     "u34": {
-      "text": "15:30"
+      "text": "客栈露台观星",
+      "node": true,
+      "sub": "避开月亮太满时段",
+      "color": "#22303c"
     },
     "u35": {
-      "text": "玉带云游路"
+      "text": "10.05",
+      "color": "#22303c",
+      "cellScale": 1.25,
+      "emphasize": [
+        "bold"
+      ],
+      "sub": "周日"
     },
     "u36": {
-      "text": "平路，适合慢走"
+      "text": "D4 · 返程　提前 2 小时到机场",
+      "color": "#b4532a"
     },
     "u37": {
-      "text": "20:00"
+      "text": "09:00",
+      "color": "#6b6b60"
     },
     "u38": {
-      "text": "客栈露台观星"
+      "text": "古城早市",
+      "node": true,
+      "sub": "鲜花饼与乳扇酱",
+      "color": "#22303c"
     },
     "u39": {
-      "text": "远离月光更清楚"
+      "text": "11:30",
+      "color": "#6b6b60"
     },
     "u40": {
-      "text": "09:00"
+      "text": "退房 · 还车",
+      "node": true,
+      "sub": "检查行李与租车油量",
+      "color": "#22303c"
     },
     "u41": {
-      "text": "古城早市"
+      "text": "14:20",
+      "color": "#6b6b60"
     },
     "u42": {
-      "text": "鲜花饼与菌子汤 · 提前 2 小时到机场"
+      "text": "机场返程",
+      "node": true,
+      "sub": "预计 18:05 落地",
+      "color": "#22303c"
     },
-    "u43": {
-      "text": "11:30"
+    "u78": {
+      "text": "预算 · BUDGET",
+      "align": "left",
+      "color": "#22303c",
+      "emphasize": [
+        "bold"
+      ]
     },
-    "u44": {
-      "text": "退房 · 还车"
+    "u79": {
+      "text": "往返机票　2,100",
+      "align": "left",
+      "color": "#5a5a52"
     },
-    "u45": {
-      "text": "检查行李与租车油量"
+    "u80": {
+      "text": "住宿 3 晚　1,950",
+      "align": "left",
+      "color": "#5a5a52"
     },
-    "u46": {
-      "text": "14:20"
+    "u81": {
+      "text": "餐食与门票　1,200",
+      "align": "left",
+      "color": "#5a5a52"
     },
-    "u47": {
-      "text": "机场返程"
+    "u82": {
+      "text": "合计　5,250 元 / 两人",
+      "align": "left",
+      "color": "#5a5a52"
     },
-    "u48": {
-      "text": "预计 18:05 落地"
+    "u83": {
+      "text": "住宿 · STAY",
+      "align": "left",
+      "color": "#22303c",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u84": {
+      "text": "古城南门客栈",
+      "align": "left",
+      "color": "#5a5a52"
+    },
+    "u85": {
+      "text": "步行 6 分钟到人民路 · 含早",
+      "align": "left",
+      "color": "#5a5a52"
+    },
+    "u86": {
+      "text": "随身 · PACK",
+      "align": "left",
+      "color": "#22303c",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u87": {
+      "text": "防晒霜与帽子 · 薄外套",
+      "align": "left",
+      "color": "#5a5a52"
+    },
+    "u88": {
+      "text": "保温杯 · 少量现金 · 相机电池",
+      "align": "left",
+      "color": "#5a5a52"
+    },
+    "u89": {
+      "text": "里程 · MILEAGE",
+      "align": "left",
+      "color": "#22303c",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u90": {
+      "text": "D1 机场—古城　22 km",
+      "align": "left",
+      "color": "#5a5a52"
+    },
+    "u91": {
+      "text": "D2 环洱海　132 km",
+      "align": "left",
+      "color": "#5a5a52"
+    },
+    "u92": {
+      "text": "D3 苍山往返　48 km",
+      "align": "left",
+      "color": "#5a5a52"
+    },
+    "u93": {
+      "text": "D4 古城—机场　26 km",
+      "align": "left",
+      "color": "#5a5a52"
     }
   },
-  "blocks": [
-    {
-      "id": "blk-d1",
-      "type": "groupHeader",
-      "slotId": "gap-d1",
-      "props": {
-        "text": "D1 · 10.02 周四 · 入住古城客栈，先适应海拔",
-        "styleTier": 1,
-        "color": "#f7e3d2"
-      }
-    },
-    {
-      "id": "blk-d2",
-      "type": "groupHeader",
-      "slotId": "gap-d2",
-      "props": {
-        "text": "D2 · 10.03 周五 · 环洱海 · 约 130km",
-        "styleTier": 1,
-        "color": "#d9ebdc"
-      }
-    },
-    {
-      "id": "blk-d3",
-      "type": "groupHeader",
-      "slotId": "gap-d3",
-      "props": {
-        "text": "D3 · 10.04 周六 · 苍山（山上比古城低 8–10℃）",
-        "styleTier": 1,
-        "color": "#dce8f7"
-      }
-    },
-    {
-      "id": "blk-d4",
-      "type": "groupHeader",
-      "slotId": "gap-d4",
-      "props": {
-        "text": "D4 · 10.05 周日 · 返程",
-        "styleTier": 1,
-        "color": "#e9e1f5"
-      }
-    },
-    {
-      "id": "blk-1794022563794",
-      "type": "emphFooter",
-      "slotId": "footer-1",
-      "props": {
-        "label": "",
-        "text": "BUDGET 合计约 5,250 元/两人（往返机票 2,100 + 住宿 3 晚 1,950 + 餐食与门票 1,200）· 出行提示：防晒霜与帽子、薄外套、保温杯与少量现金、相机备用电池 · 示例样张：行程、时间与价格仅作示意",
-        "styleTier": 1
-      }
-    }
-  ],
+  "blocks": [],
   "layout": {
-    "rowCount": 16,
-    "colCount": 3,
+    "rowCount": 20,
+    "colCount": 4,
     "headerLevels": 1,
-    "merges": [],
+    "merges": [
+      {
+        "start": [
+          1,
+          1
+        ],
+        "end": [
+          1,
+          2
+        ]
+      },
+      {
+        "start": [
+          6,
+          1
+        ],
+        "end": [
+          6,
+          2
+        ]
+      },
+      {
+        "start": [
+          11,
+          1
+        ],
+        "end": [
+          11,
+          2
+        ]
+      },
+      {
+        "start": [
+          16,
+          1
+        ],
+        "end": [
+          16,
+          2
+        ]
+      }
+    ],
     "structuralMerges": [],
     "allowedMerges": [
       {
@@ -223,298 +375,174 @@
           0
         ],
         "end": [
-          15,
-          2
+          19,
+          3
         ]
       }
     ],
-    "blockSlots": [
-      {
-        "id": "footer-1",
-        "accept": [
-          "emphFooter"
-        ],
-        "region": "footer",
-        "rowHint": "after-15"
-      },
-      {
-        "id": "left-r1",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-1"
-      },
-      {
-        "id": "left-r2",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-2"
-      },
-      {
-        "id": "left-r3",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-3"
-      },
-      {
-        "id": "left-r4",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-4"
-      },
-      {
-        "id": "left-r5",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-5"
-      },
-      {
-        "id": "left-r6",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-6"
-      },
-      {
-        "id": "left-r7",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-7"
-      },
-      {
-        "id": "left-r8",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-8"
-      },
-      {
-        "id": "left-r9",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-9"
-      },
-      {
-        "id": "left-r10",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-10"
-      },
-      {
-        "id": "left-r11",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-11"
-      },
-      {
-        "id": "left-r12",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-12"
-      },
-      {
-        "id": "left-r13",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-13"
-      },
-      {
-        "id": "left-r14",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-14"
-      },
-      {
-        "id": "left-r15",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-15"
-      },
-      {
-        "id": "gap-d1",
-        "accept": [
-          "sectionBar",
-          "groupHeader"
-        ],
-        "region": "between-rows",
-        "rowHint": "after-0"
-      },
-      {
-        "id": "gap-d2",
-        "accept": [
-          "sectionBar",
-          "groupHeader"
-        ],
-        "region": "between-rows",
-        "rowHint": "after-4"
-      },
-      {
-        "id": "gap-d3",
-        "accept": [
-          "sectionBar",
-          "groupHeader"
-        ],
-        "region": "between-rows",
-        "rowHint": "after-8"
-      },
-      {
-        "id": "gap-d4",
-        "accept": [
-          "sectionBar",
-          "groupHeader"
-        ],
-        "region": "between-rows",
-        "rowHint": "after-12"
-      }
-    ],
+    "blockSlots": [],
     "slotGrid": [
       [
         "u1",
         "u2",
-        "u3"
+        "u3",
+        "u4"
       ],
       [
-        "u4",
         "u5",
-        "u6"
+        "u6",
+        null,
+        "u78"
       ],
       [
+        null,
         "u7",
         "u8",
-        "u9"
+        "u79"
       ],
       [
+        null,
+        "u9",
         "u10",
-        "u11",
-        "u12"
+        "u80"
       ],
       [
+        null,
+        "u11",
+        "u12",
+        "u81"
+      ],
+      [
+        null,
         "u13",
         "u14",
-        "u15"
+        "u82"
       ],
       [
+        "u15",
         "u16",
-        "u17",
-        "u18"
+        null,
+        null
       ],
       [
+        null,
+        "u17",
+        "u18",
+        "u83"
+      ],
+      [
+        null,
         "u19",
         "u20",
-        "u21"
+        "u84"
       ],
       [
+        null,
+        "u21",
         "u22",
+        "u85"
+      ],
+      [
+        null,
         "u23",
-        "u24"
+        "u24",
+        null
       ],
       [
         "u25",
         "u26",
-        "u27"
+        null,
+        "u86"
       ],
       [
+        null,
+        "u27",
         "u28",
-        "u29",
-        "u30"
+        "u87"
       ],
       [
+        null,
+        "u29",
+        "u30",
+        "u88"
+      ],
+      [
+        null,
         "u31",
         "u32",
-        "u33"
+        null
       ],
       [
+        null,
+        "u33",
         "u34",
-        "u35",
-        "u36"
+        "u89"
       ],
       [
+        "u35",
+        "u36",
+        null,
+        "u90"
+      ],
+      [
+        null,
         "u37",
         "u38",
-        "u39"
+        "u91"
       ],
       [
+        null,
+        "u39",
         "u40",
+        "u92"
+      ],
+      [
+        null,
         "u41",
-        "u42"
-      ],
-      [
-        "u43",
-        "u44",
-        "u45"
-      ],
-      [
-        "u46",
-        "u47",
-        "u48"
+        "u42",
+        "u93"
       ]
     ],
     "style": {
       "colWidths": [
-        110,
-        190,
-        330
-      ]
+        130,
+        90,
+        330,
+        300
+      ],
+      "rowHeightTier": 2,
+      "fontSizeTier": 2,
+      "paddingTier": 3,
+      "fontFamily": "serif",
+      "borderScheme": "none",
+      "plainHeader": true
     }
   },
-  "kpiCards": [
-    {
-      "id": "kpi-1794022564892",
-      "label": "行程",
-      "value": "4 天 3 晚"
-    },
-    {
-      "id": "kpi-1794022565336",
-      "label": "方式",
-      "value": "两人自驾"
-    },
-    {
-      "id": "kpi-1794022565780",
-      "label": "往返里程",
-      "value": "约 1,860",
-      "unit": "km"
-    },
-    {
-      "id": "kpi-1794022566220",
-      "label": "预算合计",
-      "value": "5,250",
-      "unit": "元/两人"
-    }
-  ],
+  "slotDefs": {},
   "themeTokens": {
-    "primary": "#0b211c",
-    "headerText": "#ffffff",
-    "zebra": "#f1e9d8",
+    "primary": "#22303c",
+    "headerText": "#f5f1e6",
+    "zebra": "#efe7d6",
     "emphasis": "#b4532a",
-    "border": "#d8cdb8",
-    "background": "#f6f0e3"
+    "border": "#d9d0bc",
+    "background": "#f6f1e4"
   },
-  "slotDefs": {}
+  "kpiCards": [],
+  "poster": {
+    "bg": "solid",
+    "bgColor": "#f6f1e4",
+    "kicker": "TRAVEL ITINERARY · 4D3N",
+    "title": "大理 四天三晚",
+    "subtitle": "10.02 – 10.05 · 两人自驾 · 往返 1,860 公里 · 客栈 3 晚",
+    "metaLines": [],
+    "footerLines": [
+      "出行提示：环湖一圈建议留足一天，正午紫外线强，防晒与补水都要带够。苍山早晚温差明显，薄羽绒或抓绒外套比冲锋衣更实用。",
+      "示例样张 · 行程、时间与价格仅作排版示意。"
+    ],
+    "pageBadge": "08 / 08",
+    "accent": "#b4532a",
+    "textColor": "#22303c",
+    "titleFont": "serif",
+    "padding": 44
+  }
 }

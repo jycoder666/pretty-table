@@ -1,506 +1,366 @@
 {
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.3",
   "templateId": "user-1793988590041-9qw5w",
-  "themeId": "T-B",
-  "zebraOn": true,
-  "slotDefs": {
-    "u1": {
-      "kind": "text"
-    },
-    "u2": {
-      "kind": "text"
-    },
-    "u4": {
-      "kind": "text"
-    },
-    "u5": {
-      "kind": "text"
-    },
-    "u7": {
-      "kind": "text"
-    },
-    "u8": {
-      "kind": "text"
-    },
-    "u9": {
-      "kind": "text"
-    },
-    "u10": {
-      "kind": "text"
-    },
-    "u11": {
-      "kind": "text"
-    },
-    "u12": {
-      "kind": "text"
-    },
-    "u13": {
-      "kind": "text"
-    },
-    "u14": {
-      "kind": "text"
-    },
-    "u15": {
-      "kind": "text"
-    },
-    "u16": {
-      "kind": "text"
-    },
-    "u17": {
-      "kind": "text"
-    },
-    "u18": {
-      "kind": "text"
-    },
-    "u19": {
-      "kind": "text"
-    },
-    "u20": {
-      "kind": "text"
-    },
-    "u21": {
-      "kind": "text"
-    },
-    "u22": {
-      "kind": "text"
-    }
-  },
+  "themeId": "T-A",
+  "zebraOn": false,
   "highlight": {
     "recommendCol": null
   },
   "meta": {
-    "displayName": "三款机型参数对比",
-    "description": "三方案并排对比，适合参数/条款对照",
+    "displayName": "三款机型 参数对比",
+    "description": "白底极简 · 竖分隔线 · 主推列浅底 · 大字价格（一比一复刻设计稿）",
     "templateType": "compare",
-    "origin": "user",
-    "sourceTemplateId": "compare-alpha-v1",
-    "savedAt": "2026-11-06T18:09:50.043Z"
+    "origin": "preset"
   },
   "slots": {
-    "band.2": {
-      "text": "Pro"
-    },
-    "obj.name.a": {
-      "text": "轻巧款"
-    },
-    "obj.name.c": {
-      "text": "均衡款·主推"
-    },
-    "row.3.label": {
-      "text": "屏幕"
-    },
-    "row.3.val.a": {
-      "text": "6.1\" OLED\n120Hz 直屏"
-    },
-    "row.3.val.c": {
-      "text": "6.7\" OLED\n120Hz 曲面"
-    },
-    "row.4.label": {
-      "text": "处理器"
-    },
-    "row.4.val.a": {
-      "text": "天玑8400\n4nm"
-    },
-    "row.4.val.c": {
-      "text": "骁龙8\n4nm"
-    },
-    "row.6.label": {
-      "text": "内存/存储"
-    },
-    "row.6.val.a": {
-      "text": "12+256GB\nLPDDR5X"
-    },
-    "row.6.val.c": {
-      "text": "16+512GB\nLPDDR5X"
-    },
-    "row.7.label": {
-      "text": "后置主摄"
-    },
-    "row.7.val.a": {
-      "text": "4800万\nf/1.8·OIS"
-    },
-    "row.7.val.c": {
-      "text": "5000万\nf/1.7·OIS"
-    },
-    "row.8.label": {
-      "text": "参考价格"
-    },
-    "row.8.val.a": {
-      "text": "¥3,299"
-    },
-    "row.8.val.c": {
-      "text": "¥4,599"
-    },
-    "row.9.label": {
-      "text": "适合人群"
-    },
-    "row.9.val.a": {
-      "text": "轻薄优先\n通勤与轻度使用"
-    },
-    "row.9.val.c": {
-      "text": "性能与价格最均衡\n大多数人的主力机"
-    },
     "u1": {
-      "text": "Ultra"
+      "text": "参数项",
+      "sub": "PARAMETER"
     },
     "u2": {
-      "text": "旗舰款"
+      "text": "Air",
+      "sub": "轻巧款"
+    },
+    "u3": {
+      "text": "Pro",
+      "sub": "均衡款 · 主推",
+      "bg": "#efece2"
     },
     "u4": {
-      "text": "6.8\" LTPO\n120Hz 自适应"
+      "text": "Ultra",
+      "sub": "旗舰款"
     },
     "u5": {
-      "text": "骁龙8至尊\n3nm"
+      "text": "屏幕"
+    },
+    "u6": {
+      "text": "6.1\" OLED",
+      "align": "center",
+      "sub": "120Hz 直屏"
     },
     "u7": {
-      "text": "16+1TB\nLPDDR5X"
+      "text": "6.7\" OLED",
+      "align": "center",
+      "sub": "120Hz 曲面",
+      "bg": "#efece2"
     },
     "u8": {
-      "text": "1亿\nf/1.6·OIS"
+      "text": "6.8\" LTPO",
+      "align": "center",
+      "sub": "1–120Hz 自适应"
     },
     "u9": {
-      "text": "¥5,999"
+      "text": "处理器"
     },
     "u10": {
-      "text": "影像与重度使用\n可接受更重机身"
+      "text": "天机 8400",
+      "align": "center",
+      "sub": "4 nm"
     },
     "u11": {
-      "text": "机身重量"
+      "text": "骁龙 8",
+      "align": "center",
+      "sub": "4 nm",
+      "bg": "#efece2"
     },
     "u12": {
-      "text": "178g\n7.4mm 厚"
+      "text": "骁龙 8 至尊",
+      "align": "center",
+      "sub": "3 nm"
     },
     "u13": {
-      "text": "199g\n7.9mm 厚"
+      "text": "内存 / 存储"
     },
     "u14": {
-      "text": "221g\n8.6mm 厚"
+      "text": "12 + 256 GB",
+      "align": "center",
+      "sub": "LPDDR5X"
     },
     "u15": {
-      "text": "有线快充"
+      "text": "16 + 512 GB",
+      "align": "center",
+      "sub": "LPDDR5X",
+      "bg": "#efece2"
     },
     "u16": {
-      "text": "45W\n30分钟约60%"
+      "text": "16 + 1 TB",
+      "align": "center",
+      "sub": "LPDDR5X"
     },
     "u17": {
-      "text": "80W\n30分钟约82%"
+      "text": "后置主摄"
     },
     "u18": {
-      "text": "100W\n22分钟约80%"
+      "text": "4800 万",
+      "align": "center",
+      "sub": "f/1.8 · OIS"
     },
     "u19": {
-      "text": "电池容量"
+      "text": "5000 万",
+      "align": "center",
+      "sub": "f/1.7 · OIS",
+      "bg": "#efece2"
     },
     "u20": {
-      "text": "4200mAh\n日常一天一充"
+      "text": "1 亿",
+      "align": "center",
+      "sub": "f/1.6 · OIS"
     },
     "u21": {
-      "text": "5000mAh\n轻度可用两天"
+      "text": "电池容量"
     },
     "u22": {
-      "text": "5500mAh\n重度一天有余"
+      "text": "4200 mAh",
+      "align": "center",
+      "sub": "日常一天一充"
     },
-    "band.1": {
-      "text": "Air"
-    }
+    "u23": {
+      "text": "5000 mAh",
+      "align": "center",
+      "sub": "轻度可用两天",
+      "bg": "#efece2"
+    },
+    "u24": {
+      "text": "5500 mAh",
+      "align": "center",
+      "sub": "重度一天有余"
+    },
+    "u25": {
+      "text": "有线快充"
+    },
+    "u26": {
+      "text": "45 W",
+      "align": "center",
+      "sub": "30 分钟约 60%"
+    },
+    "u27": {
+      "text": "80 W",
+      "align": "center",
+      "sub": "30 分钟约 82%",
+      "bg": "#efece2"
+    },
+    "u28": {
+      "text": "100 W",
+      "align": "center",
+      "sub": "22 分钟约 80%"
+    },
+    "u29": {
+      "text": "机身重量"
+    },
+    "u30": {
+      "text": "178 g",
+      "align": "center",
+      "sub": "7.4 mm 厚"
+    },
+    "u31": {
+      "text": "199 g",
+      "align": "center",
+      "sub": "7.9 mm 厚",
+      "bg": "#efece2"
+    },
+    "u32": {
+      "text": "221 g",
+      "align": "center",
+      "sub": "8.6 mm 厚"
+    },
+    "u33": {
+      "text": "参考价格"
+    },
+    "u34": {
+      "text": "¥3,299",
+      "align": "center",
+      "cellScale": 1.5,
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u35": {
+      "text": "¥4,599",
+      "align": "center",
+      "cellScale": 1.5,
+      "emphasize": [
+        "bold"
+      ],
+      "bg": "#efece2"
+    },
+    "u36": {
+      "text": "¥5,999",
+      "align": "center",
+      "cellScale": 1.5,
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u37": {
+      "text": "适合人群"
+    },
+    "u38": {
+      "text": "轻薄优先",
+      "align": "center",
+      "sub": "通勤与轻度使用",
+      "cellScale": 1.25
+    },
+    "u39": {
+      "text": "性能与价格最均衡",
+      "align": "center",
+      "bg": "#efece2",
+      "sub": "大多数人的主力机",
+      "cellScale": 1.25
+    },
+    "u40": {
+      "text": "影像与重度使用",
+      "align": "center",
+      "sub": "可接受更重机身",
+      "cellScale": 1.25
+    },
+    "u41": ""
   },
   "blocks": [
     {
-      "id": "blk-1793988554387",
-      "type": "groupHeader",
-      "slotId": "gap-g1",
-      "props": {
-        "label": "",
-        "text": "核心参数 · 逐项对照",
-        "styleTier": 1
-      }
-    },
-    {
-      "id": "blk-1793988556102",
+      "id": "blk-footer",
       "type": "emphFooter",
-      "slotId": "footer-1",
+      "slotId": "u41",
       "props": {
-        "label": "",
-        "text": "注：均为公开规格整理，充电速度为实验室条件实测均值，实际以产品页面为准。\n示例样张·机型名称与数据仅作排版示意，不构成购买建议。",
-        "styleTier": 1
-      }
-    },
-    {
-      "id": "blk-1793988557802",
-      "type": "sectionBar",
-      "slotId": "gap-g2",
-      "props": {
-        "label": "",
-        "text": "分区",
+        "text": "注：参数为公开规格整理，充电速度为实验室条件实测均值，实际以产品页面为准。",
         "styleTier": 1
       }
     }
   ],
   "layout": {
-    "rowCount": 11,
+    "rowCount": 10,
     "colCount": 4,
-    "frozenColCount": 1,
-    "headerLevels": 2,
-    "recommendableCols": [
-      1,
-      2,
-      3
-    ],
-    "merges": [
-      {
-        "start": [
-          0,
-          0
-        ],
-        "end": [
-          1,
-          0
-        ]
-      }
-    ],
-    "structuralMerges": [
-      {
-        "start": [
-          0,
-          0
-        ],
-        "end": [
-          1,
-          0
-        ]
-      }
-    ],
+    "headerLevels": 1,
+    "frozenColCount": 0,
+    "merges": [],
+    "structuralMerges": [],
     "allowedMerges": [
       {
         "start": [
           0,
-          1
+          0
         ],
         "end": [
-          0,
-          2
-        ]
-      },
-      {
-        "start": [
-          2,
-          1
-        ],
-        "end": [
-          3,
-          1
-        ]
-      },
-      {
-        "start": [
-          2,
-          2
-        ],
-        "end": [
-          3,
-          2
-        ]
-      },
-      {
-        "start": [
-          4,
-          1
-        ],
-        "end": [
-          10,
-          1
-        ]
-      },
-      {
-        "start": [
-          4,
-          2
-        ],
-        "end": [
-          10,
-          2
+          9,
+          3
         ]
       }
     ],
     "blockSlots": [
       {
-        "id": "gap-g1",
-        "accept": [
-          "sectionBar",
-          "groupHeader"
-        ],
-        "region": "between-rows",
-        "mutexGroup": "g1",
-        "rowHint": "after-1"
-      },
-      {
-        "id": "gap-g2",
-        "accept": [
-          "sectionBar",
-          "groupHeader"
-        ],
-        "region": "between-rows",
-        "mutexGroup": "g2",
-        "rowHint": "after-4"
-      },
-      {
-        "id": "footer-1",
+        "id": "u41",
         "accept": [
           "emphFooter"
         ],
         "region": "footer",
-        "rowHint": "after-10"
-      },
-      {
-        "id": "left-r2",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-2"
-      },
-      {
-        "id": "left-r3",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-2"
-      },
-      {
-        "id": "left-r4",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-3"
-      },
-      {
-        "id": "left-r5",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-4"
-      },
-      {
-        "id": "left-r6",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-4"
-      },
-      {
-        "id": "left-r7",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-5"
-      },
-      {
-        "id": "left-r8",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-9"
-      },
-      {
-        "id": "left-r9",
-        "accept": [
-          "leftTag"
-        ],
-        "region": "left-tag",
-        "rowHint": "left-10"
+        "rowHint": "after-9"
       }
     ],
-    "readonlyCells": [
-      [
-        0,
-        0
-      ],
-      [
-        1,
-        0
-      ]
+    "recommendableCols": [
+      1,
+      2,
+      3
     ],
     "slotGrid": [
       [
-        null,
-        "band.1",
-        "band.2",
-        "u1"
-      ],
-      [
-        null,
-        "obj.name.a",
-        "obj.name.c",
-        "u2"
-      ],
-      [
-        "row.3.label",
-        "row.3.val.a",
-        "row.3.val.c",
+        "u1",
+        "u2",
+        "u3",
         "u4"
       ],
       [
-        "row.4.label",
-        "row.4.val.a",
-        "row.4.val.c",
-        "u5"
-      ],
-      [
-        "row.6.label",
-        "row.6.val.a",
-        "row.6.val.c",
-        "u7"
-      ],
-      [
-        "row.7.label",
-        "row.7.val.a",
-        "row.7.val.c",
+        "u5",
+        "u6",
+        "u7",
         "u8"
       ],
       [
-        "u19",
-        "u20",
-        "u21",
-        "u22"
-      ],
-      [
-        "u15",
-        "u16",
-        "u17",
-        "u18"
-      ],
-      [
+        "u9",
+        "u10",
         "u11",
-        "u12",
+        "u12"
+      ],
+      [
         "u13",
-        "u14"
+        "u14",
+        "u15",
+        "u16"
       ],
       [
-        "row.8.label",
-        "row.8.val.a",
-        "row.8.val.c",
-        "u9"
+        "u17",
+        "u18",
+        "u19",
+        "u20"
       ],
       [
-        "row.9.label",
-        "row.9.val.a",
-        "row.9.val.c",
-        "u10"
+        "u21",
+        "u22",
+        "u23",
+        "u24"
+      ],
+      [
+        "u25",
+        "u26",
+        "u27",
+        "u28"
+      ],
+      [
+        "u29",
+        "u30",
+        "u31",
+        "u32"
+      ],
+      [
+        "u33",
+        "u34",
+        "u35",
+        "u36"
+      ],
+      [
+        "u37",
+        "u38",
+        "u39",
+        "u40"
       ]
-    ]
+    ],
+    "style": {
+      "colWidths": [
+        190,
+        220,
+        220,
+        220
+      ],
+      "rowHeightTier": 3,
+      "fontSizeTier": 2,
+      "paddingTier": 3,
+      "fontFamily": "serif",
+      "borderScheme": "cols",
+      "plainHeader": true
+    }
   },
+  "slotDefs": {},
   "themeTokens": {
-    "primary": "#0b211c",
-    "headerText": "#ffffff",
-    "zebra": "#f1e9d8",
-    "emphasis": "#b4532a",
-    "border": "#d8cdb8",
-    "background": "#f6f0e3"
+    "primary": "#20342c",
+    "headerText": "#20342c",
+    "zebra": "#f2efe6",
+    "emphasis": "#20342c",
+    "border": "#d8d2c2",
+    "background": "#fbfaf5"
+  },
+  "kpiCards": [],
+  "poster": {
+    "bg": "solid",
+    "bgColor": "#fbfaf5",
+    "kicker": "SPEC COMPARISON · 2026",
+    "title": "三款机型 参数对比",
+    "subtitle": "同价位段 · 8 项核心参数 · 逐项横向对照",
+    "metaLines": [],
+    "footerLines": [
+      "示例样张 · 机型名称与参数仅作排版示意，不构成购买建议。"
+    ],
+    "pageBadge": "03 / 04",
+    "accent": "#20342c",
+    "textColor": "#20342c",
+    "titleFont": "serif",
+    "padding": 44
   }
 }

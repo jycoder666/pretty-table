@@ -2,7 +2,9 @@ import type {
   Align,
   BarFormat,
   BlockType,
+  DotFormat,
   Emphasis,
+  GanttFormat,
   LayoutStyle,
   MarkSlotObject,
   MarkValue,
@@ -15,16 +17,9 @@ import type {
 } from '../types'
 import { resolveTheme, readableTextColor, type Palette } from '../theme/palettes'
 import { toVTableTheme } from '../theme/vtableTheme'
-import { FONT_STACK, SERIF_FONT_STACK } from '../theme/font'
+import { FONT_STACK, fontStackOf } from '../theme/font'
 import { semanticColor } from '../theme/semantic'
-import {
-  BAR_MARK_LEFT_WIDTH,
-  DISPLAY_FONT_SIZE,
-  FONT_SIZE_TIERS,
-  PADDING_TIERS,
-  ROW_HEIGHT_TIERS,
-  clampRowHeight,
-} from '../theme/layoutScales'
+import { FONT_SIZE_TIERS, PADDING_TIERS, ROW_HEIGHT_TIERS } from '../theme/layoutScales'
 import { MARK_GLYPH, RECOMMEND_BADGE_TEXT, formatNumber } from '../format/formatTokens'
 import { coverCrop } from '../image/imageGuard'
 
@@ -33,12 +28,18 @@ const LABEL_WIDTH = 120
 const ROW_HEIGHT = 36
 const HEADER_HEIGHT = 36
 const BLOCK_HEIGHT = 32
+/** Schema 1.3：横幅行高（体检稿顶部结论条） */
+export const BANNER_HEIGHT = 46
+/** Schema 1.3：副行字号 = 主行 × 0.78（rich 两行格） */
+export const SUB_FONT_RATIO = 0.78
 
 /** 字号/内边距档位消费指标（自定义格式 §1.3）：同一常量表，toOption / model 两处消费 */
 export interface TypeMetrics {
   fontSize: number
   padV: number
   padH: number
+  /** Schema 1.3：生效字体族（layout.style.fontFamily → 衬线/无衬线栈） */
+  fontFamily: string
 }
 
 /** 无 style（或档位缺省）→ 既有默认值；设了档位 → 档位 px（内边距四边统一） */
@@ -47,6 +48,7 @@ export function typeMetrics(style: LayoutStyle | undefined): TypeMetrics {
     fontSize: style?.fontSizeTier !== undefined ? FONT_SIZE_TIERS[style.fontSizeTier - 1]! : 13,
     padV: style?.paddingTier !== undefined ? PADDING_TIERS[style.paddingTier - 1]! : 8,
     padH: style?.paddingTier !== undefined ? PADDING_TIERS[style.paddingTier - 1]! : 10,
+    fontFamily: fontStackOf(style?.fontFamily),
   }
 }
 
@@ -85,6 +87,28 @@ export type CellMeta = {
   blockColor?: string
   /** Schema 1.2 扩展：单元格横条格式（数据格内水平彩色条） */
   bar?: BarFormat
+  /** Schema 1.3：格内装饰扩展（rich 副行 / 逐格色 / 星级 / 圆点 / 甘特 / 时间轴 / 点线 / 描边盒） */
+  sub?: string
+  /** Schema 1.3：单位小字（num 槽 slotDefs.unit；主值同行渲染，主大单位小） */
+  unit?: string
+  color?: string
+  bg?: string
+  cellScale?: number
+  stars?: number
+  dot?: DotFormat
+  gantt?: GanttFormat
+  node?: boolean
+  /** 时间轴首/末行（竖线在首行从圆点起、末行到圆点止） */
+  nodeFirst?: boolean
+  nodeLast?: boolean
+  leader?: boolean
+  boxed?: boolean
+  /** banner 区块右侧强调文本 */
+  bannerRight?: string
+  /** banner 左强调条色（block.props.barColor 覆盖，缺省主题 emphasis） */
+  bannerBarColor?: string
+  /** banner 文本对齐（block.props.bannerAlign = 'center' 时居中；缺省左） */
+  bannerAlign?: Align
 }
 
 function slotParts(
@@ -98,6 +122,16 @@ function slotParts(
   num?: number | null
   image?: string
   bar?: BarFormat
+  sub?: string
+  color?: string
+  bg?: string
+  cellScale?: number
+  stars?: number
+  dot?: DotFormat
+  gantt?: GanttFormat
+  node?: boolean
+  leader?: boolean
+  boxed?: boolean
 } {
   if (v === undefined || v === null) return { text: '' }
   if (typeof v === 'object') {
@@ -111,6 +145,20 @@ function slotParts(
       emphasize: Array.isArray(em) ? em : em ? [em] : undefined,
     }
     const bar = 'bar' in v && v.bar && typeof v.bar === 'object' ? (v.bar as BarFormat) : undefined
+    // Schema 1.3：装饰扩展字段透传（Text/Num 槽；mark 槽无这些键，record 读取绕开联合收窄）
+    const rv = v as unknown as Record<string, unknown>
+    const deco = {
+      sub: typeof rv.sub === 'string' && rv.sub !== '' ? rv.sub : undefined,
+      color: typeof rv.color === 'string' ? rv.color : undefined,
+      bg: typeof rv.bg === 'string' ? rv.bg : undefined,
+      cellScale: typeof rv.cellScale === 'number' && rv.cellScale !== 1 ? rv.cellScale : undefined,
+      stars: typeof rv.stars === 'number' && rv.stars > 0 ? rv.stars : undefined,
+      dot: rv.dot && typeof rv.dot === 'object' ? (rv.dot as DotFormat) : undefined,
+      gantt: rv.gantt && typeof rv.gantt === 'object' ? (rv.gantt as GanttFormat) : undefined,
+      node: rv.node === true ? true : undefined,
+      leader: rv.leader === true ? true : undefined,
+      boxed: rv.boxed === true ? true : undefined,
+    }
     if ('mark' in v) {
       const m = (v as MarkSlotObject).mark
       return { text: m ? MARK_GLYPH[m] : '', mark: m, ...style }
@@ -122,9 +170,10 @@ function slotParts(
         num: n,
         ...style,
         ...(bar ? { bar } : {}),
+        ...deco,
       }
     }
-    return { text: String(v.text ?? ''), ...style, ...(bar ? { bar } : {}) }
+    return { text: String(v.text ?? ''), ...style, ...(bar ? { bar } : {}), ...deco }
   }
   // mark/num 槽存普通文字（如「面议」「100万」）→ 按文字显示，不套格式
   return { text: String(v) }
@@ -174,8 +223,6 @@ export function buildVisualRows(inst: TemplateInstance): {
     }
   }
 
-  // 逐行行高（复刻 2026-11-10）：rowHeights[r] 优先，null/缺位回退行高档位；消费处统一钳制
-  const styleRowHeights = inst.layout.style?.rowHeights
   for (let r = 0; r < grid.length; r++) {
     const row = grid[r] ?? []
     const metaRow: CellMeta[] = []
@@ -190,6 +237,18 @@ export function buildVisualRows(inst: TemplateInstance): {
       let image: string | undefined
       let bar: BarFormat | undefined
       let role: CellMeta['role'] = r < headerLevels ? 'header' : c === 0 ? 'label' : 'body'
+      // Schema 1.3：装饰扩展
+      let sub: string | undefined
+      let color: string | undefined
+      let bg: string | undefined
+      let cellScale: number | undefined
+      let stars: number | undefined
+      let dot: DotFormat | undefined
+      let gantt: GanttFormat | undefined
+      let node: boolean | undefined
+      let leader: boolean | undefined
+      let boxed: boolean | undefined
+      let unit: string | undefined
 
       if (r === 0 && c === 0 && inst.meta?.templateType === 'compare') {
         text = '项目'
@@ -199,14 +258,27 @@ export function buildVisualRows(inst: TemplateInstance): {
         text = parts.text
         mark = parts.mark
         image = parts.image
+        sub = parts.sub
+        color = parts.color
+        bg = parts.bg
+        cellScale = parts.cellScale
+        stars = parts.stars
+        dot = parts.dot
+        gantt = parts.gantt
+        node = parts.node
+        leader = parts.leader
+        boxed = parts.boxed
+        // Schema 1.3：num 槽单位小字（slotDefs.unit 声明）
+        if (parts.num !== undefined && sid) unit = inst.slotDefs?.[sid]?.unit
         // mark 默认居中、num 默认右对齐（设计增量 §4.4）
         if (parts.mark !== undefined) align = parts.align ?? 'center'
         else if (parts.num !== undefined) align = parts.align ?? 'right'
         else align = parts.align
         emphasize = parts.emphasize
         bar = parts.bar
-        // 含图格不显示占位（R-3）；空图片槽（已清）照常显示占位
-        if (text === '' && !image) {
+        // 含图格不显示占位（R-3）；空图片槽（已清）照常显示占位；
+        // Schema 1.3：bar 格条形即内容，空文字不提示占位（收支账结构列纯条形）
+        if (text === '' && !image && !bar) {
           isPlaceholder = true
           text = '填写内容'
         }
@@ -243,16 +315,30 @@ export function buildVisualRows(inst: TemplateInstance): {
         mark,
         image,
         ...(bar ? { bar } : {}),
+        ...(sub !== undefined ? { sub } : {}),
+        ...(color !== undefined ? { color } : {}),
+        ...(bg !== undefined ? { bg } : {}),
+        ...(cellScale !== undefined ? { cellScale } : {}),
+        ...(stars !== undefined ? { stars } : {}),
+        ...(dot ? { dot } : {}),
+        ...(gantt ? { gantt } : {}),
+        ...(node ? { node } : {}),
+        ...(leader ? { leader } : {}),
+        ...(boxed ? { boxed } : {}),
+        ...(unit ? { unit } : {}),
       })
     }
     metas.push(metaRow)
-    // rowHeights 按可视行索引（与 colWidths 按列对称；区块 gap 行不在数组语义内，恒 32）
-    const styleRowHeight = styleRowHeights?.[metas.length - 1]
-    rowHeights.push(
-      typeof styleRowHeight === 'number'
-        ? clampRowHeight(styleRowHeight)
-        : rowHeightOf(inst.layout.style, r < headerLevels),
-    )
+    // 行高：含副行（rich 两行格）的行按内容抬高；其余走档位
+    const metrics = typeMetrics(inst.layout.style)
+    const hasSub = metaRow.some((cell) => cell.sub)
+    let rowH = rowHeightOf(inst.layout.style, r < headerLevels)
+    if (hasSub) {
+      const subFont = metrics.fontSize * SUB_FONT_RATIO
+      const richH = metrics.padV * 2 + metrics.fontSize * 1.45 + 3 + subFont * 1.35
+      rowH = Math.max(rowH, Math.ceil(richH))
+    }
+    rowHeights.push(rowH)
 
     const gapId = gapAfter.get(r)
     if (gapId) {
@@ -261,10 +347,13 @@ export function buildVisualRows(inst: TemplateInstance): {
       const block = inst.blocks.find((b) => b.slotId === gapId)
       // footer 槽空置时不预留表底行（预览/导出都不多一行；between-rows 空槽照旧显示占位）
       if (isFooter && !block) continue
+      const isBanner = block?.type === 'banner'
       const label = block
         ? block.type === 'sectionBar'
           ? String(block.props?.label ?? '分区')
-          : String(block.props?.text ?? block.props?.label ?? (isFooter ? '注脚内容' : '分组标题'))
+          : block.type === 'banner'
+            ? String(block.props?.text ?? '')
+            : String(block.props?.text ?? block.props?.label ?? (isFooter ? '注脚内容' : '分组标题'))
         : '（可拖入分区色条 / 分组标题）'
       const blockRow: CellMeta[] = Array.from({ length: colCount }, (_, c) => ({
         slotId: c === 0 ? gapId : null,
@@ -277,10 +366,34 @@ export function buildVisualRows(inst: TemplateInstance): {
           block && typeof block.props?.color === 'string' && block.props.color
             ? block.props.color
             : undefined,
+        ...(isBanner && typeof block?.props?.bannerRight === 'string'
+          ? { bannerRight: block.props.bannerRight }
+          : {}),
+        ...(isBanner &&
+        typeof block?.props?.barColor === 'string' &&
+        (block.props.barColor as string)
+          ? { bannerBarColor: block.props.barColor as string }
+          : {}),
+        ...(isBanner && block?.props?.bannerAlign === 'center' ? { bannerAlign: 'center' as Align } : {}),
       }))
       blockRowIndexes.set(metas.length, gapId)
       metas.push(blockRow)
-      rowHeights.push(BLOCK_HEIGHT)
+      rowHeights.push(isBanner ? BANNER_HEIGHT : BLOCK_HEIGHT)
+    }
+  }
+
+  // Schema 1.3：时间轴首/末行标记（同列相邻 node 格连线；首行线从圆点起、末行到圆点止）
+  for (let c = 0; c < colCount; c++) {
+    let prev = -1
+    for (let r = 0; r <= metas.length; r++) {
+      const isNode = r < metas.length && metas[r]![c]?.node === true
+      if (isNode) {
+        if (prev < 0) metas[r]![c]!.nodeFirst = true
+        prev = r
+      } else if (prev >= 0) {
+        metas[prev]![c]!.nodeLast = true
+        prev = -1
+      }
     }
   }
 
@@ -330,28 +443,42 @@ function styleForCell(
   mode: RenderContext['mode'],
   recommendCol: number | null,
   metrics: TypeMetrics,
-  layout: { gridLines?: 'all' | 'rows'; zebraRange?: [number, number] } = {},
+  borderScheme: LayoutStyle['borderScheme'],
+  headerShape: LayoutStyle['headerShape'],
+  plainHeader: boolean,
 ): Record<string, unknown> {
-  // gridLines 'rows'（复刻 2026-11-10）：只留行间横线——竖向边宽 0、顶边 0（行线由下行 bottom 承担）；
-  // 横线随 zebraRange 限定数据区（区间外注脚/列头行无任何边线）
-  const rowsOnly = layout.gridLines === 'rows'
-  // zebraRange：斑马纹与行间横线只作用于区间内可视行（含端点）；缺省全表（既有行为）
-  const inZebraRange =
-    !layout.zebraRange || (row >= layout.zebraRange[0] && row <= layout.zebraRange[1])
-  const hairline = rowsOnly && inZebraRange ? 1 : 0
   const style: Record<string, unknown> = {
-    fontFamily: FONT_STACK,
+    fontFamily: metrics.fontFamily,
     fontSize: metrics.fontSize,
-    borderColor: rowsOnly
-      ? [palette.border, palette.border, palette.border, palette.border]
-      : palette.border,
-    borderLineWidth: rowsOnly ? [0, 0, hairline, 0] : 1,
+    borderColor: palette.border,
+    borderLineWidth: 1,
     padding: [metrics.padV, metrics.padH, metrics.padV, metrics.padH],
   }
+  // Schema 1.3：边框方案（rows 仅横线 / cols 仅竖线 / none 无框；数组形式 [上,右,下,左]）
+  if (borderScheme === 'rows') {
+    style.borderColor = [palette.border, palette.border, palette.border, palette.border]
+    style.borderLineWidth = [1, 0, 1, 0]
+  } else if (borderScheme === 'cols') {
+    style.borderColor = [palette.border, palette.border, palette.border, palette.border]
+    style.borderLineWidth = [0, 1, 0, 1]
+  } else if (borderScheme === 'none') {
+    style.borderLineWidth = 0
+  }
   if (cell.role === 'header') {
-    style.bgColor = palette.primary
-    style.color = palette.headerText
-    style.fontWeight = 'bold'
+    if (headerShape === 'pill') {
+      // 药丸表头：格底透明化（纸色），圆角色块由 deco pill 通道绘制
+      style.bgColor = palette.paper
+      style.borderLineWidth = 0
+    } else if (plainHeader) {
+      // 无底色表头（账本/极简风）：纸底深字（字色走主题 primary）
+      style.bgColor = palette.paper
+      style.color = palette.primary
+      style.fontWeight = 'bold'
+    } else {
+      style.bgColor = palette.primary
+      style.color = palette.headerText
+      style.fontWeight = 'bold'
+    }
   } else if (cell.role === 'leftTag') {
     // R-4 左栏标签块：tag 色底（深浅 2 档，零新增色值 GC-11）——档位常量与渲染单点在此
     style.bgColor = cell.styleTier === 2 ? palette.zebra : palette.tag
@@ -365,6 +492,12 @@ function styleForCell(
       style.textAlign = 'left'
       // 字号 2 档（TH-B2）：常规 / 略大
       style.fontSize = metrics.fontSize + (cell.styleTier === 2 ? 2 : 0)
+    } else if (cell.blockType === 'banner') {
+      // Schema 1.3 横幅行：柔色底 + 主文本（默认绘制；左条/右文由 deco banner 通道补画）
+      style.bgColor = cell.blockColor ?? palette.zebra
+      style.color = palette.primary
+      style.textAlign = cell.bannerAlign ?? 'left'
+      style.fontWeight = 600
     } else {
       // sectionBar / groupHeader：主色整行；区块级自定义底色时文字按亮度自动黑白
       if (cell.blockColor) {
@@ -378,9 +511,9 @@ function styleForCell(
       style.textAlign = 'left'
     }
   } else {
-    const zebra = zebraOn && row % 2 === 1 && inZebraRange
+    const zebra = zebraOn && row % 2 === 1
     const isRecCol = recommendCol !== null && col === recommendCol
-    // 推荐列浅底优先于斑马纹（设计增量 §4.3）
+    // 推荐列浅底优先于斑马纹（设计增量 §4.3）；逐格底色最高优先
     style.bgColor = isRecCol
       ? semanticColor(palette, 'recommendColBg')
       : zebra
@@ -395,29 +528,17 @@ function styleForCell(
   const em = cell.emphasize ?? []
   if (em.includes('bold')) style.fontWeight = 700
   if (em.includes('red')) style.color = palette.emphasis
-  if (em.includes('green')) style.color = palette.success
   if (em.includes('bg')) style.bgColor = palette.emphasisSoft
-  // 2026-11-10 四新 mark（全部加法，可与上方既有 mark 任意组合；同字段后写者赢，
-  // 色类顺序 red < green < muted 与既有 red < green 约定一致）：
-  if (em.includes('serif')) style.fontFamily = SERIF_FONT_STACK
-  if (em.includes('display')) style.fontSize = DISPLAY_FONT_SIZE
-  if (em.includes('muted')) style.color = palette.muted
-  if (em.includes('bar')) {
-    // 汇总带左强调竖条：vtable 1.26.8 逐格 style 支持单侧边框——per-cell borderLineWidth 数组
-    // → theme.group.strokeArrayWidth = getQuadProps（node_modules/@visactor/vtable/cjs/core/
-    // tableHelper.js:192），borderColor 数组 → strokeArrayColor（同 :194-196）；四元组序 =
-    // [上,右,下,左]（scenegraph/utils/padding.js normalizeQuadArray 原样透传，索引 3=左缘，
-    // 见 cell-helper.js 的 padding[3] 左内缩与 cell-border-stroke-width.js 对 [3] 置 0 的佐证）。
-    // rows 模式下与横线网格 compose：竖向/区间外底边随网格置 0
-    style.borderLineWidth = rowsOnly
-      ? [0, 0, hairline, BAR_MARK_LEFT_WIDTH]
-      : [1, 1, 1, BAR_MARK_LEFT_WIDTH]
-    style.borderColor = [palette.border, palette.border, palette.border, palette.headerText]
+  // Schema 1.3：逐格底色 / 文字色 / 字号倍率（后置覆盖，作者意图优先级最高）
+  if (cell.bg) style.bgColor = cell.bg
+  if (cell.color) style.color = cell.color
+  if (cell.cellScale && cell.cellScale !== 1) {
+    style.fontSize = Math.round(metrics.fontSize * cell.cellScale)
   }
-  if (em.includes('rule')) {
-    // 下缘重强调线（复刻 2026-11-10，如列头行下的全宽深色粗线）：下边 3px headerText
-    style.borderLineWidth = rowsOnly ? [0, 0, 3, 0] : [1, 1, 3, 1]
-    style.borderColor = [palette.border, palette.border, palette.headerText, palette.border]
+  // Schema 1.3：描边盒（无框方案下的独立描边格，菜单供应说明）
+  if (cell.boxed) {
+    style.borderColor = [palette.border, palette.border, palette.border, palette.border]
+    style.borderLineWidth = [1, 1, 1, 1]
   }
   if (cell.isPlaceholder && mode === 'preview') {
     style.color = '#9aa3af'
@@ -606,6 +727,187 @@ export function drawBarCell(
   }
 }
 
+// ── Schema 1.3 扩展：格内装饰绘制通道（星级/圆点/甘特/时间轴/点线/横幅/药丸/rich 双行）──
+// 与 image/bar 同一 customLayout 机制；spec 在 toOption 内由 palette 派生组装（逻辑单点），
+// vrender 图元工厂在 decoDrawVRender.ts（VTable chunk），预览 / PNG 同源。
+
+/** 装饰格绘制描述（扁平结构；字段按 kind 取用，全部为已解析的具体值） */
+export interface DecoSpec {
+  kind: 'rich' | 'stars' | 'dot' | 'gantt' | 'node' | 'leader' | 'banner' | 'pill' | 'headerCard'
+  /** 主行文本（rich/dot/leader/banner/pill） */
+  main?: string
+  /** 副行文本（rich/pill） */
+  sub?: string
+  /** banner 右侧强调文本 */
+  right?: string
+  fontSize?: number
+  subFontSize?: number
+  color?: string
+  subColor?: string
+  rightColor?: string
+  fontWeight?: number
+  fontFamily?: string
+  align?: 'left' | 'center' | 'right'
+  padH?: number
+  /** 单位小字（同行，主值后；字号 = fontSize × 0.62） */
+  unit?: string
+  /** stars：0-5 */
+  stars?: number
+  starColor?: string
+  starEmptyColor?: string
+  /** dot / node / leader */
+  dotColor?: string
+  lineColor?: string
+  /** node：首行（线从圆点起）/ 末行（线到圆点止） */
+  nodeFirst?: boolean
+  nodeLast?: boolean
+  /** gantt：from/to 0-1 相对内容区宽 */
+  from?: number
+  to?: number
+  barColor?: string
+  trackColor?: string
+  milestone?: boolean
+  /** 里程碑菱形色（缺省主题 emphasis 派生传入） */
+  milestoneColor?: string
+  /** banner / pill 底色与左强调条色 */
+  bg?: string
+  barLeftColor?: string
+}
+
+export type DecoGroupFactory = (spec: DecoSpec, width: number, height: number) => unknown
+
+let decoGroupFactory: DecoGroupFactory | null = null
+
+/** 装饰格绘制通道注册（vtableLite 装载时调用一次；传 null 撤销，装饰格回退默认文字绘制） */
+export function registerDecoGroupFactory(fn: DecoGroupFactory | null): void {
+  decoGroupFactory = fn
+}
+
+/** 单格装饰 kind 判定（priority：gantt > stars > dot > node > leader > rich 副行） */
+export function decoKindOf(cell: CellMeta): DecoSpec['kind'] | null {
+  if (cell.gantt) return 'gantt'
+  if (cell.stars !== undefined) return 'stars'
+  if (cell.dot) return 'dot'
+  if (cell.node) return 'node'
+  if (cell.leader) return 'leader'
+  if (cell.sub) return 'rich'
+  return null
+}
+
+/** 由 CellMeta 组装 DecoSpec（色值 palette 派生，作者 hex 优先；逻辑单点在核内） */
+export function decoSpecOf(
+  cell: CellMeta,
+  palette: Palette,
+  metrics: TypeMetrics,
+  headerShapeFlat = true,
+  plainHeader = false,
+): DecoSpec | null {
+  // 表头角色优先于装饰分派：表头 sub 是「定位小字」，路由成 pill / headerCard 而非 rich
+  if (cell.role === 'header' && !cell.stars && !cell.dot && !cell.gantt && !cell.node && !cell.leader) {
+    const headSpec = {
+      main: cell.text,
+      sub: cell.sub,
+      fontSize: metrics.fontSize,
+      subFontSize: metrics.fontSize * SUB_FONT_RATIO,
+      color: plainHeader ? palette.primary : palette.headerText,
+      subColor: plainHeader ? palette.muted : palette.headerText,
+      fontWeight: 700,
+      fontFamily: metrics.fontFamily,
+      bg: plainHeader ? palette.paper : palette.primary,
+      padH: metrics.padH,
+      align: 'center' as const,
+    }
+    return headerShapeFlat ? { kind: 'headerCard', ...headSpec } : { kind: 'pill', ...headSpec }
+  }
+  const kind = decoKindOf(cell)
+  if (kind) {
+    const mainColor = cell.color ?? '#1a1a1a'
+    const em = cell.emphasize ?? []
+    const fontWeight = em.includes('bold') ? 700 : undefined
+    const base = {
+      fontSize: metrics.fontSize * (cell.cellScale && cell.cellScale !== 1 ? cell.cellScale : 1),
+      subFontSize: metrics.fontSize * SUB_FONT_RATIO,
+      color: mainColor,
+      subColor: palette.muted,
+      fontWeight,
+      fontFamily: metrics.fontFamily,
+      align: cell.align ?? ('left' as Align),
+      padH: metrics.padH,
+      unit: cell.unit,
+    }
+    if (kind === 'gantt' && cell.gantt) {
+      const g = cell.gantt
+      return {
+        kind,
+        ...base,
+        from: Math.min(1, Math.max(0, g.from)),
+        to: Math.min(1, Math.max(0, g.to)),
+        barColor: g.color || palette.primary,
+        trackColor: palette.zebra,
+        milestone: g.milestone === true,
+        milestoneColor: palette.emphasis,
+      }
+    }
+    if (kind === 'stars') {
+      return {
+        kind,
+        ...base,
+        align: cell.align ?? 'left',
+        stars: cell.stars,
+        starColor: cell.color || palette.emphasis,
+        starEmptyColor: palette.zebra,
+      }
+    }
+    if (kind === 'dot') {
+      return {
+        kind,
+        ...base,
+        align: cell.align ?? 'left',
+        main: cell.text,
+        dotColor: cell.dot?.color || palette.emphasis,
+      }
+    }
+    if (kind === 'node') {
+      return {
+        kind,
+        ...base,
+        main: cell.text,
+        dotColor: cell.color || palette.emphasis,
+        lineColor: palette.border,
+        nodeFirst: cell.nodeFirst === true,
+        nodeLast: cell.nodeLast === true,
+      }
+    }
+    if (kind === 'leader') {
+      return {
+        kind,
+        ...base,
+        main: cell.text,
+        dotColor: palette.border,
+      }
+    }
+    // rich：主行 + 副行小字
+    return { kind: 'rich', ...base, main: cell.text, sub: cell.sub ?? '' }
+  }
+  if (cell.role === 'block' && cell.blockType === 'banner') {
+    return {
+      kind: 'banner',
+      main: cell.text,
+      right: cell.bannerRight,
+      fontSize: metrics.fontSize,
+      color: palette.primary,
+      rightColor: palette.emphasis,
+      fontWeight: 600,
+      fontFamily: metrics.fontFamily,
+      bg: cell.blockColor ?? palette.zebra,
+      barLeftColor: cell.bannerBarColor ?? palette.emphasis,
+      padH: metrics.padH,
+      align: cell.bannerAlign ?? 'left',
+    }
+  }
+  return null
+}
+
 export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<string, unknown> {
   const { palette, zebraOn } = resolveTheme(inst.themeId, inst.themeTokens)
   const effectiveZebra = inst.zebraOn === false ? false : zebraOn
@@ -623,6 +925,9 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
   const colCount = inst.layout.colCount
   const recommendCol = inst.highlight?.recommendCol ?? null
   const metrics = typeMetrics(inst.layout.style)
+  const borderScheme = inst.layout.style?.borderScheme ?? 'full'
+  const headerShape = inst.layout.style?.headerShape ?? 'flat'
+  const plainHeader = inst.layout.style?.plainHeader === true
 
   const records = metas.map((row) => {
     const rec: Record<string, string> = {}
@@ -634,12 +939,27 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
 
   // R-3：含图列挂 customLayout（列级，图片格绘制通道）；文字格仍走 style 回调，两机制并存
   // Schema 1.2 扩展：含 bar 格的列同样挂 customLayout（图片 / 条形两通道在回调内按格分流）
+  // Schema 1.3 扩展：装饰格（星级/圆点/甘特/时间轴/点线/rich 双行）与 banner/药丸表头同通道
   const imageCols = new Set<number>()
   const barCols = new Set<number>()
-  metas.forEach((row) => {
+  const decoCols = new Set<number>()
+  const pill = inst.layout.style?.headerShape === 'pill'
+  metas.forEach((row, r) => {
     row.forEach((cell, c) => {
       if (cell.image) imageCols.add(c)
       if (cell.bar) barCols.add(c)
+      const isPlainCenterBanner =
+        cell.role === 'block' &&
+        cell.blockType === 'banner' &&
+        cell.bannerAlign === 'center' &&
+        !cell.bannerRight
+      if (decoKindOf(cell) || (cell.role === 'block' && cell.blockType === 'banner' && !isPlainCenterBanner)) {
+        decoCols.add(c)
+      }
+      if (pill && cell.role === 'header') decoCols.add(c)
+      // 平表头带副行（双层表头「产品名 + 定位小字」）→ headerCard 通道绘制双行
+      if (!pill && cell.role === 'header' && cell.sub) decoCols.add(c)
+      void r
     })
   })
 
@@ -651,13 +971,22 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
       style: (args: { row: number; col: number }) => {
         const cell = metas[args.row]?.[args.col]
         if (!cell) return {}
-        return styleForCell(cell, palette, effectiveZebra, args.row, args.col, ctx.mode, recommendCol, metrics, {
-          gridLines: inst.layout.style?.gridLines,
-          zebraRange: inst.layout.style?.zebraRange,
-        })
+        return styleForCell(
+          cell,
+          palette,
+          effectiveZebra,
+          args.row,
+          args.col,
+          ctx.mode,
+          recommendCol,
+          metrics,
+          borderScheme,
+          headerShape,
+          plainHeader,
+        )
       },
     }
-    if (imageCols.has(c) || barCols.has(c)) {
+    if (imageCols.has(c) || barCols.has(c) || decoCols.has(c)) {
       // P1 修复：customLayout 函数通道（rootContainer 直接采用，见文件头选型说明）；
       // vtable 1.26.8 customRender 参数无 ctx，旧 args.ctx.drawImage 必崩
       col.customLayout = (args: VCustomRenderArgs) => {
@@ -666,7 +995,19 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
           const asset = ctx.images?.get(cell.image)
           return drawImageCell(cell, asset, args)
         }
-        return drawBarCell(cell, palette, metrics, args)
+        if (cell?.bar) return drawBarCell(cell, palette, metrics, args)
+        if (cell && decoCols.has(args.col)) {
+          const spec = decoSpecOf(cell, palette, metrics, headerShape === 'flat', plainHeader)
+          if (spec && decoGroupFactory) {
+            return {
+              rootContainer: decoGroupFactory(spec, args.rect.width, args.rect.height),
+              expectedWidth: args.rect.width,
+              expectedHeight: args.rect.height,
+              renderDefault: false,
+            }
+          }
+        }
+        return undefined
       }
     }
     return col
@@ -676,8 +1017,6 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     zebraOn: effectiveZebra,
     transparentUnderlay: ctx.transparentUnderlay,
     metrics,
-    gridLines: inst.layout.style?.gridLines,
-    zebraRange: inst.layout.style?.zebraRange,
   })
 
   const customMergeCell = (col: number, row: number) => {
@@ -707,11 +1046,6 @@ export function toOption(inst: TemplateInstance, ctx: RenderContext): Record<str
     columns,
     widthMode: 'standard',
     heightMode: 'standard',
-    // 槽值含 \n（复刻实例标题行日期格/免责行等）：开 enableLineBreak 让 VTable breakString
-    // 按 \n 拆多行（vtable 1.26.8 BaseTable.js:148 消费 options.enableLineBreak）。本表
-    // standard 高度模式 + rowHeightConfig 逐行钉死，行高不受多行文本影响；无 \n 的格
-    // textArr 长度 1，渲染路径与此前完全一致。
-    enableLineBreak: true,
     defaultRowHeight: rowHeightOf(inst.layout.style, false),
     defaultHeaderRowHeight: 0,
     // 行高单点（PX-04 命中与渲染同源）：rowHeights 已喂给壳几何（命中/叠加层）与 PNG 尺寸，

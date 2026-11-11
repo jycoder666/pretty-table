@@ -115,7 +115,7 @@ describe('T05 · 自定义格式全链路（新建空白表 → … → 导出�
     // 重新选用：模拟持久化读回 + migrate 1.2 读路径
     const raw = storeMap.get(`tpl:${saved.templateId}`) as unknown as TemplateInstance
     const m = migrateInstance(JSON.parse(JSON.stringify(raw)), listPresetTemplates())
-    expect(m.ok && m.value.schemaVersion).toBe('1.2')
+    expect(m.ok && m.value.schemaVersion).toBe('1.3')
     editor.openTemplate(m.ok ? m.value : raw)
     const cur = editor.current!
     expect(cur.layout.rowCount).toBe(7) // 5 + 加 1 行 + 表头上调插 1 行
@@ -153,7 +153,7 @@ describe('T05 · 自定义格式全链路（新建空白表 → … → 导出�
     const raw = JSON.parse(JSON.stringify(COMPARE_ALPHA_V1)) as TemplateInstance
     expect(raw.schemaVersion).toBe('1.1')
     const m = migrateInstance(raw, listPresetTemplates())
-    expect(m.ok && m.value.schemaVersion).toBe('1.2')
+    expect(m.ok && m.value.schemaVersion).toBe('1.3')
     editor.openTemplate(m.ok ? m.value : raw)
     // 原槽位内容与结构都在
     expect(editor.current?.slots['obj.name.a']).toBe('方案 A')

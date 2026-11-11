@@ -4,6 +4,7 @@ import {
   loadRenderCore,
   type CoreHandle,
   type KpiCard,
+  measureContentSize,
   findSlotAtVisual,
   findMergeAt,
   visualToLogicalRow,
@@ -15,6 +16,18 @@ import {
   kpiUnitStyle,
   kpiLabelStyle,
   kpiValueText,
+  kpiStripStyle,
+  kpiStripItemStyle,
+  kpiStripLabelStyle,
+  kpiStripValueStyle,
+  hasPoster,
+  posterWrapStyle,
+  posterHeaderStyles,
+  posterFooterStyles,
+  posterPadding,
+  posterColors,
+  type PosterSpec,
+  type Palette,
 } from '@/core'
 import {
   editableCellAt,
@@ -279,10 +292,16 @@ const structuralLabel = computed(() => {
 const mountStyle = computed(() => {
   const inst = editor.current
   if (!inst) return undefined
-  return {
+  const base: Record<string, string> = {
     width: `min(100%, ${Math.ceil(totalContentWidth(inst))}px)`,
     margin: '0 auto',
   }
+  // Schema 1.3 海报模式：表格按内容全高呈现（设计稿一比一；无海报保持既有 400px 内滚行为）
+  if (posterSpec.value) {
+    const m = measureContentSize(inst)
+    base.height = `${m.height + 2}px`
+  }
+  return base
 })
 
 // ── Schema 1.2 扩展：KPI 统计卡 hero 区（表格上方一排等宽卡片，无卡片零占位）──
@@ -326,6 +345,88 @@ function kpiLabelStyleOf(): string {
   const pal = kpiPalette.value
   return pal ? kpiLabelStyle(pal) : ''
 }
+
+// ── Schema 1.3：strip 统计条形态（细分隔条；样式与 HTML/PNG 同源 kpiCards.ts）──
+const kpiIsStrip = computed(() => editor.current?.kpiStyle === 'strip')
+
+function kpiStripRowStyleOf(): string {
+  const pal = kpiPalette.value
+  return pal ? kpiStripStyle(pal) : ''
+}
+
+function kpiStripItemStyleOf(card: KpiCard, index: number): string {
+  const pal = kpiPalette.value
+  return pal ? kpiStripItemStyle(card, pal, index) : ''
+}
+
+function kpiStripLabelStyleOf(): string {
+  const pal = kpiPalette.value
+  return pal ? kpiStripLabelStyle(pal) : ''
+}
+
+function kpiStripValueStyleOf(card: KpiCard): string {
+  const pal = kpiPalette.value
+  return pal ? kpiStripValueStyle(card, pal) : ''
+}
+
+// ── Schema 1.3：海报层（预览 DOM 与 HTML/PNG 三方同源 posterStyle.ts）──
+const posterSpec = computed<PosterSpec | undefined>(() =>
+  editor.current && hasPoster(editor.current) ? editor.current.poster : undefined,
+)
+const posterPalette = computed<Palette | null>(() =>
+  posterSpec.value ? effectivePalette(editor.current) : null,
+)
+const isPoster = computed(() => Boolean(posterSpec.value && posterPalette.value))
+
+const posterSheetStyle = computed(() => {
+  const p = posterSpec.value
+  const pal = posterPalette.value
+  if (!p || !pal || !editor.current) return undefined
+  const innerW = Math.ceil(totalContentWidth(editor.current))
+  const pad = posterPadding(p)
+  return {
+    ...cssTextToStyle(posterWrapStyle(p, pal)),
+    width: `min(100%, ${innerW + pad * 2}px)`,
+    margin: '12px auto',
+    boxSizing: 'border-box' as const,
+  }
+})
+
+const posterHdr = computed(() =>
+  posterSpec.value && posterPalette.value
+    ? posterHeaderStyles(posterSpec.value, posterPalette.value)
+    : null,
+)
+const posterFtr = computed(() =>
+  posterSpec.value && posterPalette.value
+    ? posterFooterStyles(posterSpec.value, posterPalette.value)
+    : null,
+)
+
+const posterHasHeader = computed(() => {
+  const p = posterSpec.value
+  return Boolean(p && (p.kicker || p.title || p.subtitle || p.metaLines?.length))
+})
+const posterHasFooter = computed(() => {
+  const p = posterSpec.value
+  return Boolean(p && (p.footerLines?.length || p.pageBadge))
+})
+
+/** 内联样式文本 → Vue style 对象（posterWrapStyle 产出 CSS 文本，含 background-image） */
+function cssTextToStyle(css: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const decl of css.split(';')) {
+    const i = decl.indexOf(':')
+    if (i <= 0) continue
+    const key = decl
+      .slice(0, i)
+      .trim()
+      .replace(/-([a-z])/g, (_, ch: string) => ch.toUpperCase())
+    out[key] = decl.slice(i + 1).trim()
+  }
+  return out
+}
+
 
 /** WP1：合并/拆分成功后描边闪一次（flashKey 归零即停，可重复触发） */
 const flashing = computed(() => editor.flashKey > 0)
@@ -843,30 +944,92 @@ defineExpose({
     @click="onClick"
   >
     <!-- PX-09：悬浮粘贴按钮已并入顶部工具条（EditorPage header），预览区保持纯净 -->
-    <!-- Schema 1.2 扩展：KPI 统计卡 hero 区（表格上方；无卡片 v-if 零占位） -->
-    <div v-if="kpiCards.length" class="kpi-hero" :style="kpiHeroWrapStyle" data-testid="kpi-hero">
-      <div :style="kpiRowStyleOf()">
-        <div v-for="card in kpiCards" :key="card.id" :style="kpiCardStyleOf(card)">
-          <div :style="kpiValueStyleOf(card)">
-            {{ kpiValueText(card) }}<span v-if="card.unit" :style="kpiUnitStyleOf()"> {{ card.unit }}</span>
-          </div>
-          <p :style="kpiLabelStyleOf()">{{ card.label }}</p>
+    <!-- Schema 1.3：海报层 sheet（bg + 标题区 + 注脚区；与 HTML/PNG 三方同源 posterStyle.ts） -->
+    <div v-if="isPoster" class="poster-sheet" :style="posterSheetStyle" data-testid="poster-sheet">
+      <div v-if="posterHasHeader && posterHdr" :style="posterHdr.wrap">
+        <div>
+          <p v-if="posterSpec?.kicker" :style="posterHdr.kicker">{{ posterSpec.kicker }}</p>
+          <h1 v-if="posterSpec?.title" :style="posterHdr.title">{{ posterSpec.title }}</h1>
+          <p v-if="posterSpec?.subtitle" :style="posterHdr.subtitle">{{ posterSpec.subtitle }}</p>
+        </div>
+        <div v-if="posterSpec?.metaLines?.length" :style="posterHdr.meta">
+          <div v-for="(line, i) in posterSpec.metaLines" :key="`pm-${i}`">{{ line }}</div>
         </div>
       </div>
+      <!-- Schema 1.2 扩展：KPI 统计卡 hero 区（表格上方；无卡片 v-if 零占位；strip 形态分支） -->
+      <div v-if="kpiCards.length" class="kpi-hero" :style="kpiHeroWrapStyle" data-testid="kpi-hero">
+        <div v-if="kpiIsStrip" :style="kpiStripRowStyleOf()">
+          <div v-for="(card, i) in kpiCards" :key="card.id" :style="kpiStripItemStyleOf(card, i)">
+            <p :style="kpiStripLabelStyleOf()">{{ card.label }}</p>
+            <div :style="kpiStripValueStyleOf(card)">
+              {{ kpiValueText(card) }}<span v-if="card.unit" :style="kpiUnitStyleOf()"> {{ card.unit }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else :style="kpiRowStyleOf()">
+          <div v-for="card in kpiCards" :key="card.id" :style="kpiCardStyleOf(card)">
+            <div :style="kpiValueStyleOf(card)">
+              {{ kpiValueText(card) }}<span v-if="card.unit" :style="kpiUnitStyleOf()"> {{ card.unit }}</span>
+            </div>
+            <p :style="kpiLabelStyleOf()">{{ card.label }}</p>
+          </div>
+        </div>
+      </div>
+      <div
+        ref="el"
+        class="vtable-root"
+        tabindex="0"
+        data-testid="preview-canvas"
+        :style="mountStyle"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @dblclick="onDblClick"
+        @keydown="onKeydown"
+      />
+      <div v-if="posterHasFooter && posterFtr" :style="posterFtr.wrap">
+        <div v-if="posterSpec?.footerLines?.length" :style="posterFtr.line">
+          <div v-for="(line, i) in posterSpec.footerLines" :key="`pf-${i}`">{{ line }}</div>
+        </div>
+        <div v-else></div>
+        <div v-if="posterSpec?.pageBadge" :style="posterFtr.badge">{{ posterSpec.pageBadge }}</div>
+      </div>
     </div>
-    <div
-      ref="el"
-      class="vtable-root"
-      tabindex="0"
-      data-testid="preview-canvas"
-      :style="mountStyle"
-      @pointerdown="onPointerDown"
-      @pointermove="onPointerMove"
-      @pointerup="onPointerUp"
-      @pointercancel="onPointerUp"
-      @dblclick="onDblClick"
-      @keydown="onKeydown"
-    />
+    <!-- 无海报层：原结构（kpi hero + 画布），老模板渲染零回归 -->
+    <template v-else>
+      <div v-if="kpiCards.length" class="kpi-hero" :style="kpiHeroWrapStyle" data-testid="kpi-hero">
+        <div v-if="kpiIsStrip" :style="kpiStripRowStyleOf()">
+          <div v-for="(card, i) in kpiCards" :key="card.id" :style="kpiStripItemStyleOf(card, i)">
+            <p :style="kpiStripLabelStyleOf()">{{ card.label }}</p>
+            <div :style="kpiStripValueStyleOf(card)">
+              {{ kpiValueText(card) }}<span v-if="card.unit" :style="kpiUnitStyleOf()"> {{ card.unit }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else :style="kpiRowStyleOf()">
+          <div v-for="card in kpiCards" :key="card.id" :style="kpiCardStyleOf(card)">
+            <div :style="kpiValueStyleOf(card)">
+              {{ kpiValueText(card) }}<span v-if="card.unit" :style="kpiUnitStyleOf()"> {{ card.unit }}</span>
+            </div>
+            <p :style="kpiLabelStyleOf()">{{ card.label }}</p>
+          </div>
+        </div>
+      </div>
+      <div
+        ref="el"
+        class="vtable-root"
+        tabindex="0"
+        data-testid="preview-canvas"
+        :style="mountStyle"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @dblclick="onDblClick"
+        @keydown="onKeydown"
+      />
+    </template>
     <!-- R-2：选区描边叠加层（纯壳，不刷核）；WP1：合并/拆分成功后闪一次 -->
     <div
       v-for="(r, i) in selectionRects"

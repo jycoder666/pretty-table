@@ -19,7 +19,9 @@ import { TooltipHandler } from '@visactor/vtable/es/components/tooltip/TooltipHa
 import { registerCustomCellStylePlugin } from '@visactor/vtable/es/plugins/custom-cell-style'
 import { createCellGroup as createTextCellGroup } from '@visactor/vtable/es/scenegraph/group-creater/cell-type/text-cell'
 // P1：图片格绘制通道（vrender Group/Image 工厂）与 VTable 同 chunk 装载（侧效注册）
+// Schema 1.3：装饰格（星级/圆点/甘特/时间轴/点线/横幅/药丸/rich）工厂同装载点注册
 import '../adapter/imageDrawVRender'
+import '../adapter/decoDrawVRender'
 
 Factory.registerComponent('tooltipHandler', TooltipHandler)
 Factory.registerComponent('menuHandler', MenuHandler)

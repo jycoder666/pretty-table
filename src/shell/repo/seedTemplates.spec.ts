@@ -9,7 +9,7 @@ import { SEED_TEMPLATES, ensureSeeded } from './seedTemplates'
  * 内置需求表自动播种（tables/*.json →「我的模板」）：
  * - 首次播种 8 张、显示名=中文文件名去扩展名
  * - 刷新（再次 ensureSeeded）不重复种
- * - 用户删除某张种子表后不复活（注册键 seed:<templateId> 仍在）
+ * - 用户删除某张种子表后不复活（注册键 seed:v3:<templateId> 仍在；v3 = schema 1.3 复刻版升级戳）
  * - 用户库已有同 id 模板（跨机导入）不被覆盖
  * idb-keyval 以内存 Map 模拟（与 idbTemplateRepo.spec.ts 同款），
  * import.meta.glob 经 vitest 真实加载 tables/ 下 8 张 JSON。
@@ -59,7 +59,7 @@ const SEED_FILE_NAMES = [
 ]
 
 function seedKeys(): string[] {
-  return [...memOf(kvStore).keys()].filter((k) => k.startsWith('seed:'))
+  return [...memOf(kvStore).keys()].filter((k) => k.startsWith('seed:v3:'))
 }
 
 function userTemplate(id: string, name: string): TemplateInstance {
@@ -94,7 +94,7 @@ describe('seedTemplates · 内置需求表自动播种', () => {
     expect(list.map((t) => t.meta?.displayName ?? '').sort()).toEqual([...SEED_FILE_NAMES].sort())
     expect(seedKeys()).toHaveLength(8)
     // 播种实例可再读回（repo.list 内 validate+migrate 通过）
-    expect(list.every((t) => t.schemaVersion === '1.2')).toBe(true)
+    expect(list.every((t) => t.schemaVersion === '1.3')).toBe(true)
     // 防回退（P0 教训 2026-11-08）：所有播种写入必须落在应用库 kvStore，
     // 默认库（漏传 store 参数时的去处）必须保持零键
     expect(mem.size).toBe(0)
@@ -133,7 +133,7 @@ describe('seedTemplates · 内置需求表自动播种', () => {
     // 覆盖为种子内容（用户拍板 2026-11-08：首次播种等同手动初创建）
     const got = await repo.get(target.instance.templateId)
     expect(got?.meta?.displayName).toBe(target.fileName)
-    expect(seedKeys()).toContain('seed:' + target.instance.templateId)
+    expect(seedKeys()).toContain('seed:v3:' + target.instance.templateId)
     // 注册键落地：后续 ensureSeeded 零写入，用户编辑/删除不受影响
     const writesAfterFirst = vi.mocked(idbSet).mock.calls.length
     await ensureSeeded()
