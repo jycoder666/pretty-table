@@ -65,6 +65,12 @@ export interface TextSlotObject {
   boxed?: boolean
   /** Schema 1.5：同行尾注小字（如动作名右侧「主项/收尾」灰字） */
   unit?: string
+  /** Schema 1.6：行底粗规则线（报价单表头/合计上方粗线；width px 1-6，color 缺省主题 primary） */
+  ruleBelow?: { width?: number; color?: string }
+  /** Schema 1.6：格内字体覆盖（'serif' 衬线 / 'sans' 无衬线） */
+  font?: 'sans' | 'serif'
+  /** Schema 1.6：药丸标签（格内圆角小卡：排班班次/库存状态；bg 底色必填） */
+  chip?: { bg: string; color?: string }
 }
 
 /** Schema 1.1: three-state semantic mark */
@@ -89,6 +95,10 @@ export interface NumSlotObject {
   color?: string
   bg?: string
   cellScale?: number
+  /** Schema 1.6：与 TextSlotObject 同语义的扩展字段（ruleBelow/font/chip） */
+  ruleBelow?: { width?: number; color?: string }
+  font?: 'sans' | 'serif'
+  chip?: { bg: string; color?: string }
 }
 
 /** Schema 1.2：图片槽值。image 必须是通过 imageGuard.isImageDataUrl 白名单校验的 data URL */
@@ -179,7 +189,7 @@ export interface ThemeTokens {
 export interface LayoutStyle {
   /** 与列一一对应；null/缺位 = 该列用默认宽 */
   colWidths?: (number | null)[]
-  rowHeightTier?: 1 | 2 | 3 | 4
+  rowHeightTier?: 1 | 2 | 3 | 4 | 5
   fontSizeTier?: 1 | 2 | 3
   paddingTier?: 1 | 2 | 3
   /** Schema 1.3：字体族（sans 无衬线 / serif 衬线；缺省 sans） */
@@ -192,6 +202,8 @@ export interface LayoutStyle {
   plainHeader?: boolean
   /** Schema 1.4：药丸表头上下内缩 px（0-20，缺省 6；越小药丸越饱满） */
   pillInsetV?: number
+  /** Schema 1.6：表头字重（plainHeader 时生效；缺省 700 = bold） */
+  headerWeight?: 400 | 600 | 700
 }
 
 export interface BlockDesc {
@@ -340,6 +352,8 @@ export interface TemplateInstance {
   kpiCards?: KpiCard[]
   /** Schema 1.3/1.5：统计卡形态（cards 卡片 / strip 细分隔条 / plain 无框大数字；缺省 cards） */
   kpiStyle?: 'cards' | 'strip' | 'plain'
+  /** Schema 1.6：统计卡位置（top 表格上方 / bottom 表格下方；缺省 top） */
+  kpiPosition?: 'top' | 'bottom'
   /** Schema 1.3：页面海报层（背景纹理 / 标题区 / 注脚 / 页码；缺省 = 无海报层，行为同 1.2） */
   poster?: PosterSpec
   /** Runtime: zebra on/off; defaults true when unset */
@@ -406,6 +420,8 @@ export type EditIntent =
   | { kind: 'setPoster'; poster: PosterSpec }
   /** Schema 1.5：表格形态部分合并（字体族/边框方案/表头形状/药丸内缩等；一次意图一张快照） */
   | { kind: 'setStylePatch'; patch: Partial<LayoutStyle> }
+  /** Schema 1.6：统计卡位置（top 表格上方 / bottom 表格下方） */
+  | { kind: 'setKpiPosition'; position: 'top' | 'bottom' }
 
 /** E3 多次撤销：撤销/重做栈深上限（入栈超限裁掉最旧一条，恒定内存上界） */
 export const UNDO_LIMITS = { maxDepth: 50 } as const

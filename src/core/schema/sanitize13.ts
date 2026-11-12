@@ -93,6 +93,36 @@ export function sanitizeSlotDeco(obj: Record<string, unknown>): void {
   if ('node' in obj && obj.node !== true) delete obj.node
   if ('leader' in obj && obj.leader !== true) delete obj.leader
   if ('boxed' in obj && obj.boxed !== true) delete obj.boxed
+  if ('ruleBelow' in obj) {
+    const rb = obj.ruleBelow
+    if (rb && typeof rb === 'object') {
+      const o = rb as Record<string, unknown>
+      const out: { width?: number; color?: string } = {}
+      if (typeof o.width === 'number' && Number.isFinite(o.width)) {
+        out.width = Math.min(6, Math.max(1, Math.round(o.width)))
+      }
+      const c = sanitizeCellColor(o.color)
+      if (c) out.color = c
+      obj.ruleBelow = Object.keys(out).length ? out : undefined
+      if (!obj.ruleBelow) delete obj.ruleBelow
+    } else delete obj.ruleBelow
+  }
+  if ('font' in obj) {
+    if (obj.font !== 'serif' && obj.font !== 'sans') delete obj.font
+  }
+  if ('chip' in obj) {
+    const cp = obj.chip
+    if (cp && typeof cp === 'object') {
+      const o = cp as Record<string, unknown>
+      const bg = sanitizeCellColor(o.bg)
+      if (bg) {
+        const out: { bg: string; color?: string } = { bg }
+        const c = sanitizeCellColor(o.color)
+        if (c) out.color = c
+        obj.chip = out
+      } else delete obj.chip
+    } else delete obj.chip
+  }
 }
 
 /** 槽值是否为 Text/Num 形态（可携带 1.3 装饰字段；match/cells/champion 不带装饰字段） */

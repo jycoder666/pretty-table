@@ -32,7 +32,7 @@ export const COL_WIDTH_RANGE: readonly [number, number] = [64, 360]
 export const ROW_HEIGHT_RANGE: readonly [number, number] = [24, 160]
 
 /** 行高档位：紧凑 / 标准 / 宽松 / 特高（多行单元格，如体检样张 88px 行） */
-export const ROW_HEIGHT_TIERS: readonly [number, number, number, number] = [32, 40, 48, 80]
+export const ROW_HEIGHT_TIERS: readonly [number, number, number, number, number] = [32, 40, 48, 80, 96]
 /** 字号档位：正文小 / 标准 / 大 */
 export const FONT_SIZE_TIERS: readonly [number, number, number] = [12, 13, 15]
 /** 内边距档位：紧 / 标准 / 松 */
@@ -46,13 +46,13 @@ export const PADDING_TIERS: readonly [number, number, number] = [6, 10, 14]
 export const DISPLAY_FONT_SIZE = 26
 export const BAR_MARK_LEFT_WIDTH = 6
 
-export type Tier = 1 | 2 | 3 | 4
+export type Tier = 1 | 2 | 3 | 4 | 5
 
 /** 档位钳制：非 1~4 的输入收口到最近合法档位 */
 export function clampTier(t: number): Tier {
   const n = Math.round(Number(t))
   if (!Number.isFinite(n)) return 2
-  return (n < 1 ? 1 : n > 4 ? 4 : n) as Tier
+  return (n < 1 ? 1 : n > 5 ? 5 : n) as Tier
 }
 
 /** 三档钳制：字号/内边距仍只有 1~3 档（行高才有第 4 档特高），值超界收口到 3 */

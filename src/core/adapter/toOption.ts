@@ -20,7 +20,7 @@ import type {
 } from '../types'
 import { resolveTheme, readableTextColor, type Palette } from '../theme/palettes'
 import { toVTableTheme } from '../theme/vtableTheme'
-import { FONT_STACK, fontStackOf } from '../theme/font'
+import { FONT_STACK, FONT_STACK_SERIF, fontStackOf } from '../theme/font'
 import { semanticColor } from '../theme/semantic'
 import { FONT_SIZE_TIERS, PADDING_TIERS, ROW_HEIGHT_TIERS } from '../theme/layoutScales'
 import { MARK_GLYPH, RECOMMEND_BADGE_TEXT, formatNumber } from '../format/formatTokens'
@@ -45,6 +45,8 @@ export interface TypeMetrics {
   fontFamily: string
   /** Schema 1.4：药丸表头上下内缩 px（缺省 6；越小药丸越饱满） */
   pillInsetV: number
+  /** Schema 1.6：表头字重（plainHeader 时生效；缺省 700） */
+  headerWeight: number
 }
 
 /** 无 style（或档位缺省）→ 既有默认值；设了档位 → 档位 px（内边距四边统一） */
@@ -58,6 +60,10 @@ export function typeMetrics(style: LayoutStyle | undefined): TypeMetrics {
       typeof style?.pillInsetV === 'number' && Number.isFinite(style.pillInsetV)
         ? Math.min(20, Math.max(0, style.pillInsetV))
         : 6,
+    headerWeight:
+      style?.headerWeight === 400 || style?.headerWeight === 600 || style?.headerWeight === 700
+        ? style.headerWeight
+        : 700,
   }
 }
 
@@ -122,6 +128,10 @@ export type CellMeta = {
   bannerTextColor?: string
   /** Schema 1.5：banner 右侧文本色覆盖 */
   bannerRightColor?: string
+  /** Schema 1.6：行底粗规则线 / 格内字体 / 药丸标签 */
+  ruleBelow?: { width?: number; color?: string }
+  font?: 'sans' | 'serif'
+  chip?: { bg: string; color?: string }
   /** Schema 1.5：对阵卡（bracket） */
   match?: MatchSlotObject['match']
   /** Schema 1.5：打卡矩阵 */
@@ -155,6 +165,9 @@ function slotParts(
   match?: MatchSlotObject['match']
   cells?: CellsSlotObject['cells']
   champion?: ChampionSlotObject['champion']
+  ruleBelow?: { width?: number; color?: string }
+  font?: 'sans' | 'serif'
+  chip?: { bg: string; color?: string }
 } {
   if (v === undefined || v === null) return { text: '' }
   if (typeof v === 'object') {
@@ -192,6 +205,15 @@ function slotParts(
       node: rv.node === true ? true : undefined,
       leader: rv.leader === true ? true : undefined,
       unit: typeof rv.unit === 'string' && rv.unit !== '' ? rv.unit : undefined,
+      ruleBelow:
+        rv.ruleBelow && typeof rv.ruleBelow === 'object'
+          ? (rv.ruleBelow as { width?: number; color?: string })
+          : undefined,
+      font: rv.font === 'serif' || rv.font === 'sans' ? (rv.font as 'sans' | 'serif') : undefined,
+      chip:
+        rv.chip && typeof rv.chip === 'object'
+          ? (rv.chip as { bg: string; color?: string })
+          : undefined,
       boxed: rv.boxed === true ? true : undefined,
     }
     if ('mark' in v) {
@@ -224,6 +246,16 @@ function gapAfterSet(inst: TemplateInstance): Set<number> {
   return gapAfter
 }
 
+/** Schema 1.6：before-N 锚点集合（横幅行插在逻辑行 N 之前） */
+function gapBeforeSet(inst: TemplateInstance): Set<number> {
+  const gapBefore = new Set<number>()
+  for (const def of inst.layout.blockSlots) {
+    const m = /^before-(\d+)$/.exec(def.rowHint ?? '')
+    if (m) gapBefore.add(Number(m[1]))
+  }
+  return gapBefore
+}
+
 export function buildVisualRows(inst: TemplateInstance): {
   metas: CellMeta[][]
   rowHeights: number[]
@@ -236,9 +268,12 @@ export function buildVisualRows(inst: TemplateInstance): {
   const rowHeights: number[] = []
   const blockRowIndexes = new Map<number, string>()
   const gapAfter = new Map<number, string>()
+  const gapBefore = new Map<number, string>()
   for (const def of inst.layout.blockSlots) {
-    const m = /^after-(\d+)$/.exec(def.rowHint ?? '')
-    if (m) gapAfter.set(Number(m[1]), def.id)
+    const mAfter = /^after-(\d+)$/.exec(def.rowHint ?? '')
+    if (mAfter) gapAfter.set(Number(mAfter[1]), def.id)
+    const mBefore = /^before-(\d+)$/.exec(def.rowHint ?? '')
+    if (mBefore) gapBefore.set(Number(mBefore[1]), def.id)
   }
   // R-4 leftTag：left-N 锚点 → 该逻辑行首列标记（不插行）；blockSlotId 供命中链选中区块
   const leftTagAt = new Map<
@@ -259,6 +294,46 @@ export function buildVisualRows(inst: TemplateInstance): {
   }
 
   for (let r = 0; r < grid.length; r++) {
+    // Schema 1.6：before-N 锚点——横幅行插在逻辑行 r 之前（成绩单姓名条在表头上方）
+    const beforeId = gapBefore.get(r)
+    if (beforeId) {
+      const defB = inst.layout.blockSlots.find((b) => b.id === beforeId)
+      const blockB = inst.blocks.find((b) => b.slotId === beforeId)
+      const labelB = blockB
+        ? blockB.type === 'banner'
+          ? String(blockB.props?.text ?? '')
+          : String(blockB.props?.text ?? blockB.props?.label ?? '')
+        : ''
+      const bannerRowB: CellMeta[] = Array.from({ length: colCount }, (_, c) => ({
+        slotId: c === 0 ? beforeId : null,
+        role: blockB ? 'block' : 'body',
+        text: c === 0 ? labelB : '',
+        isPlaceholder: !blockB,
+        blockType: blockB?.type,
+        styleTier: typeof blockB?.props?.styleTier === 'number' ? blockB.props.styleTier : undefined,
+        blockColor:
+          blockB && typeof blockB.props?.color === 'string' && blockB.props.color
+            ? blockB.props.color
+            : undefined,
+        ...(blockB?.type === 'banner' && typeof blockB?.props?.bannerRight === 'string'
+          ? { bannerRight: blockB.props.bannerRight }
+          : {}),
+        ...(blockB?.type === 'banner' &&
+        typeof blockB?.props?.barColor === 'string' &&
+        (blockB.props.barColor as string)
+          ? { bannerBarColor: blockB.props.barColor as string }
+          : {}),
+        ...(blockB?.type === 'banner' && typeof blockB?.props?.bannerTextColor === 'string' && blockB.props.bannerTextColor
+          ? { bannerTextColor: blockB.props.bannerTextColor as string }
+          : {}),
+        ...(blockB?.type === 'banner' && typeof blockB?.props?.bannerRightColor === 'string' && blockB.props.bannerRightColor
+          ? { bannerRightColor: blockB.props.bannerRightColor as string }
+          : {}),
+      }))
+      blockRowIndexes.set(metas.length, beforeId)
+      metas.push(bannerRowB)
+      rowHeights.push(blockB?.type === 'banner' ? BANNER_HEIGHT : BLOCK_HEIGHT)
+    }
     const row = grid[r] ?? []
     const metaRow: CellMeta[] = []
     for (let c = 0; c < colCount; c++) {
@@ -287,6 +362,9 @@ export function buildVisualRows(inst: TemplateInstance): {
       let match: MatchSlotObject['match'] | undefined
       let cells: CellsSlotObject['cells'] | undefined
       let champion: ChampionSlotObject['champion'] | undefined
+      let ruleBelow: { width?: number; color?: string } | undefined
+      let font: 'sans' | 'serif' | undefined
+      let chip: { bg: string; color?: string } | undefined
 
       if (r === 0 && c === 0 && inst.meta?.templateType === 'compare') {
         text = '项目'
@@ -310,6 +388,9 @@ export function buildVisualRows(inst: TemplateInstance): {
         match = parts.match
         cells = parts.cells
         champion = parts.champion
+        ruleBelow = parts.ruleBelow
+        font = parts.font
+        chip = parts.chip
         // Schema 1.3：num 槽单位小字（slotDefs.unit 声明）
         if (parts.num !== undefined && sid) unit = inst.slotDefs?.[sid]?.unit
         // mark 默认居中、num 默认右对齐（设计增量 §4.4）
@@ -371,6 +452,9 @@ export function buildVisualRows(inst: TemplateInstance): {
         ...(match ? { match } : {}),
         ...(cells ? { cells } : {}),
         ...(champion ? { champion } : {}),
+        ...(ruleBelow ? { ruleBelow } : {}),
+        ...(font ? { font } : {}),
+        ...(chip ? { chip } : {}),
       })
     }
     metas.push(metaRow)
@@ -466,10 +550,12 @@ export function remapMerges(
   blockRowIndexes: Map<number, string>,
 ): MergeRange[] {
   const gapAfter = gapAfterSet(inst)
+  const gapBefore = gapBeforeSet(inst)
   const logicalToVisual = new Map<number, number>()
   let visual = 0
   const gridLen = inst.layout.slotGrid?.length ?? inst.layout.rowCount
   for (let r = 0; r < gridLen; r++) {
+    if (gapBefore.has(r)) visual += 1
     logicalToVisual.set(r, visual)
     visual += 1
     if (gapAfter.has(r)) visual += 1
@@ -524,10 +610,10 @@ function styleForCell(
       style.bgColor = palette.paper
       style.borderLineWidth = 0
     } else if (plainHeader) {
-      // 无底色表头（账本/极简风）：纸底深字（字色走主题 primary）
+      // 无底色表头（账本/极简风）：纸底深字（字重可调，Schema 1.6 headerWeight）
       style.bgColor = palette.paper
       style.color = palette.primary
-      style.fontWeight = 'bold'
+      style.fontWeight = metrics.headerWeight
     } else {
       style.bgColor = palette.primary
       style.color = palette.headerText
@@ -588,6 +674,20 @@ function styleForCell(
   if (cell.color) style.color = cell.color
   if (cell.cellScale && cell.cellScale !== 1) {
     style.fontSize = Math.round(metrics.fontSize * cell.cellScale)
+  }
+  // Schema 1.6：格内字体覆盖 / 行底粗规则线 / 药丸标签底色
+  if (cell.font) style.fontFamily = cell.font === 'serif' ? FONT_STACK_SERIF : FONT_STACK
+  if (cell.ruleBelow) {
+    const w = Math.min(6, Math.max(1, Math.round(cell.ruleBelow.width ?? 2)))
+    const c = cell.ruleBelow.color ?? palette.primary
+    const colors = Array.isArray(style.borderColor) ? style.borderColor : [c, c, c, c]
+    style.borderColor = [colors[0], colors[1], c, colors[3]]
+    const widths = Array.isArray(style.borderLineWidth) ? style.borderLineWidth : [1, 1, 1, 1]
+    style.borderLineWidth = [widths[0], widths[1], w, widths[3]]
+  }
+  if (cell.chip) {
+    style.bgColor = cell.chip.bg
+    if (cell.chip.color) style.color = cell.chip.color
   }
   // Schema 1.3：描边盒（无框方案下的独立描边格，菜单供应说明）
   if (cell.boxed) {
@@ -787,7 +887,20 @@ export function drawBarCell(
 
 /** 装饰格绘制描述（扁平结构；字段按 kind 取用，全部为已解析的具体值） */
 export interface DecoSpec {
-  kind: 'rich' | 'stars' | 'dot' | 'gantt' | 'node' | 'leader' | 'banner' | 'pill' | 'headerCard' | 'match' | 'champion' | 'cells'
+  kind:
+    | 'rich'
+    | 'stars'
+    | 'dot'
+    | 'gantt'
+    | 'node'
+    | 'leader'
+    | 'banner'
+    | 'pill'
+    | 'headerCard'
+    | 'match'
+    | 'champion'
+    | 'cells'
+    | 'chip'
   /** 主行文本（rich/dot/leader/banner/pill） */
   main?: string
   /** 副行文本（rich/pill） */
@@ -871,6 +984,7 @@ export function decoKindOf(cell: CellMeta): DecoSpec['kind'] | null {
   if (cell.node) return 'node'
   if (cell.leader) return 'leader'
   if (cell.sub) return 'rich'
+  if (cell.chip) return 'chip'
   return null
 }
 
@@ -968,9 +1082,20 @@ export function decoSpecOf(
         dotColor: palette.border,
       }
     }
+    if (kind === 'chip' && cell.chip) {
+      return {
+        kind: 'chip',
+        ...base,
+        main: cell.text,
+        bg: cell.chip.bg,
+        color: cell.chip.color ?? readableTextColor(cell.chip.bg),
+        align: cell.align ?? 'center',
+      }
+    }
     // rich：主行 + 副行小字
     return { kind: 'rich', ...base, main: cell.text, sub: cell.sub ?? '' }
   }
+
   if (cell.role === 'block' && cell.blockType === 'banner') {
     return {
       kind: 'banner',
@@ -1273,9 +1398,14 @@ export function findSlotAtVisual(
 /** Map a visual body row index back to logical slotGrid row, or null if it is a block row. */
 export function visualToLogicalRow(inst: TemplateInstance, visualRow: number): number | null {
   const gapAfter = gapAfterSet(inst)
+  const gapBefore = gapBeforeSet(inst)
   let visual = 0
   const gridLen = inst.layout.slotGrid?.length ?? inst.layout.rowCount
   for (let r = 0; r < gridLen; r++) {
+    if (gapBefore.has(r)) {
+      if (visual === visualRow) return null
+      visual += 1
+    }
     if (visual === visualRow) return r
     visual += 1
     if (gapAfter.has(r)) {

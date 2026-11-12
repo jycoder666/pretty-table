@@ -1,8 +1,8 @@
 import type { SlotValue, TemplateInstance, PosterSpec } from '../types'
 import { resolveTheme, readableTextColor, type Palette } from '../theme/palettes'
 import { cellInlineStyle } from '../theme/inlineStyle'
-import { FONT_STACK } from '../theme/font'
-import { DECO_CARD_INK, DECO_CELLS_TODAY, DECO_STAR, DECO_STAR_EMPTY, DECO_WIN_GOLD } from '../theme/decoDefaults'
+import { FONT_STACK, FONT_STACK_SERIF } from '../theme/font'
+import { DECO_CARD_INK, DECO_CHIP_INK, DECO_CELLS_TODAY, DECO_STAR, DECO_STAR_EMPTY, DECO_WIN_GOLD } from '../theme/decoDefaults'
 import {
   posterWrapStyle,
   posterHeaderStyles,
@@ -74,6 +74,10 @@ export interface ExportCell {
   champion?: { title?: string; name: string; note?: string }
   /** Schema 1.5：打卡矩阵（0/1 串 + 今天下标） */
   cells?: { pattern: string; today?: number }
+  /** Schema 1.6：行底粗规则线 / 格内字体 / 药丸标签 */
+  ruleBelow?: { width?: number; color?: string }
+  font?: 'sans' | 'serif'
+  chip?: { bg: string; color?: string }
 }
 
 export interface ExportModel {
@@ -87,6 +91,8 @@ export interface ExportModel {
   minWidthPx: number
   /** Schema 1.3：海报层（wrapStyle 容器内联样式 + 已渲染 header/footer HTML；缺省 = 无海报层） */
   poster?: { wrapStyle: string; headerHtml: string; footerHtml: string }
+  /** Schema 1.6：统计卡位置（top/bottom；缺省 top） */
+  kpiPosition?: 'top' | 'bottom'
 }
 
 function escapeHtml(s: string): string {
@@ -182,6 +188,17 @@ function cellStyle(
   }
   // Schema 1.3：描边盒（无框方案下的独立描边格）
   if (cell.boxed) parts.push(`border:1px solid ${palette.border}`)
+  // Schema 1.6：格内字体 / 行底粗规则线
+  if (cell.font) parts.push(`font-family:${cell.font === 'serif' ? FONT_STACK_SERIF : FONT_STACK}`)
+  if (cell.ruleBelow) {
+    const w = Math.min(6, Math.max(1, Math.round(cell.ruleBelow.width ?? 2)))
+    const c = cell.ruleBelow.color || palette.primary
+    parts.push(`border-bottom:${w}px solid ${c}`)
+  }
+  if (cell.chip) {
+    parts.push(`background:${cell.chip.bg}`)
+    if (cell.chip.color) parts.push(`color:${cell.chip.color}`)
+  }
   // 窄屏首列 sticky（FR-26）：首列固定，其余横滚
   if (ci === 0) parts.push('position:sticky;left:0')
   return parts.join(';')
@@ -431,6 +448,11 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
           match,
           champion,
           cells: cellsDeco,
+          ruleBelow: cell.ruleBelow
+            ? { width: Math.min(6, Math.max(1, Math.round(cell.ruleBelow.width ?? 2))), color: cell.ruleBelow.color || palette.primary }
+            : undefined,
+          font: cell.font,
+          chip: cell.chip ? { bg: cell.chip.bg, color: cell.chip.color || DECO_CHIP_INK } : undefined,
         })
       })
       if (inHeader) headRows.push(cells)
@@ -478,6 +500,7 @@ export function buildExportModel(inst: TemplateInstance): Result<ExportModel> {
       frozenColCount: inst.layout.frozenColCount ?? 0,
       minWidthPx,
       poster,
+      kpiPosition: inst.kpiPosition,
     })
   } catch (e) {
     return fail('EXPORT_HTML_FAIL', e instanceof Error ? e.message : '导出模型构建失败')
@@ -579,7 +602,8 @@ export function renderExportHtml(model: ExportModel): string {
   const table = `<table style="border-collapse:collapse;width:100%;max-width:100%;min-width:${model.minWidthPx}px">${caption}${thead}${tbody}${tfoot}</table>`
   // 窄屏（FR-26）：外包横滚容器 + table min-width，页面不撑破；编辑器剥掉 sticky/overflow 时优雅降级
   // Schema 1.2 扩展：KPI hero 区置于横滚容器内、表格上方（无卡片零占位）
-  const scrollWrap = `<div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch">${model.kpiHeroHtml ?? ''}${table}</div>`
+  const kpi = model.kpiHeroHtml ?? ''
+  const scrollWrap = `<div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch">${model.kpiPosition === 'bottom' ? `${table}${kpi}` : `${kpi}${table}`}</div>`
   // Schema 1.3：海报层包裹（bg + 标题区 + 横滚容器 + 注脚区；无海报 = 原样输出）
   if (model.poster) {
     return `<div style="${attr(model.poster.wrapStyle)}">${model.poster.headerHtml}${scrollWrap}${model.poster.footerHtml}</div>`

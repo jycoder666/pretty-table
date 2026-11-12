@@ -30,9 +30,9 @@ describe('layoutScales · LIMITS（GC-21 单点）', () => {
     expect(LIMITS.maxCols).toBe(12)
   })
 
-  it('档位常量齐全（行高四档，字号/内边距三档）', () => {
+  it('档位常量齐全（行高五档，字号/内边距三档）', () => {
     expect(COL_WIDTH_RANGE).toEqual([64, 360])
-    expect(ROW_HEIGHT_TIERS).toEqual([32, 40, 48, 80])
+    expect(ROW_HEIGHT_TIERS).toEqual([32, 40, 48, 80, 96])
     expect(FONT_SIZE_TIERS).toEqual([12, 13, 15])
     expect(PADDING_TIERS).toEqual([6, 10, 14])
   })
@@ -50,11 +50,12 @@ describe('layoutScales · clampColWidth / clampTier', () => {
     expect(clampColWidth(Number.NaN)).toBe(64)
   })
 
-  it('档位钳制：clampTier 到 1~4（行高），clampTier3 到 1~3（字号/内边距）', () => {
+  it('档位钳制：clampTier 到 1~5（行高），clampTier3 到 1~3（字号/内边距）', () => {
     expect(clampTier(0)).toBe(1)
     expect(clampTier(3)).toBe(3)
     expect(clampTier(4)).toBe(4)
-    expect(clampTier(9)).toBe(4)
+    expect(clampTier(5)).toBe(5)
+    expect(clampTier(9)).toBe(5)
     expect(clampTier(2.4)).toBe(2)
     expect(clampTier(Number.NaN)).toBe(2)
     expect(clampTier3(0)).toBe(1)

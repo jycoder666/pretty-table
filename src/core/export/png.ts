@@ -305,28 +305,52 @@ export async function exportPng(
     const contentX = pad * scale
     const contentW = measured.width * scale
     cursorY += drawPosterHeader(ctx, poster, palette, contentX, cursorY, contentW, scale)
-    // Schema 1.2 扩展：KPI hero 区先画（表格上方；几何与语义色同 HTML 导出单点），表格图随之下移
-    const kpiDrawn = drawKpiHero(
-      ctx,
-      kpiCards,
-      palette,
-      contentX,
-      cursorY,
-      contentW,
-      scale,
-      inst.kpiStyle,
-    )
-    ctx.drawImage(img, contentX, cursorY + kpiDrawn, img.width, img.height)
-    // Schema 1.3：海报注脚区（表格之下）
-    drawPosterFooter(
-      ctx,
-      poster,
-      palette,
-      contentX,
-      cursorY + kpiDrawn + img.height,
-      contentW,
-      scale,
-    )
+    // Schema 1.2/1.6：KPI hero 区（位置可配 top/bottom），表格图与注脚随之排布
+    if (inst.kpiPosition === 'bottom') {
+      ctx.drawImage(img, contentX, cursorY, img.width, img.height)
+      const kpiDrawn = drawKpiHero(
+        ctx,
+        kpiCards,
+        palette,
+        contentX,
+        cursorY + img.height,
+        contentW,
+        scale,
+        inst.kpiStyle,
+      )
+      // 注脚区接在 KPI 之后
+      drawPosterFooter(
+        ctx,
+        poster,
+        palette,
+        contentX,
+        cursorY + img.height + kpiDrawn,
+        contentW,
+        scale,
+      )
+    } else {
+      const kpiDrawn = drawKpiHero(
+        ctx,
+        kpiCards,
+        palette,
+        contentX,
+        cursorY,
+        contentW,
+        scale,
+        inst.kpiStyle,
+      )
+      ctx.drawImage(img, contentX, cursorY + kpiDrawn, img.width, img.height)
+      // Schema 1.3：海报注脚区（表格之下）
+      drawPosterFooter(
+        ctx,
+        poster,
+        palette,
+        contentX,
+        cursorY + kpiDrawn + img.height,
+        contentW,
+        scale,
+      )
+    }
 
     // P1 空图守卫（终检兜底）：产物降采样后除纸面/透明外无任何内容像素 →
     // 显式报错（EXPORT_PNG_EMPTY + errorCopy 白话，GC-25），绝不静默交付全空白图。

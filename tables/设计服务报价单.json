@@ -1,0 +1,749 @@
+{
+  "schemaVersion": "1.3",
+  "templateId": "user-1762900000000-quote",
+  "themeId": "T-A",
+  "zebraOn": false,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "设计服务报价单",
+    "description": "白底极简商务报价单：衬线海报头 + 六列人日明细 + 交付节奏/结算双块 + 条款与签章（一比一复刻）",
+    "templateType": "pricing",
+    "origin": "preset"
+  },
+  "slots": {
+    "u01": {
+      "text": "序",
+      "ruleBelow": {
+        "width": 2,
+        "color": "#111111"
+      }
+    },
+    "u02": {
+      "text": "项目 / DELIVERABLE",
+      "ruleBelow": {
+        "width": 2,
+        "color": "#111111"
+      }
+    },
+    "u03": {
+      "text": "工作量",
+      "ruleBelow": {
+        "width": 2,
+        "color": "#111111"
+      }
+    },
+    "u04": {
+      "text": "单价",
+      "ruleBelow": {
+        "width": 2,
+        "color": "#111111"
+      }
+    },
+    "u05": {
+      "text": "周期",
+      "ruleBelow": {
+        "width": 2,
+        "color": "#111111"
+      }
+    },
+    "u06": {
+      "text": "小计 / 元",
+      "align": "right",
+      "ruleBelow": {
+        "width": 2,
+        "color": "#111111"
+      }
+    },
+    "u07": {
+      "text": "01",
+      "color": "#8a8378"
+    },
+    "u08": {
+      "text": "品牌主视觉",
+      "sub": "主KV一套+三版尺寸适配",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u09": {
+      "text": "12 人日"
+    },
+    "u10": {
+      "text": "1,200 / 人日"
+    },
+    "u11": {
+      "text": "3 周"
+    },
+    "u12": {
+      "num": 14400
+    },
+    "u13": {
+      "text": "02",
+      "color": "#8a8378"
+    },
+    "u14": {
+      "text": "产品详情页",
+      "sub": "首屏+5屏图文，可编辑HTML",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u15": {
+      "text": "16 人日"
+    },
+    "u16": {
+      "text": "1,200 / 人日"
+    },
+    "u17": {
+      "text": "4 周"
+    },
+    "u18": {
+      "num": 19200
+    },
+    "u19": {
+      "text": "03",
+      "color": "#8a8378"
+    },
+    "u20": {
+      "text": "社媒套图",
+      "sub": "小红书9图，统一视觉系列",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u21": {
+      "text": "8 人日"
+    },
+    "u22": {
+      "text": "1,200 / 人日"
+    },
+    "u23": {
+      "text": "2 周"
+    },
+    "u24": {
+      "num": 9600
+    },
+    "u25": {
+      "text": "04",
+      "color": "#8a8378"
+    },
+    "u26": {
+      "text": "包装延展",
+      "sub": "外盒、内衬、贴纸三件套",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u27": {
+      "text": "10 人日"
+    },
+    "u28": {
+      "text": "1,350 / 人日"
+    },
+    "u29": {
+      "text": "3 周"
+    },
+    "u30": {
+      "num": 13500
+    },
+    "u31": {
+      "text": "05",
+      "color": "#8a8378"
+    },
+    "u32": {
+      "text": "字体与色彩规范",
+      "sub": "40页规范手册，可交付源文件",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u33": {
+      "text": "6 人日"
+    },
+    "u34": {
+      "text": "1,200 / 人日"
+    },
+    "u35": {
+      "text": "2 周"
+    },
+    "u36": {
+      "num": 7200
+    },
+    "u37": {
+      "text": "06",
+      "color": "#8a8378"
+    },
+    "u38": {
+      "text": "上线支持",
+      "sub": "两周内5次远程调整",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u39": {
+      "text": "4 人日"
+    },
+    "u40": {
+      "text": "1,000 / 人日"
+    },
+    "u41": {
+      "text": "2 周"
+    },
+    "u42": {
+      "num": 4000
+    },
+    "u43": {
+      "text": "交付节奏",
+      "color": "#8a8378"
+    },
+    "u44": {
+      "text": "项目小计",
+      "color": "#6f695f"
+    },
+    "u45": {
+      "num": 67900
+    },
+    "u46": {
+      "text": "11.16",
+      "color": "#8a8378"
+    },
+    "u47": {
+      "text": "签约 · 启动会",
+      "color": "#47423b"
+    },
+    "u48": {
+      "text": "长期合作优惠（−5%）",
+      "color": "#6f695f"
+    },
+    "u49": {
+      "num": -3395
+    },
+    "u50": {
+      "text": "11.20",
+      "color": "#8a8378"
+    },
+    "u51": {
+      "text": "主视觉首轮定稿",
+      "color": "#47423b"
+    },
+    "u52": {
+      "text": "增值税（6%）",
+      "color": "#6f695f"
+    },
+    "u53": {
+      "num": 3870
+    },
+    "u54": {
+      "text": "12.05",
+      "color": "#8a8378"
+    },
+    "u55": {
+      "text": "详情页与套图初稿",
+      "color": "#47423b"
+    },
+    "u56": {
+      "text": "应付合计",
+      "color": "#6f695f"
+    },
+    "u57": {
+      "num": 68375,
+      "cellScale": 1.5,
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u58": {
+      "text": "12.20",
+      "color": "#8a8378"
+    },
+    "u59": {
+      "text": "全部交付与验收",
+      "color": "#47423b"
+    },
+    "u60": {
+      "text": "大写 陆万捌仟叁佰柒拾伍元整",
+      "color": "#8a8378",
+      "align": "right",
+      "font": "serif"
+    },
+    "u61": {
+      "text": "付款条件",
+      "color": "#8a8378"
+    },
+    "u62": {
+      "text": "报价包含",
+      "color": "#8a8378"
+    },
+    "u63": {
+      "text": "① 签约后 3 个工作日内支付 50% 预付款。",
+      "color": "#47423b"
+    },
+    "u64": {
+      "text": "① 两轮整体修改，超出按人日另行报价。",
+      "color": "#47423b"
+    },
+    "u65": {
+      "text": "② 主视觉确认后支付 30%。",
+      "color": "#47423b"
+    },
+    "u66": {
+      "text": "② 全部源文件与导出文件交付。",
+      "color": "#47423b"
+    },
+    "u67": {
+      "text": "③ 全部交付验收后 10 日内结清尾款。",
+      "color": "#47423b"
+    },
+    "u68": {
+      "text": "③ 版权转让，不含字体与素材授权费。",
+      "color": "#47423b"
+    },
+    "u69": {
+      "text": "报价方签章",
+      "color": "#9a948a"
+    },
+    "u70": {
+      "text": "客户确认",
+      "color": "#9a948a"
+    },
+    "u71": {
+      "text": "日期 ____ 年 ____ 月 ____ 日",
+      "color": "#9a948a"
+    },
+    "u72": {
+      "text": "日期 ____ 年 ____ 月 ____ 日",
+      "color": "#9a948a"
+    }
+  },
+  "blocks": [],
+  "layout": {
+    "rowCount": 18,
+    "colCount": 6,
+    "headerLevels": 1,
+    "merges": [
+      {
+        "start": [
+          7,
+          0
+        ],
+        "end": [
+          7,
+          1
+        ]
+      },
+      {
+        "start": [
+          7,
+          3
+        ],
+        "end": [
+          7,
+          4
+        ]
+      },
+      {
+        "start": [
+          8,
+          3
+        ],
+        "end": [
+          8,
+          4
+        ]
+      },
+      {
+        "start": [
+          9,
+          3
+        ],
+        "end": [
+          9,
+          4
+        ]
+      },
+      {
+        "start": [
+          10,
+          3
+        ],
+        "end": [
+          10,
+          4
+        ]
+      },
+      {
+        "start": [
+          11,
+          3
+        ],
+        "end": [
+          11,
+          5
+        ]
+      },
+      {
+        "start": [
+          12,
+          0
+        ],
+        "end": [
+          12,
+          2
+        ]
+      },
+      {
+        "start": [
+          12,
+          3
+        ],
+        "end": [
+          12,
+          5
+        ]
+      },
+      {
+        "start": [
+          13,
+          0
+        ],
+        "end": [
+          13,
+          2
+        ]
+      },
+      {
+        "start": [
+          13,
+          3
+        ],
+        "end": [
+          13,
+          5
+        ]
+      },
+      {
+        "start": [
+          14,
+          0
+        ],
+        "end": [
+          14,
+          2
+        ]
+      },
+      {
+        "start": [
+          14,
+          3
+        ],
+        "end": [
+          14,
+          5
+        ]
+      },
+      {
+        "start": [
+          15,
+          0
+        ],
+        "end": [
+          15,
+          2
+        ]
+      },
+      {
+        "start": [
+          15,
+          3
+        ],
+        "end": [
+          15,
+          5
+        ]
+      },
+      {
+        "start": [
+          16,
+          0
+        ],
+        "end": [
+          16,
+          1
+        ]
+      },
+      {
+        "start": [
+          16,
+          3
+        ],
+        "end": [
+          16,
+          5
+        ]
+      },
+      {
+        "start": [
+          17,
+          0
+        ],
+        "end": [
+          17,
+          1
+        ]
+      },
+      {
+        "start": [
+          17,
+          3
+        ],
+        "end": [
+          17,
+          5
+        ]
+      }
+    ],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          17,
+          5
+        ]
+      }
+    ],
+    "blockSlots": [],
+    "slotGrid": [
+      [
+        "u01",
+        "u02",
+        "u03",
+        "u04",
+        "u05",
+        "u06"
+      ],
+      [
+        "u07",
+        "u08",
+        "u09",
+        "u10",
+        "u11",
+        "u12"
+      ],
+      [
+        "u13",
+        "u14",
+        "u15",
+        "u16",
+        "u17",
+        "u18"
+      ],
+      [
+        "u19",
+        "u20",
+        "u21",
+        "u22",
+        "u23",
+        "u24"
+      ],
+      [
+        "u25",
+        "u26",
+        "u27",
+        "u28",
+        "u29",
+        "u30"
+      ],
+      [
+        "u31",
+        "u32",
+        "u33",
+        "u34",
+        "u35",
+        "u36"
+      ],
+      [
+        "u37",
+        "u38",
+        "u39",
+        "u40",
+        "u41",
+        "u42"
+      ],
+      [
+        "u43",
+        null,
+        null,
+        "u44",
+        null,
+        "u45"
+      ],
+      [
+        "u46",
+        "u47",
+        null,
+        "u48",
+        null,
+        "u49"
+      ],
+      [
+        "u50",
+        "u51",
+        null,
+        "u52",
+        null,
+        "u53"
+      ],
+      [
+        "u54",
+        "u55",
+        null,
+        "u56",
+        null,
+        "u57"
+      ],
+      [
+        "u58",
+        "u59",
+        null,
+        "u60",
+        null,
+        null
+      ],
+      [
+        "u61",
+        null,
+        null,
+        "u62",
+        null,
+        null
+      ],
+      [
+        "u63",
+        null,
+        null,
+        "u64",
+        null,
+        null
+      ],
+      [
+        "u65",
+        null,
+        null,
+        "u66",
+        null,
+        null
+      ],
+      [
+        "u67",
+        null,
+        null,
+        "u68",
+        null,
+        null
+      ],
+      [
+        "u69",
+        null,
+        null,
+        "u70",
+        null,
+        null
+      ],
+      [
+        "u71",
+        null,
+        null,
+        "u72",
+        null,
+        null
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        70,
+        324,
+        126,
+        144,
+        126,
+        158
+      ],
+      "rowHeightTier": 5,
+      "fontSizeTier": 3,
+      "paddingTier": 3,
+      "fontFamily": "sans",
+      "borderScheme": "rows",
+      "plainHeader": true,
+      "headerWeight": 400
+    }
+  },
+  "slotDefs": {
+    "u12": {
+      "kind": "number"
+    },
+    "u18": {
+      "kind": "number"
+    },
+    "u24": {
+      "kind": "number"
+    },
+    "u30": {
+      "kind": "number"
+    },
+    "u36": {
+      "kind": "number"
+    },
+    "u42": {
+      "kind": "number"
+    },
+    "u45": {
+      "kind": "number"
+    },
+    "u49": {
+      "kind": "number"
+    },
+    "u53": {
+      "kind": "number"
+    },
+    "u57": {
+      "kind": "number",
+      "unit": "元"
+    }
+  },
+  "themeTokens": {
+    "primary": "#8a8378",
+    "headerText": "#fcfbf8",
+    "zebra": "#f2f0ea",
+    "emphasis": "#1a1a1a",
+    "border": "#d5d3cf",
+    "background": "#fcfbf8"
+  },
+  "kpiCards": [],
+  "kpiStyle": "plain",
+  "poster": {
+    "bg": "solid",
+    "bgColor": "#fcfbf8",
+    "kicker": "QUOTATION · 2025 / 11",
+    "title": "设计服务报价单",
+    "subtitle": "编号 NO.2026-1112 · 版本 v2",
+    "metaLines": [
+      "客户 示例科技有限公司",
+      "日期 2026.11.12",
+      "有效期 15 天"
+    ],
+    "footerLines": [
+      "本报价单为示例模板，人日单价与项目按实际需求调整。",
+      "示例样张 · 客户名、金额与周期仅作排版示意。"
+    ],
+    "pageBadge": "13",
+    "accent": "#8a8378",
+    "textColor": "#1a1a1a",
+    "titleFont": "serif",
+    "padding": 66
+  }
+}

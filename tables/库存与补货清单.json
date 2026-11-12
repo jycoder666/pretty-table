@@ -1,0 +1,991 @@
+{
+  "schemaVersion": "1.3",
+  "templateId": "user-1762900000003-stock",
+  "themeId": "T-A",
+  "zebraOn": false,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "库存与补货清单",
+    "description": "白底藏蓝库存样张 · 状态药丸底色 + 建议补货按状态着色（一比一复刻）",
+    "templateType": "detail",
+    "origin": "preset"
+  },
+  "slots": {
+    "u1": {
+      "text": "SKU",
+      "color": "#8a8f96"
+    },
+    "u2": {
+      "text": "品名 / ITEM",
+      "color": "#8a8f96"
+    },
+    "u3": {
+      "text": "现存",
+      "color": "#8a8f96"
+    },
+    "u4": {
+      "text": "安全线",
+      "color": "#8a8f96"
+    },
+    "u5": {
+      "text": "状态",
+      "color": "#8a8f96"
+    },
+    "u6": {
+      "text": "日均",
+      "color": "#8a8f96"
+    },
+    "u7": {
+      "text": "建议补货",
+      "color": "#8a8f96"
+    },
+    "u8": {
+      "text": "A-1001",
+      "color": "#959aa0"
+    },
+    "u9": {
+      "text": "纯棉圆领 T 恤 · 白",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u10": {
+      "num": 120,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u11": {
+      "num": 40,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u12": {
+      "text": "正常",
+      "align": "center",
+      "color": "#2e7d4f",
+      "chip": {
+        "bg": "#e3efe6",
+        "color": "#2e7d4f"
+      }
+    },
+    "u13": {
+      "num": 8,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u14": {
+      "text": "—",
+      "align": "left",
+      "color": "#b7bcc2"
+    },
+    "u15": {
+      "text": "A-1002",
+      "color": "#959aa0"
+    },
+    "u16": {
+      "text": "牛仔外套 · 浅蓝",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u17": {
+      "num": 18,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u18": {
+      "num": 30,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u19": {
+      "text": "偏低",
+      "align": "center",
+      "color": "#a8762a",
+      "chip": {
+        "bg": "#f7ecd2",
+        "color": "#a8762a"
+      }
+    },
+    "u20": {
+      "num": 4,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u21": {
+      "num": 42,
+      "align": "left",
+      "color": "#a8762a"
+    },
+    "u22": {
+      "text": "A-1003",
+      "color": "#959aa0"
+    },
+    "u23": {
+      "text": "高帮帆布鞋 · 米",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u24": {
+      "num": 0,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u25": {
+      "num": 25,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u26": {
+      "text": "缺货",
+      "align": "center",
+      "color": "#b0392b",
+      "chip": {
+        "bg": "#f6d8de",
+        "color": "#b0392b"
+      }
+    },
+    "u27": {
+      "num": 6,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u28": {
+      "num": 50,
+      "align": "left",
+      "color": "#b0392b"
+    },
+    "u29": {
+      "text": "A-1004",
+      "color": "#959aa0"
+    },
+    "u30": {
+      "text": "亚麻衬衫 · 条纹",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u31": {
+      "num": 65,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u32": {
+      "num": 35,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u33": {
+      "text": "正常",
+      "align": "center",
+      "color": "#2e7d4f",
+      "chip": {
+        "bg": "#e3efe6",
+        "color": "#2e7d4f"
+      }
+    },
+    "u34": {
+      "num": 5,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u35": {
+      "num": 5,
+      "align": "left",
+      "color": "#2e7d4f"
+    },
+    "u36": {
+      "text": "B-2001",
+      "color": "#959aa0"
+    },
+    "u37": {
+      "text": "羊毛围巾 · 灰",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u38": {
+      "num": 12,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u39": {
+      "num": 40,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u40": {
+      "text": "偏低",
+      "align": "center",
+      "color": "#a8762a",
+      "chip": {
+        "bg": "#f7ecd2",
+        "color": "#a8762a"
+      }
+    },
+    "u41": {
+      "num": 3,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u42": {
+      "num": 68,
+      "align": "left",
+      "color": "#a8762a"
+    },
+    "u43": {
+      "text": "B-2002",
+      "color": "#959aa0"
+    },
+    "u44": {
+      "text": "帆布托特包",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u45": {
+      "num": 210,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u46": {
+      "num": 60,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u47": {
+      "text": "正常",
+      "align": "center",
+      "color": "#2e7d4f",
+      "chip": {
+        "bg": "#e3efe6",
+        "color": "#2e7d4f"
+      }
+    },
+    "u48": {
+      "num": 12,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u49": {
+      "text": "—",
+      "align": "left",
+      "color": "#b7bcc2"
+    },
+    "u50": {
+      "text": "B-2003",
+      "color": "#959aa0"
+    },
+    "u51": {
+      "text": "刺绣棒球帽",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u52": {
+      "num": 5,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u53": {
+      "num": 20,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u54": {
+      "text": "缺货",
+      "align": "center",
+      "color": "#b0392b",
+      "chip": {
+        "bg": "#f6d8de",
+        "color": "#b0392b"
+      }
+    },
+    "u55": {
+      "num": 3,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u56": {
+      "num": 35,
+      "align": "left",
+      "color": "#b0392b"
+    },
+    "u57": {
+      "text": "C-3001",
+      "color": "#959aa0"
+    },
+    "u58": {
+      "text": "双层保温杯",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u59": {
+      "num": 88,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u60": {
+      "num": 45,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u61": {
+      "text": "正常",
+      "align": "center",
+      "color": "#2e7d4f",
+      "chip": {
+        "bg": "#e3efe6",
+        "color": "#2e7d4f"
+      }
+    },
+    "u62": {
+      "num": 6,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u63": {
+      "num": 2,
+      "align": "left",
+      "color": "#2e7d4f"
+    },
+    "u64": {
+      "text": "C-3002",
+      "color": "#959aa0"
+    },
+    "u65": {
+      "text": "折叠晴雨伞",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u66": {
+      "num": 26,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u67": {
+      "num": 50,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u68": {
+      "text": "偏低",
+      "align": "center",
+      "color": "#a8762a",
+      "chip": {
+        "bg": "#f7ecd2",
+        "color": "#a8762a"
+      }
+    },
+    "u69": {
+      "num": 7,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u70": {
+      "num": 74,
+      "align": "left",
+      "color": "#a8762a"
+    },
+    "u71": {
+      "text": "C-3003",
+      "color": "#959aa0"
+    },
+    "u72": {
+      "text": "香薰蜡烛 · 雪松",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u73": {
+      "num": 140,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u74": {
+      "num": 30,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u75": {
+      "text": "正常",
+      "align": "center",
+      "color": "#2e7d4f",
+      "chip": {
+        "bg": "#e3efe6",
+        "color": "#2e7d4f"
+      }
+    },
+    "u76": {
+      "num": 4,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u77": {
+      "text": "—",
+      "align": "left",
+      "color": "#b7bcc2"
+    },
+    "u78": {
+      "text": "D-4001",
+      "color": "#959aa0"
+    },
+    "u79": {
+      "text": "帆布腰带",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u80": {
+      "num": 9,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u81": {
+      "num": 25,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u82": {
+      "text": "缺货",
+      "align": "center",
+      "color": "#b0392b",
+      "chip": {
+        "bg": "#f6d8de",
+        "color": "#b0392b"
+      }
+    },
+    "u83": {
+      "num": 2,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u84": {
+      "num": 41,
+      "align": "left",
+      "color": "#b0392b"
+    },
+    "u85": {
+      "text": "D-4002",
+      "color": "#959aa0"
+    },
+    "u86": {
+      "text": "皮质卡包",
+      "color": "#22262b",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u87": {
+      "num": 52,
+      "align": "left",
+      "color": "#22262b"
+    },
+    "u88": {
+      "num": 30,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u89": {
+      "text": "正常",
+      "align": "center",
+      "color": "#2e7d4f",
+      "chip": {
+        "bg": "#e3efe6",
+        "color": "#2e7d4f"
+      }
+    },
+    "u90": {
+      "num": 3,
+      "align": "left",
+      "color": "#82888f"
+    },
+    "u91": {
+      "num": 8,
+      "align": "left",
+      "color": "#2e7d4f"
+    },
+    "u92": {
+      "text": "补货规则",
+      "color": "#8a8f96"
+    },
+    "u93": {
+      "text": "建议补货量 = 安全线 × 2 − 现存，保证两周周转且不压货；补到安全线附近即可，不一次性囤满。",
+      "color": "#575c62"
+    },
+    "u94": "",
+    "u95": "",
+    "u96": "",
+    "u97": "",
+    "u98": "",
+    "u99": "",
+    "u100": {
+      "text": "交期：A 类 3 天、B 类 5 天、C/D 类 10 天；缺货项当日下单，偏低项随本周合并下单。",
+      "color": "#575c62"
+    },
+    "u101": "",
+    "u102": "",
+    "u103": "",
+    "u104": "",
+    "u105": ""
+  },
+  "blocks": [],
+  "layout": {
+    "rowCount": 15,
+    "colCount": 7,
+    "headerLevels": 1,
+    "merges": [
+      {
+        "start": [
+          13,
+          1
+        ],
+        "end": [
+          13,
+          6
+        ]
+      },
+      {
+        "start": [
+          14,
+          1
+        ],
+        "end": [
+          14,
+          6
+        ]
+      }
+    ],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          14,
+          6
+        ]
+      }
+    ],
+    "blockSlots": [],
+    "slotGrid": [
+      [
+        "u1",
+        "u2",
+        "u3",
+        "u4",
+        "u5",
+        "u6",
+        "u7"
+      ],
+      [
+        "u8",
+        "u9",
+        "u10",
+        "u11",
+        "u12",
+        "u13",
+        "u14"
+      ],
+      [
+        "u15",
+        "u16",
+        "u17",
+        "u18",
+        "u19",
+        "u20",
+        "u21"
+      ],
+      [
+        "u22",
+        "u23",
+        "u24",
+        "u25",
+        "u26",
+        "u27",
+        "u28"
+      ],
+      [
+        "u29",
+        "u30",
+        "u31",
+        "u32",
+        "u33",
+        "u34",
+        "u35"
+      ],
+      [
+        "u36",
+        "u37",
+        "u38",
+        "u39",
+        "u40",
+        "u41",
+        "u42"
+      ],
+      [
+        "u43",
+        "u44",
+        "u45",
+        "u46",
+        "u47",
+        "u48",
+        "u49"
+      ],
+      [
+        "u50",
+        "u51",
+        "u52",
+        "u53",
+        "u54",
+        "u55",
+        "u56"
+      ],
+      [
+        "u57",
+        "u58",
+        "u59",
+        "u60",
+        "u61",
+        "u62",
+        "u63"
+      ],
+      [
+        "u64",
+        "u65",
+        "u66",
+        "u67",
+        "u68",
+        "u69",
+        "u70"
+      ],
+      [
+        "u71",
+        "u72",
+        "u73",
+        "u74",
+        "u75",
+        "u76",
+        "u77"
+      ],
+      [
+        "u78",
+        "u79",
+        "u80",
+        "u81",
+        "u82",
+        "u83",
+        "u84"
+      ],
+      [
+        "u85",
+        "u86",
+        "u87",
+        "u88",
+        "u89",
+        "u90",
+        "u91"
+      ],
+      [
+        "u92",
+        "u93",
+        "u94",
+        "u95",
+        "u96",
+        "u97",
+        "u98"
+      ],
+      [
+        "u99",
+        "u100",
+        "u101",
+        "u102",
+        "u103",
+        "u104",
+        "u105"
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        120,
+        301,
+        90,
+        88,
+        112,
+        90,
+        151
+      ],
+      "rowHeightTier": 4,
+      "fontSizeTier": 2,
+      "paddingTier": 1,
+      "fontFamily": "sans",
+      "borderScheme": "rows",
+      "headerShape": "flat",
+      "plainHeader": true
+    }
+  },
+  "slotDefs": {
+    "u10": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u11": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u13": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u17": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u18": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u20": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u24": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u25": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u27": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u31": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u32": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u34": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u38": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u39": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u41": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u45": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u46": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u48": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u52": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u53": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u55": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u59": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u60": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u62": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u66": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u67": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u69": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u73": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u74": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u76": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u80": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u81": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u83": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u87": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u88": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u90": {
+      "kind": "number",
+      "format": "number",
+      "unit": "件"
+    },
+    "u21": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u28": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u35": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u42": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u56": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u63": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u70": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u84": {
+      "kind": "number",
+      "format": "number"
+    },
+    "u91": {
+      "kind": "number",
+      "format": "number"
+    }
+  },
+  "themeTokens": {
+    "primary": "#22262b",
+    "headerText": "#f4f7fa",
+    "zebra": "#eef0f2",
+    "emphasis": "#b0392b",
+    "border": "#e4e5e6",
+    "background": "#fbfbfc"
+  },
+  "kpiStyle": "plain",
+  "kpiCards": [
+    {
+      "id": "k1",
+      "label": "在册 SKU",
+      "value": "48"
+    },
+    {
+      "id": "k2",
+      "label": "需补货",
+      "value": "9",
+      "color": "#b0392b"
+    },
+    {
+      "id": "k3",
+      "label": "待补数量",
+      "value": "325",
+      "unit": "件"
+    },
+    {
+      "id": "k4",
+      "label": "补货到位后可用 · 按当前日均销量折算",
+      "value": "17.0 天"
+    }
+  ],
+  "poster": {
+    "bg": "solid",
+    "bgColor": "#fbfbfc",
+    "kicker": "INVENTORY · 11 / 12 SNAPSHOT",
+    "title": "库存与补货清单",
+    "metaLines": [
+      "盘点时间 2026.11.12 08:00",
+      "仓库 主仓 · 摘录 12 个重点 SKU"
+    ],
+    "footerLines": [
+      "现存数量来自每日 08:00 点盘，在途未入库存部分另计。",
+      "示例样张 · 商品、库存与数量仅作排版示意。"
+    ],
+    "pageBadge": "16",
+    "accent": "#8a8f96",
+    "textColor": "#22262b",
+    "titleFont": "serif",
+    "padding": 64
+  }
+}

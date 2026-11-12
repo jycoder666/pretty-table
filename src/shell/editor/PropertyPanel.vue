@@ -71,7 +71,13 @@ const tierOptions = (a: string, b: string, c: string) => [
   { value: 3, label: c },
 ]
 
-const rowTierOptions = tierOptions('紧凑', '标准', '宽松')
+const rowTierOptions = [
+  { value: 1, label: '紧凑' },
+  { value: 2, label: '标准' },
+  { value: 3, label: '宽松' },
+  { value: 4, label: '特高' },
+  { value: 5, label: '超宽' },
+]
 const fontTierOptions = tierOptions('小', '标准', '大')
 const padTierOptions = tierOptions('紧', '标准', '松')
 
@@ -438,6 +444,41 @@ function setGanttColor(hex: string) {
 const slotNode = computed(() => decorSlot.value?.node === true)
 const slotLeader = computed(() => decorSlot.value?.leader === true)
 const slotBoxed = computed(() => decorSlot.value?.boxed === true)
+const slotRule = computed(
+  () => (decorSlot.value?.ruleBelow as { width?: number; color?: string } | undefined) ?? null,
+)
+const ruleWidth = computed(() => slotRule.value?.width ?? 2)
+function toggleRule() {
+  patchDecor({ ruleBelow: slotRule.value ? undefined : { width: ruleWidth.value === 2 ? 2 : 2 } })
+}
+function setRuleWidth(raw: string) {
+  if (!slotRule.value) return
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return
+  patchDecor({ ruleBelow: { ...slotRule.value, width: Math.min(6, Math.max(1, Math.round(n))) } })
+}
+function setRuleColor(hex: string) {
+  if (!slotRule.value) return
+  patchDecor({ ruleBelow: { ...slotRule.value, color: hex } })
+}
+
+const slotFont = computed(() => (decorSlot.value?.font as 'sans' | 'serif' | undefined) ?? 'inherit')
+
+const slotChip = computed(
+  () => (decorSlot.value?.chip as { bg: string; color?: string } | undefined) ?? null,
+)
+const chipTextColor = computed(() => slotChip.value?.color ?? '#1a1a1a')
+function toggleChip() {
+  patchDecor({ chip: slotChip.value ? undefined : { bg: '#e3efe6', color: '#2e7d4f' } })
+}
+function setChipBg(hex: string) {
+  if (!slotChip.value) return
+  patchDecor({ chip: { ...slotChip.value, bg: hex } })
+}
+function setChipTextColor(hex: string) {
+  if (!slotChip.value) return
+  patchDecor({ chip: { ...slotChip.value, color: hex } })
+}
 
 const slotScale = computed(() => (decorSlot.value?.cellScale as number | undefined) ?? 1)
 function setScale(v: number) {
@@ -508,9 +549,17 @@ const borderScheme = computed(() => styleState.value.borderScheme ?? 'full')
 const headerShape = computed(() => styleState.value.headerShape ?? 'flat')
 const plainHeader = computed(() => styleState.value.plainHeader === true)
 const pillInsetV = computed(() => styleState.value.pillInsetV ?? 6)
+const headerWeight = computed<number>(() => styleState.value.headerWeight ?? 700)
+const kpiPosition = computed<'top' | 'bottom'>(() =>
+  editor.current?.kpiPosition === 'bottom' ? 'bottom' : 'top',
+)
 function patchStyle(patch: Record<string, unknown>) {
   if (!editor.current || editor.pastePending) return
   editor.apply({ kind: 'setStylePatch', patch: patch as never })
+}
+function setKpiPosition(pos: 'top' | 'bottom') {
+  if (!editor.current || editor.pastePending) return
+  editor.apply({ kind: 'setKpiPosition', position: pos })
 }
 
 // ── Schema 1.5：海报背景（bg 形态 / 基色 / 纹理色 / accent / 文字色 / 标题字体 / 留白 / 颜色洗）──
@@ -1157,7 +1206,7 @@ const barColorValue = computed(() => selectedBar.value?.color ?? roleColorOf(edi
                 <label class="mini-label">字号倍率</label>
                 <div class="row" role="radiogroup" aria-label="字号倍率">
                   <PtButton
-                    v-for="sc in [1, 1.25, 1.5]"
+                    v-for="sc in [1, 1.25, 1.5, 1.75, 2]"
                     :key="'sc-' + sc"
                     variant="ghost"
                     :class="{ on: slotScale === sc }"
@@ -1167,6 +1216,93 @@ const barColorValue = computed(() => selectedBar.value?.color ?? roleColorOf(edi
                   >
                     {{ sc }}×
                   </PtButton>
+                </div>
+                <label class="mini-label">行底粗规则线</label>
+                <div class="row">
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: !!slotRule }"
+                    :aria-pressed="!!slotRule"
+                    :disabled="editor.pastePending"
+                    @click="toggleRule"
+                  >
+                    {{ slotRule ? '▬ 有规则线' : '▭ 无规则线' }}
+                  </PtButton>
+                  <template v-if="slotRule">
+                    <input
+                      class="num-sm"
+                      type="text"
+                      inputmode="numeric"
+                      :value="String(ruleWidth)"
+                      aria-label="规则线宽"
+                      @change="setRuleWidth(($event.target as HTMLInputElement).value)"
+                    />
+                    <input
+                      type="color"
+                      class="mini-color"
+                      :value="slotRule.color || '#151515'"
+                      aria-label="规则线颜色"
+                      @change="setRuleColor(($event.target as HTMLInputElement).value)"
+                    />
+                  </template>
+                </div>
+                <label class="mini-label">格内字体</label>
+                <div class="row" role="radiogroup" aria-label="格内字体">
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: slotFont === 'inherit' }"
+                    :aria-pressed="slotFont === 'inherit'"
+                    :disabled="editor.pastePending"
+                    @click="patchDecor({ font: undefined })"
+                  >
+                    跟随表
+                  </PtButton>
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: slotFont === 'sans' }"
+                    :aria-pressed="slotFont === 'sans'"
+                    :disabled="editor.pastePending"
+                    @click="patchDecor({ font: 'sans' })"
+                  >
+                    无衬线
+                  </PtButton>
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: slotFont === 'serif' }"
+                    :aria-pressed="slotFont === 'serif'"
+                    :disabled="editor.pastePending"
+                    @click="patchDecor({ font: 'serif' })"
+                  >
+                    衬线
+                  </PtButton>
+                </div>
+                <label class="mini-label">药丸标签</label>
+                <div class="row">
+                  <PtButton
+                    variant="ghost"
+                    :class="{ on: !!slotChip }"
+                    :aria-pressed="!!slotChip"
+                    :disabled="editor.pastePending"
+                    @click="toggleChip"
+                  >
+                    {{ slotChip ? '● 有药丸' : '○ 无药丸' }}
+                  </PtButton>
+                  <template v-if="slotChip">
+                    <input
+                      type="color"
+                      class="mini-color"
+                      :value="slotChip.bg"
+                      aria-label="药丸底色"
+                      @change="setChipBg(($event.target as HTMLInputElement).value)"
+                    />
+                    <input
+                      type="color"
+                      class="mini-color"
+                      :value="chipTextColor"
+                      aria-label="药丸文字色"
+                      @change="setChipTextColor(($event.target as HTMLInputElement).value)"
+                    />
+                  </template>
                 </div>
                 <label class="mini-label" for="slot-bg">格子底色</label>
                 <div class="row">
@@ -1733,10 +1869,31 @@ const barColorValue = computed(() => selectedBar.value?.color ?? roleColorOf(edi
             <PtButton variant="ghost" @click="patchKpi(card.id, { color: undefined })">跟随主题</PtButton>
           </div>
         </div>
-        <PtButton
-          variant="ghost"
-          :disabled="kpiFull || editor.pastePending"
-          data-testid="kpi-add"
+          <!-- Schema 1.6：统计卡位置 -->
+          <div class="row" role="radiogroup" aria-label="统计卡位置">
+            <PtButton
+              variant="ghost"
+              :class="{ on: kpiPosition === 'top' }"
+              :aria-pressed="kpiPosition === 'top'"
+              :disabled="editor.pastePending"
+              @click="setKpiPosition('top')"
+            >
+              表格上方
+            </PtButton>
+            <PtButton
+              variant="ghost"
+              :class="{ on: kpiPosition === 'bottom' }"
+              :aria-pressed="kpiPosition === 'bottom'"
+              :disabled="editor.pastePending"
+              @click="setKpiPosition('bottom')"
+            >
+              表格下方
+            </PtButton>
+          </div>
+          <PtButton
+            variant="ghost"
+            :disabled="kpiFull || editor.pastePending"
+            data-testid="kpi-add"
           @click="addKpiCard"
         >
           添加统计卡
@@ -1925,6 +2082,24 @@ const barColorValue = computed(() => selectedBar.value?.color ?? roleColorOf(edi
                 @click="patchStyle({ headerShape: 'pill', plainHeader: undefined })"
               >
                 药丸
+              </PtButton>
+            </div>
+            <label class="mini-label">表头字重（无底色表头时生效）</label>
+            <div class="row" role="radiogroup" aria-label="表头字重">
+              <PtButton
+                v-for="w in [
+                  { v: 400, label: '常规' },
+                  { v: 600, label: '半粗' },
+                  { v: 700, label: '加粗' },
+                ]"
+                :key="'hw-' + w.v"
+                variant="ghost"
+                :class="{ on: headerWeight === w.v }"
+                :aria-pressed="headerWeight === w.v"
+                :disabled="editor.pastePending"
+                @click="patchStyle({ headerWeight: w.v })"
+              >
+                {{ w.label }}
               </PtButton>
             </div>
             <template v-if="headerShape === 'pill'">

@@ -351,6 +351,9 @@ function kpiLabelStyleOf(): string {
 
 // ── Schema 1.3：strip 统计条形态（细分隔条；样式与 HTML/PNG 同源 kpiCards.ts）──
 const kpiIsStrip = computed(() => editor.current?.kpiStyle === 'strip')
+const kpiPosition = computed<'top' | 'bottom'>(() =>
+  editor.current?.kpiPosition === 'bottom' ? 'bottom' : 'top',
+)
 
 function kpiStripRowStyleOf(): string {
   const pal = kpiPalette.value
@@ -980,8 +983,8 @@ defineExpose({
           <div v-for="(line, i) in posterSpec.metaLines" :key="`pm-${i}`">{{ line }}</div>
         </div>
       </div>
-      <!-- Schema 1.2 扩展：KPI 统计卡 hero 区（表格上方；无卡片 v-if 零占位；strip 形态分支） -->
-      <div v-if="kpiCards.length" class="kpi-hero" :style="kpiHeroWrapStyle" data-testid="kpi-hero">
+      <!-- Schema 1.2/1.6：KPI 统计卡 hero 区（位置可配 top/bottom；无卡片零占位；strip/plain 形态分支） -->
+      <div v-if="kpiCards.length && kpiPosition === 'top'" class="kpi-hero" :style="kpiHeroWrapStyle" data-testid="kpi-hero">
         <div v-if="kpiIsStrip" :style="kpiStripRowStyleOf()">
           <div v-for="(card, i) in kpiCards" :key="card.id" :style="kpiStripItemStyleOf(card, i)">
             <p :style="kpiStripLabelStyleOf()">{{ card.label }}</p>
@@ -1012,6 +1015,24 @@ defineExpose({
         @dblclick="onDblClick"
         @keydown="onKeydown"
       />
+      <div v-if="kpiCards.length && kpiPosition === 'bottom'" class="kpi-hero" :style="kpiHeroWrapStyle" data-testid="kpi-hero-bottom">
+        <div v-if="kpiIsStrip" :style="kpiStripRowStyleOf()">
+          <div v-for="(card, i) in kpiCards" :key="'b-' + card.id" :style="kpiStripItemStyleOf(card, i)">
+            <p :style="kpiStripLabelStyleOf()">{{ card.label }}</p>
+            <div :style="kpiStripValueStyleOf(card)">
+              {{ kpiValueText(card) }}<span v-if="card.unit" :style="kpiUnitStyleOf()"> {{ card.unit }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else :style="kpiRowStyleOf()">
+          <div v-for="card in kpiCards" :key="'b-' + card.id" :style="kpiCardStyleOf(card)">
+            <div :style="kpiValueStyleOf(card)">
+              {{ kpiValueText(card) }}<span v-if="card.unit" :style="kpiUnitStyleOf()"> {{ card.unit }}</span>
+            </div>
+            <p :style="kpiLabelStyleOf()">{{ card.label }}</p>
+          </div>
+        </div>
+      </div>
       <div v-if="posterHasFooter && posterFtr" :style="posterFtr.wrap">
         <div v-if="posterSpec?.footerLines?.length" :style="posterFtr.line">
           <div v-for="(line, i) in posterSpec.footerLines" :key="`pf-${i}`">{{ line }}</div>

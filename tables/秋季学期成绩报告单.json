@@ -1,0 +1,801 @@
+{
+  "schemaVersion": "1.3",
+  "templateId": "user-1762900000002-report",
+  "themeId": "T-A",
+  "zebraOn": false,
+  "highlight": {
+    "recommendCol": null
+  },
+  "meta": {
+    "displayName": "秋季学期 成绩报告单",
+    "description": "白底藏蓝成绩单：信息横幅 + 加权成绩明细 + 得分分布轨道条 + 班主任评语（一比一复刻）",
+    "templateType": "stat",
+    "origin": "preset"
+  },
+  "slots": {
+    "u1": {
+      "text": "科目",
+      "align": "left"
+    },
+    "u2": {
+      "text": "平时（30%）",
+      "align": "left"
+    },
+    "u3": {
+      "text": "期中（30%）",
+      "align": "left"
+    },
+    "u4": {
+      "text": "期末（40%）",
+      "align": "left"
+    },
+    "u5": {
+      "text": "总评",
+      "align": "left"
+    },
+    "u6": {
+      "text": "等级",
+      "align": "left"
+    },
+    "u7": {
+      "text": "得分分布",
+      "align": "left"
+    },
+    "u8": {
+      "text": "语文",
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u9": {
+      "num": 88,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u10": {
+      "num": 85,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u11": {
+      "num": 90,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u12": {
+      "num": 88,
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u13": {
+      "text": "A−",
+      "align": "left",
+      "color": "#2f5588"
+    },
+    "u14": {
+      "text": "",
+      "gantt": {
+        "from": 0,
+        "to": 0.88,
+        "color": "#2f5588"
+      }
+    },
+    "u15": {
+      "text": "88%",
+      "align": "left",
+      "color": "#a1adb9"
+    },
+    "u16": {
+      "text": "数学",
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u17": {
+      "num": 92,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u18": {
+      "num": 88,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u19": {
+      "num": 95,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u20": {
+      "num": 92,
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u21": {
+      "text": "A",
+      "align": "left",
+      "color": "#2f5588"
+    },
+    "u22": {
+      "text": "",
+      "gantt": {
+        "from": 0,
+        "to": 0.92,
+        "color": "#2f5588"
+      }
+    },
+    "u23": {
+      "text": "92%",
+      "align": "left",
+      "color": "#a1adb9"
+    },
+    "u24": {
+      "text": "英语",
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u25": {
+      "num": 85,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u26": {
+      "num": 90,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u27": {
+      "num": 88,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u28": {
+      "num": 88,
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u29": {
+      "text": "A−",
+      "align": "left",
+      "color": "#2f5588"
+    },
+    "u30": {
+      "text": "",
+      "gantt": {
+        "from": 0,
+        "to": 0.88,
+        "color": "#2f5588"
+      }
+    },
+    "u31": {
+      "text": "88%",
+      "align": "left",
+      "color": "#a1adb9"
+    },
+    "u32": {
+      "text": "物理",
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u33": {
+      "num": 78,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u34": {
+      "num": 82,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u35": {
+      "num": 80,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u36": {
+      "num": 80,
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u37": {
+      "text": "B+",
+      "align": "left",
+      "color": "#8a6a14"
+    },
+    "u38": {
+      "text": "",
+      "gantt": {
+        "from": 0,
+        "to": 0.8,
+        "color": "#8a6a14"
+      }
+    },
+    "u39": {
+      "text": "80%",
+      "align": "left",
+      "color": "#a1adb9"
+    },
+    "u40": {
+      "text": "化学",
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u41": {
+      "num": 86,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u42": {
+      "num": 84,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u43": {
+      "num": 89,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u44": {
+      "num": 87,
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u45": {
+      "text": "A−",
+      "align": "left",
+      "color": "#2f5588"
+    },
+    "u46": {
+      "text": "",
+      "gantt": {
+        "from": 0,
+        "to": 0.87,
+        "color": "#2f5588"
+      }
+    },
+    "u47": {
+      "text": "87%",
+      "align": "left",
+      "color": "#a1adb9"
+    },
+    "u48": {
+      "text": "生物",
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u49": {
+      "num": 90,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u50": {
+      "num": 92,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u51": {
+      "num": 88,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u52": {
+      "num": 90,
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u53": {
+      "text": "A",
+      "align": "left",
+      "color": "#2f5588"
+    },
+    "u54": {
+      "text": "",
+      "gantt": {
+        "from": 0,
+        "to": 0.9,
+        "color": "#2f5588"
+      }
+    },
+    "u55": {
+      "text": "90%",
+      "align": "left",
+      "color": "#a1adb9"
+    },
+    "u56": {
+      "text": "历史",
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u57": {
+      "num": 82,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u58": {
+      "num": 86,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u59": {
+      "num": 84,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u60": {
+      "num": 84,
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u61": {
+      "text": "B+",
+      "align": "left",
+      "color": "#8a6a14"
+    },
+    "u62": {
+      "text": "",
+      "gantt": {
+        "from": 0,
+        "to": 0.84,
+        "color": "#8a6a14"
+      }
+    },
+    "u63": {
+      "text": "84%",
+      "align": "left",
+      "color": "#a1adb9"
+    },
+    "u64": {
+      "text": "体育",
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u65": {
+      "num": 95,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u66": {
+      "num": 94,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u67": {
+      "num": 96,
+      "align": "left",
+      "color": "#5e6d82"
+    },
+    "u68": {
+      "num": 95,
+      "align": "left",
+      "color": "#1b2a3f",
+      "emphasize": [
+        "bold"
+      ]
+    },
+    "u69": {
+      "text": "A",
+      "align": "left",
+      "color": "#2f5588"
+    },
+    "u70": {
+      "text": "",
+      "gantt": {
+        "from": 0,
+        "to": 0.95,
+        "color": "#2f5588"
+      }
+    },
+    "u71": {
+      "text": "95%",
+      "align": "left",
+      "color": "#a1adb9"
+    },
+    "u72": {
+      "text": "班主任评语 · 本学期理科基础稳定，数学与生物进步明显，作业完成质量高。",
+      "sub": "物理的力学模型还需多画受力分析，历史材料题要按要求分点作答；建议寒假把物理错题按模块重做一遍，保持每周两次长跑。",
+      "align": "left",
+      "color": "#3c4e66",
+      "boxed": true
+    },
+    "u73": {
+      "text": "签名",
+      "align": "left",
+      "color": "#8e9aab",
+      "leader": true
+    },
+    "u74": ""
+  },
+  "blocks": [
+    {
+      "id": "blk-info",
+      "type": "banner",
+      "slotId": "u74",
+      "props": {
+        "text": "姓名 林一舟　学号 20250317　考试 期中 / 期末加权",
+        "color": "#f2f5fa",
+        "barColor": "#1b3a6b",
+        "bannerTextColor": "#1b2a3f",
+        "bannerRight": "出单 2026.11.12",
+        "bannerRightColor": "#8e9aab"
+      }
+    }
+  ],
+  "layout": {
+    "rowCount": 10,
+    "colCount": 8,
+    "headerLevels": 1,
+    "merges": [
+      {
+        "start": [
+          0,
+          6
+        ],
+        "end": [
+          0,
+          7
+        ]
+      },
+      {
+        "start": [
+          9,
+          0
+        ],
+        "end": [
+          9,
+          5
+        ]
+      },
+      {
+        "start": [
+          9,
+          6
+        ],
+        "end": [
+          9,
+          7
+        ]
+      }
+    ],
+    "structuralMerges": [],
+    "allowedMerges": [
+      {
+        "start": [
+          0,
+          0
+        ],
+        "end": [
+          10,
+          7
+        ]
+      }
+    ],
+    "blockSlots": [
+      {
+        "id": "u74",
+        "accept": [
+          "banner"
+        ],
+        "rowHint": "before-0"
+      }
+    ],
+    "slotGrid": [
+      [
+        "u1",
+        "u2",
+        "u3",
+        "u4",
+        "u5",
+        "u6",
+        "u7",
+        null
+      ],
+      [
+        "u8",
+        "u9",
+        "u10",
+        "u11",
+        "u12",
+        "u13",
+        "u14",
+        "u15"
+      ],
+      [
+        "u16",
+        "u17",
+        "u18",
+        "u19",
+        "u20",
+        "u21",
+        "u22",
+        "u23"
+      ],
+      [
+        "u24",
+        "u25",
+        "u26",
+        "u27",
+        "u28",
+        "u29",
+        "u30",
+        "u31"
+      ],
+      [
+        "u32",
+        "u33",
+        "u34",
+        "u35",
+        "u36",
+        "u37",
+        "u38",
+        "u39"
+      ],
+      [
+        "u40",
+        "u41",
+        "u42",
+        "u43",
+        "u44",
+        "u45",
+        "u46",
+        "u47"
+      ],
+      [
+        "u48",
+        "u49",
+        "u50",
+        "u51",
+        "u52",
+        "u53",
+        "u54",
+        "u55"
+      ],
+      [
+        "u56",
+        "u57",
+        "u58",
+        "u59",
+        "u60",
+        "u61",
+        "u62",
+        "u63"
+      ],
+      [
+        "u64",
+        "u65",
+        "u66",
+        "u67",
+        "u68",
+        "u69",
+        "u70",
+        "u71"
+      ],
+      [
+        "u72",
+        null,
+        null,
+        null,
+        null,
+        null,
+        "u73",
+        null
+      ]
+    ],
+    "style": {
+      "colWidths": [
+        187,
+        100,
+        100,
+        110,
+        110,
+        80,
+        210,
+        64
+      ],
+      "rowHeightTier": 4,
+      "fontSizeTier": 3,
+      "paddingTier": 3,
+      "fontFamily": "serif",
+      "borderScheme": "rows",
+      "headerShape": "flat",
+      "plainHeader": true
+    }
+  },
+  "slotDefs": {
+    "u9": {
+      "kind": "number"
+    },
+    "u10": {
+      "kind": "number"
+    },
+    "u11": {
+      "kind": "number"
+    },
+    "u12": {
+      "kind": "number"
+    },
+    "u17": {
+      "kind": "number"
+    },
+    "u18": {
+      "kind": "number"
+    },
+    "u19": {
+      "kind": "number"
+    },
+    "u20": {
+      "kind": "number"
+    },
+    "u25": {
+      "kind": "number"
+    },
+    "u26": {
+      "kind": "number"
+    },
+    "u27": {
+      "kind": "number"
+    },
+    "u28": {
+      "kind": "number"
+    },
+    "u33": {
+      "kind": "number"
+    },
+    "u34": {
+      "kind": "number"
+    },
+    "u35": {
+      "kind": "number"
+    },
+    "u36": {
+      "kind": "number"
+    },
+    "u41": {
+      "kind": "number"
+    },
+    "u42": {
+      "kind": "number"
+    },
+    "u43": {
+      "kind": "number"
+    },
+    "u44": {
+      "kind": "number"
+    },
+    "u49": {
+      "kind": "number"
+    },
+    "u50": {
+      "kind": "number"
+    },
+    "u51": {
+      "kind": "number"
+    },
+    "u52": {
+      "kind": "number"
+    },
+    "u57": {
+      "kind": "number"
+    },
+    "u58": {
+      "kind": "number"
+    },
+    "u59": {
+      "kind": "number"
+    },
+    "u60": {
+      "kind": "number"
+    },
+    "u65": {
+      "kind": "number"
+    },
+    "u66": {
+      "kind": "number"
+    },
+    "u67": {
+      "kind": "number"
+    },
+    "u68": {
+      "kind": "number"
+    }
+  },
+  "themeTokens": {
+    "primary": "#8e9aab",
+    "headerText": "#ffffff",
+    "zebra": "#e6eaef",
+    "emphasis": "#1b3a6b",
+    "border": "#e0e3e7",
+    "background": "#fafbfd"
+  },
+  "kpiStyle": "plain",
+  "kpiCards": [
+    {
+      "id": "kpi-avg",
+      "label": "总评均分",
+      "value": "88.0",
+      "color": "#1b2a3f"
+    },
+    {
+      "id": "kpi-grade-a",
+      "label": "A 等级科目",
+      "value": "3",
+      "unit": "/ 8",
+      "color": "#1b2a3f"
+    },
+    {
+      "id": "kpi-delta",
+      "label": "较上学期",
+      "value": "+3.4",
+      "color": "#1b3a6b"
+    },
+    {
+      "id": "kpi-weak",
+      "label": "短板 · 力学部分失分集中 / 材料题答点不全",
+      "value": "物理 80 · 历史 84",
+      "color": "#3c4e66"
+    }
+  ],
+  "poster": {
+    "bg": "gradient",
+    "bgColor": "#fefeff",
+    "bgAccent": "#f1f5fa",
+    "kicker": "ACADEMIC REPORT · 2026 FALL",
+    "title": "秋季学期 成绩报告单",
+    "metaLines": [
+      "2026 — 2027 学年 第一学期",
+      "高二（3）班 · 理科方向"
+    ],
+    "footerLines": [
+      "总评 = 平时 30% + 期中 30% + 期末 40%，四舍五入取整。",
+      "示例样张 · 姓名、分数与评语仅作排版示意，非真实成绩。"
+    ],
+    "pageBadge": "15",
+    "accent": "#8e9aab",
+    "textColor": "#1b2a3f",
+    "titleFont": "serif",
+    "padding": 64
+  },
+  "kpiPosition": "bottom"
+}

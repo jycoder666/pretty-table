@@ -73,6 +73,9 @@ const DECOR_KEYS: readonly string[] = [
   'node',
   'leader',
   'boxed',
+  'ruleBelow',
+  'font',
+  'chip',
 ]
 
 /** 从槽值提取已定义的装饰字段 */
@@ -685,6 +688,11 @@ export function applyEditIntent(
       const poster = sanitizePoster(intent.poster)
       if (poster) next.poster = poster
       else delete next.poster
+      return ok(next)
+    }
+    // ── Schema 1.6：统计卡位置 ──
+    case 'setKpiPosition': {
+      next.kpiPosition = intent.position === 'bottom' ? 'bottom' : undefined
       return ok(next)
     }
     // ── Schema 1.5：表格形态部分合并（字体族/边框/表头形状/药丸内缩等）──

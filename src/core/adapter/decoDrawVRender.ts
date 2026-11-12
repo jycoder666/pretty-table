@@ -18,6 +18,7 @@ import {
 import { registerCellGroupFactory, registerBarGroupFactory, registerDecoGroupFactory } from './toOption'
 import type { DecoSpec } from './toOption'
 import {
+  DECO_CHIP_BG,
   DECO_CELLS_EMPTY,
   DECO_CELLS_INK,
   DECO_CELLS_TODAY,
@@ -718,6 +719,40 @@ registerDecoGroupFactory((spec, width, height) => {
         )
       }
     }
+    return group
+  }
+
+  if (spec.kind === 'chip') {
+    // 药丸标签：格内圆角小卡（排班班次/库存状态），四周留白让相邻药丸不粘连
+    const insetV = Math.max(4, height * 0.18)
+    const insetH = Math.max(10, padH * 1.2)
+    const pillH = height - insetV * 2
+    const pillW = Math.max(0, width - insetH * 2)
+    group.appendChild(
+      createRect({
+        x: insetH,
+        y: insetV,
+        width: pillW,
+        height: Math.max(0, pillH),
+        cornerRadius: pillH / 2,
+        fill: spec.bg ?? DECO_CHIP_BG,
+        pickable: false,
+      }),
+    )
+    group.appendChild(
+      createText({
+        x: spec.align === 'left' ? insetH + 10 : width / 2,
+        y: insetV + pillH / 2 + 1,
+        text: spec.main ?? '',
+        fontSize: fs,
+        fill: spec.color ?? DECO_INK,
+        fontFamily: spec.fontFamily,
+        fontWeight: spec.fontWeight,
+        textAlign: spec.align ?? 'center',
+        textBaseline: 'middle',
+        pickable: false,
+      }),
+    )
     return group
   }
 
